@@ -45,13 +45,13 @@
     <div class="wrap">
       <div class="head"><span class="eyebrow">Quem cuida do seu caso</span><h2>Gente de verdade, perto de você.</h2><p>Três sócios, de Goiás e de Minas Gerais, que atendem pessoalmente cada cliente. Sem central de atendimento: você fala com quem faz o trabalho.</p></div>
       <div class="vs-grid"><article class="vs-p">
-      <div class="vs-foto"><img src="/equipe/george.jpg" alt="Foto de George Vital" loading="lazy" onerror="this.remove()"><span aria-hidden="true">GV</span></div>
+      <div class="vs-foto"><img src="/vitalagroenegocios/equipe/george.jpg" alt="Foto de George Vital" loading="lazy" onerror="this.remove()"><span aria-hidden="true">GV</span></div>
       <div><b>George Vital</b><span class="vs-papel">Sócio · Goiás</span><p>Tributário, controladoria e Fator R. Professor do SENAR.</p></div>
     </article><article class="vs-p">
-      <div class="vs-foto"><img src="/equipe/bruna.jpg" alt="Foto de Bruna" loading="lazy" onerror="this.remove()"><span aria-hidden="true">B</span></div>
+      <div class="vs-foto"><img src="/vitalagroenegocios/equipe/bruna.jpg" alt="Foto de Bruna" loading="lazy" onerror="this.remove()"><span aria-hidden="true">B</span></div>
       <div><b>Bruna</b><span class="vs-papel">Sócia · Minas Gerais</span></div>
     </article><article class="vs-p">
-      <div class="vs-foto"><img src="/equipe/jheniffer.jpg" alt="Foto de Jheniffer" loading="lazy" onerror="this.remove()"><span aria-hidden="true">J</span></div>
+      <div class="vs-foto"><img src="/vitalagroenegocios/equipe/jheniffer.jpg" alt="Foto de Jheniffer" loading="lazy" onerror="this.remove()"><span aria-hidden="true">J</span></div>
       <div><b>Jheniffer</b><span class="vs-papel">Sócia · Goiás</span></div>
     </article></div>
     </div>
@@ -98,7 +98,7 @@
   "use strict";
   function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]}) }
   function n(v){ return Number(v||0).toLocaleString("pt-BR") }
-  function dBR(d){ var p=String(d).split("-"); return p[2]+"/vitalagroenegocios/"+p[1]+"/vitalagroenegocios/"+p[0] }
+  function dBR(d){ var p=String(d).split("-"); return p[2]+"/"+p[1]+"/"+p[0] }
   var V=window.Vitrine=window.Vitrine||{};
   V.giroHtml=function(g){ if(!g) return '<p class="nota">O primeiro giro sai no próximo sábado.</p>';
     var it=g.itens||[], nots=it.filter(function(x){return x.tipo==="noticia"}), cots=it.filter(function(x){return x.tipo==="cot"}), dica=it.filter(function(x){return x.tipo==="dica"})[0];

@@ -282,7 +282,7 @@ const norm = s => String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerC
 const store = { get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch{ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} } };
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "x"+Date.now().toString(36)+Math.random().toString(36).slice(2));
 const hoje = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
-const fmtD = iso => iso ? iso.slice(8,10)+"/vitalagroenegocios/"+iso.slice(5,7)+"/vitalagroenegocios/"+iso.slice(0,4) : "";
+const fmtD = iso => iso ? iso.slice(8,10)+"/"+iso.slice(5,7)+"/"+iso.slice(0,4) : "";
 const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 let toastT; function toast(m){ const t=$("#toast"); t.textContent=m; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,3000); }
 async function copiar(t){ try{ await navigator.clipboard.writeText(t); toast("Copiado."); }catch{ toast("Não foi possível copiar."); } }
@@ -796,7 +796,7 @@ $("#relBody").addEventListener("click", e => {
 let LF = "";
 $("#btnPrint").onclick = () => window.print();
 $("#btnCsv").onclick = () => {
-  const avs = filtrar(); const q = v => `"${String(v??"").replace(/vitalagroenegocios/"/g,'""')}"`;
+  const avs = filtrar(); const q = v => `"${String(v??"").replace(/"/g,'""')}"`;
   const linhas = [["id","empresa","unidade","tipo","local","data","avaliadores","nota","senso","item","resposta","observacao","fotos"].join(";")];
   for (const a of avs) for (const i of a.itens) linhas.push([a.id,a.empresa,a.unidade,MODELOS[a.modelo]?.nome||a.modelo,a.local,a.data,a.avaliadores,a.nota??"",i.s,i.q,RNOME[i.r]||"",i.o,(i.f||[]).length].map(q).join(";"));
   baixar(`5s_${hoje()}.csv`, "﻿"+linhas.join("\n"), "text/csv;charset=utf-8"); toast("Arquivo baixado.");

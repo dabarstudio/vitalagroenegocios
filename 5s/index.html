@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#00582F">
+<title>Vital 5S</title>
+<link rel="icon" href="/vitalagroenegocios/logo.png">
+<link rel="apple-touch-icon" href="/vitalagroenegocios/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: app de campo — barra superior com marca e envio, abas (no celular, no rodapé), formulário de vistoria por senso com fotos, relatórios com gráficos */
+:root{
+  color-scheme:light;
+  --bg:#F3F6F1; --surface:#FFFFFF; --surface-2:#E8EFE4; --line:#D3DECD;
+  --fg:#18241B; --muted:#57665A; --brand:#00582F; --brand-2:#007941; --leaf:#79C25B; --on-brand:#FFFFFF;
+  --warn:#9A6200; --warn-bg:#FFF3D6; --bad:#B3261E; --bad-bg:#FBE4E1; --ok:#1F7A3F; --ok-bg:#E1F2E5;
+  --r-mb:#1F7A3F; --r-b:#5E9E2F; --r-r:#B07A00; --r-c:#B3261E; --r-na:#8A968C;
+  --display:"Poppins","Segoe UI",system-ui,sans-serif; --body:"Source Sans 3","Segoe UI",system-ui,sans-serif; --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522;
+  --r-mb:#5FBF7F; --r-b:#A3CF6B; --r-r:#E2B44C; --r-c:#F08A80; --r-na:#7E8C82; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522;
+  --r-mb:#5FBF7F; --r-b:#A3CF6B; --r-r:#E2B44C; --r-c:#F08A80; --r-na:#7E8C82; color-scheme:dark}
+html{padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+img{max-width:100%}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+.wrap{max-width:1020px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.logo{width:44px;height:44px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none;border:1px solid var(--line);text-decoration:none}
+.logo img{width:36px}
+.brandtxt{min-width:0}
+.brandtxt b{font-family:var(--display);display:block;color:var(--brand)}
+.brandtxt span{font-size:.8rem;color:var(--muted)}
+.spacer{flex:1}
+.sync{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 10px;font-size:.82rem;background:var(--surface);white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ok)}
+.sync[data-s="pend"] .dot{background:var(--warn)} .sync[data-s="off"] .dot{background:var(--muted)}
+.tabs{display:flex;gap:4px}
+.tab{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--muted);font-weight:600;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--surface-2);color:var(--brand)}
+.tab .n{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:var(--warn-bg);color:var(--warn);font-size:.75rem;margin-left:4px}
+.bottomnav{display:none}
+@media (max-width:820px){
+  .top .tabs{display:none}
+  .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);overflow-x:auto;
+    padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+  .bottomnav .tab{flex:1 0 auto;padding:8px 6px;font-size:.8rem}
+  main{padding-bottom:88px}
+  .brandtxt span{display:none}
+}
+main{padding-block:20px 40px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.stack{display:grid;gap:16px;align-content:start}
+.muted,.note{color:var(--muted)} .note{font-size:.88rem}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.btn{border:1px solid var(--line);background:var(--surface);padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.ghost{border-color:transparent;background:none;color:var(--brand)}
+.btn.sm{padding:6px 10px;font-size:.88rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.field{display:grid;gap:6px;min-width:0}
+.field label{font-weight:600;font-size:.92rem}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:700;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)} .chip.na{background:var(--surface-2);color:var(--muted)}
+.callout{background:var(--surface-2);border-radius:var(--r);padding:14px 16px;font-size:.93rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.login{max-width:440px;margin:24px auto}
+.linklike{border:0;background:none;color:var(--brand);font-weight:600;cursor:pointer;padding:4px 0;text-align:left}
+
+/* vistoria */
+.senso{display:grid;gap:10px}
+.senso h3{font-size:1rem;color:var(--brand);display:flex;justify-content:space-between;gap:8px}
+.item{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;background:var(--surface)}
+.item.done{border-color:color-mix(in srgb,var(--brand) 40%,var(--line))}
+.item .q{font-weight:600}
+.notas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.nota{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 4px;font-weight:700;font-size:.82rem;cursor:pointer;min-height:44px;line-height:1.15}
+.nota[aria-pressed="true"][data-r="MB"]{background:var(--r-mb);border-color:var(--r-mb);color:#fff}
+.nota[aria-pressed="true"][data-r="B"]{background:var(--r-b);border-color:var(--r-b);color:#fff}
+.nota[aria-pressed="true"][data-r="R"]{background:var(--r-r);border-color:var(--r-r);color:#fff}
+.nota[aria-pressed="true"][data-r="C"]{background:var(--r-c);border-color:var(--r-c);color:#fff}
+.nota[aria-pressed="true"][data-r="NA"]{background:var(--r-na);border-color:var(--r-na);color:#fff}
+@media (max-width:420px){.nota{font-size:.74rem}}
+.extras{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--surface-2)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+#rankBox,#galCard{min-width:0}
+.ordem{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
+.ordem select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;color:var(--fg)}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.gal button{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:0;overflow:hidden;cursor:pointer;text-align:left;display:grid;color:inherit}
+.gal .ph{aspect-ratio:1;display:grid;place-items:center;overflow:hidden;font-size:.75rem;color:var(--muted);text-align:center}
+.gal .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.gal small{display:block;padding:6px 8px;font-size:.72rem;line-height:1.3;color:var(--muted);background:var(--surface)}
+.gal small b{color:var(--fg);font-weight:600}
+button.thumb{padding:0;cursor:pointer}
+.ph-off{display:grid;place-items:center;height:100%;padding:4px;font-size:.72rem;color:var(--muted);text-align:center}
+dialog.lb{border:0;padding:0;background:rgba(8,12,9,.94);max-width:100vw;max-height:100vh;width:100vw;height:100vh;color:#fff}
+dialog.lb::backdrop{background:rgba(0,0,0,.88)}
+.lb .in{display:grid;grid-template-rows:auto 1fr auto;height:100%;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
+.lb .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.9rem}
+.lb .pic{display:grid;place-items:center;min-height:0;position:relative}
+.lb .pic img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+.lb .cap{text-align:center;font-size:.88rem;opacity:.9;padding-top:8px}
+.lb .x,.lb .nav{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:999px;min-width:44px;height:44px;font-size:1.3rem;cursor:pointer}
+.lb .nav{position:absolute;top:50%;transform:translateY(-50%)}
+.lb .nav.p{left:4px}.lb .nav.n{right:4px}
+.lb a{color:#fff}
+.thumb button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;line-height:1}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.progress{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--brand-2);transition:width .25s}
+.sticky-foot{position:sticky;bottom:0;background:var(--bg);padding-block:10px;border-top:1px solid var(--line);z-index:3}
+@media (max-width:820px){.sticky-foot{bottom:64px}}
+
+/* relatórios */
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+@media (max-width:820px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+@media (max-width:820px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 16px}
+.kpi b{display:block;font-family:var(--display);font-size:1.7rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi span{font-size:.85rem;color:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:820px){.two{grid-template-columns:minmax(0,1fr)}}
+.hbar{display:grid;grid-template-columns:120px minmax(0,1fr) 52px;gap:10px;align-items:center;font-variant-numeric:tabular-nums;font-size:.92rem}
+.hbar .tr{height:16px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.hbar .tr i{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--brand-2)}
+.hbar .v{text-align:right;font-weight:700}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface-2);white-space:nowrap}
+tbody tr.click{cursor:pointer} tbody tr.click:hover{background:var(--surface-2)}
+td.num,th.num{text-align:right;white-space:nowrap}
+.svgchart{width:100%;height:auto;display:block}
+.svgchart text{fill:var(--muted);font-size:11px;font-family:var(--body)}
+.svgchart .grid{stroke:var(--line)}
+.svgchart .line{stroke:var(--brand-2);fill:none;stroke-width:2.5}
+.svgchart .pt{fill:var(--brand-2)}
+.svgchart .lbl{fill:var(--fg);font-weight:700}
+.svgchart .meta{stroke:var(--r-r);stroke-dasharray:6 4;stroke-width:1.5}
+.svgchart .metal{fill:var(--r-r);font-weight:700}
+.heat th,.heat td{padding:7px 9px}
+.heat th.m,.heat td.hc{text-align:center}
+.heat td.hc{background:color-mix(in srgb,var(--h) 20%,transparent);color:color-mix(in srgb,var(--h) 72%,var(--fg));font-weight:700}
+.heat .k{position:sticky;left:0;background:var(--surface);min-width:150px;z-index:1}
+@media (min-width:821px){.heat .k{min-width:230px}}
+.heat th.k{background:var(--surface-2)}
+.heat tfoot td{font-weight:700;background:var(--surface-2);border-top:2px solid var(--line)}
+.heat tfoot td.k{background:var(--surface-2)}
+.dist{display:flex;height:24px;border-radius:6px;overflow:hidden;background:var(--surface-2)} .dist i{display:block;height:100%}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.88rem;color:var(--muted)} .leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.obs-l{display:grid;grid-template-columns:78px minmax(0,1fr) auto;gap:4px 12px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;align-items:start}
+.obs-l:hover{background:var(--surface-2)} .obs-l p{margin:3px 0 0;font-size:.9rem;white-space:pre-wrap}
+@media (max-width:600px){.obs-l{grid-template-columns:minmax(0,1fr) auto}.obs-l>.note{grid-column:1/-1}}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.det-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.det-item .o{grid-column:1/-1;font-size:.88rem;color:var(--muted)}
+.det-item .fs{grid-column:1/-1}
+.emplist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;max-height:260px;overflow:auto;padding:2px}
+.emplist label{display:flex;gap:10px;align-items:center;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.emplist label.on{border-color:var(--brand);background:var(--surface-2)}
+.emplist input{width:20px;height:20px;accent-color:var(--brand);flex:none}
+.gcard{border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:8px;background:var(--surface)}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{background:var(--surface-2);border-radius:999px;padding:2px 10px;font-size:.8rem}
+code{background:var(--surface-2);padding:2px 6px;border-radius:6px;word-break:break-all}
+@media print{.top,.bottomnav,.noprint,.toast{display:none!important} body{background:#fff} .card{break-inside:avoid;border-color:#ccc} main{padding:0}}
+</style>
+<script src="/vitalagroenegocios/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<style id="vlarg">.wrap{max-width:1680px}dialog.pd.largo{max-width:1100px}</style></head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/vitalagroenegocios/" title="Portal Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
+    <div class="brandtxt"><b>Vital 5S</b><span>Avaliação de organização e limpeza</span></div>
+    <div class="spacer"></div>
+    <nav class="tabs" id="tabsTop" role="tablist" aria-label="Seções"></nav>
+    <div class="sync" id="sync" data-s="ok" hidden><span class="dot"></span><span id="syncTxt">Tudo enviado</span></div>
+  </div>
+</header>
+<nav class="bottomnav" id="tabsBottom" role="tablist" aria-label="Seções"></nav>
+
+<main class="wrap">
+  <!-- login -->
+  <section id="v-login" class="view" hidden><div class="card stack login" id="loginBody"></div></section>
+
+  <!-- avaliar -->
+  <section id="v-avaliar" class="view stack" hidden>
+    <div class="card stack" id="cab">
+      <div><div class="eyebrow">Nova vistoria</div><h2 style="font-size:1.35rem">Avaliação 5S</h2></div>
+      <div class="grid2">
+        <div class="field"><label for="aEmp">Empresa</label><select id="aEmp"></select></div>
+        <div class="field"><label for="aUni">Unidade / sede</label><select id="aUni"></select><input id="aUniNova" placeholder="Nome da unidade" hidden></div>
+        <div class="field"><label for="aMod">Tipo de vistoria</label><select id="aMod"></select></div>
+        <div class="field"><label for="aLocal" id="aLocalLbl">Setor avaliado</label><input id="aLocal" list="locaisList" placeholder="Ex.: Manutenção"><datalist id="locaisList"></datalist></div>
+        <div class="field"><label for="aData">Data da vistoria</label><input id="aData" type="date"></div>
+        <div class="field"><label for="aAval">Avaliadores</label><input id="aAval" placeholder="Nomes de quem está avaliando"></div>
+        <div class="field" id="boxOcup" hidden><label for="aOcup">Ocupantes</label><input id="aOcup" placeholder="Quem mora ou usa o local (opcional)"></div>
+      </div>
+    </div>
+    <div class="callout" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <b>Escala:</b><span class="chip ok">Muito bom</span><span class="chip ok" style="opacity:.8">Bom</span><span class="chip warn">Regular</span><span class="chip bad">Crítico</span><span class="chip na">Não se aplica</span>
+      <span class="note">Fotos são opcionais, mas ajudam muito nos itens Regular e Crítico.</span>
+    </div>
+    <div class="stack" id="itens"></div>
+    <div class="card stack">
+      <div class="field"><label for="aObs">Observações gerais</label><textarea id="aObs" rows="3" placeholder="Pontos de melhoria, combinados com o setor, prazos…"></textarea></div>
+      <div class="extras"><label class="btn sm file">📷 Fotos gerais<input type="file" accept="image/*" multiple data-foto="geral"></label><div class="thumbs" data-thumbs="geral"></div></div>
+    </div>
+    <div class="sticky-foot noprint">
+      <div class="row" style="justify-content:space-between">
+        <div style="flex:1;min-width:160px"><div class="progress"><i id="prog" style="width:0"></i></div><span class="note" id="progTxt"></span></div>
+        <button class="btn primary" id="btnConcluir">Concluir vistoria</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-fim" class="view stack" hidden></section>
+
+  <!-- relatórios -->
+  <section id="v-rel" class="view stack" hidden>
+    <div class="row" style="justify-content:space-between">
+      <div><div class="eyebrow">Relatórios</div><h2 style="font-size:1.35rem" id="relTit">Resultados do 5S</h2></div>
+      <div class="row noprint"><button class="btn sm" id="btnCsv">Exportar CSV</button><button class="btn sm" id="btnPrint">Imprimir / PDF</button></div>
+    </div>
+    <div class="card filters noprint" id="filtros"></div>
+    <div id="relBody" class="stack"></div>
+  </section>
+
+  <!-- lista -->
+  <section id="v-lista" class="view stack" hidden>
+    <div><div class="eyebrow">Histórico</div><h2 style="font-size:1.35rem">Vistorias realizadas</h2></div>
+    <div class="card filters noprint" id="filtros2"></div>
+    <div id="listaBody" class="stack"></div>
+  </section>
+
+  <section id="v-det" class="view stack" hidden></section>
+
+  <!-- admin -->
+  <section id="v-adm" class="view stack" hidden>
+    <div><div class="eyebrow">Equipe Vital</div><h2 style="font-size:1.35rem">Empresas e acessos do 5S</h2></div>
+    <div class="card stack" id="admEmp"></div>
+    <div class="card stack" id="admAcesso"></div>
+    <div id="admLista" class="stack"></div>
+    <div class="card stack" id="admImport"></div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+"use strict";
+/* ===== util ===== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s => String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+const store = { get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch{ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} } };
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "x"+Date.now().toString(36)+Math.random().toString(36).slice(2));
+const hoje = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const fmtD = iso => iso ? iso.slice(8,10)+"/vitalagroenegocios/"+iso.slice(5,7)+"/vitalagroenegocios/"+iso.slice(0,4) : "";
+const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+let toastT; function toast(m){ const t=$("#toast"); t.textContent=m; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,3000); }
+async function copiar(t){ try{ await navigator.clipboard.writeText(t); toast("Copiado."); }catch{ toast("Não foi possível copiar."); } }
+function baixar(nome, dados, tipo){ const b = dados instanceof Blob ? dados : new Blob([dados],{type:tipo||"text/plain"}); const u=URL.createObjectURL(b), a=document.createElement("a"); a.href=u; a.download=nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); }
+function gerarSenha(){ const a="ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"; let s=[...crypto.getRandomValues(new Uint32Array(10))].map(n=>a[n%a.length]).join(""); if(!/[0-9]/.test(s)) s=s.slice(0,9)+"7"; return s; }
+
+/* ===== modelos de vistoria ===== */
+const SENSOS = ["Utilização","Ordenação","Limpeza","Saúde","Autodisciplina"];
+const SENSO_DESC = {"Utilização":"Seiri · manter só o necessário","Ordenação":"Seiton · cada coisa no seu lugar","Limpeza":"Seiso · local limpo e cuidado","Saúde":"Seiketsu · padronização, segurança e bem-estar","Autodisciplina":"Shitsuke · manter e melhorar"};
+const MODELOS = {
+  setores:{nome:"Setores de trabalho", local:"Setor avaliado", ex:"Ex.: Manutenção, Almoxarifado", itens:[
+    ["Utilização","Mantém nos locais de trabalho somente materiais necessários às atividades."],
+    ["Utilização","Utensílios e ferramentas estão em boas condições de uso."],
+    ["Ordenação","Mantém o local de trabalho organizado."],
+    ["Ordenação","Armários, equipamentos e lixeiras do setor estão identificados."],
+    ["Ordenação","Materiais pessoais estão guardados em local específico."],
+    ["Limpeza","Os lixos estão separados corretamente."],
+    ["Limpeza","Mantém limpo o local e os utensílios de trabalho."],
+    ["Limpeza","Banheiro/vestiário encontram-se limpos, com papel higiênico e papel toalha."],
+    ["Saúde","Os uniformes e EPIs estão em bom estado de conservação e sendo utilizados corretamente."],
+    ["Saúde","Existe sinalização adequada no local de trabalho."],
+    ["Saúde","O espaço de circulação permite o tráfego de pessoas e equipamentos sem perigo de incidentes."],
+    ["Autodisciplina","Conduta dos funcionários do setor durante a vistoria do 5S."],
+    ["Autodisciplina","Desperdícios são solucionados quando identificados."],
+    ["Autodisciplina","Melhorias realizadas após a última avaliação."]]},
+  alojamentos:{nome:"Alojamentos", local:"Alojamento / quarto", ex:"Ex.: Alojamento 04 · quarto 2", ocup:true, itens:[
+    ["Limpeza","Limpeza do piso."],["Limpeza","Limpeza de parede, portas e janelas."],["Limpeza","Limpeza e organização do banheiro."],
+    ["Ordenação","Organização do quarto."],["Ordenação","Calçados fora do armário (externo)."],["Limpeza","Lixo na frente, organização geral da frente."]]},
+  residencias:{nome:"Residências", local:"Residência", ex:"Ex.: Residência 113", ocup:true, itens:[
+    ["Limpeza","Limpeza da calçada."],["Limpeza","Limpeza de parede, portas e janelas."],["Limpeza","Limpeza geral do quintal."],
+    ["Saúde","Condições dos vidros e portas."],["Saúde","Botijão de gás e iluminação econômica."],["Ordenação","Organização externa da casa."]]}
+};
+const RESP = [["MB","Muito bom"],["B","Bom"],["R","Regular"],["C","Crítico"],["NA","Não se aplica"]];
+const RNOME = Object.fromEntries(RESP);
+const PTS = {MB:3,B:2,R:1,C:0};
+const nota = itens => { const v = itens.filter(i=>i.r in PTS).map(i=>PTS[i.r]); return v.length ? Math.round(v.reduce((a,b)=>a+b,0)/(3*v.length)*1000)/10 : null; };
+const faixa = n => n==null ? ["na","Sem nota"] : n>=85 ? ["ok","Excelente"] : n>=70 ? ["ok","Bom"] : n>=50 ? ["warn","Atenção"] : ["bad","Crítico"];
+let META = store.get("v5s_meta", 80), ESC3 = store.get("v5s_esc3", false);
+const n3 = v => (v/100*3).toFixed(2).replace(".",",");
+const pct = n => n==null ? "–" : ESC3 ? n3(n) : (Math.round(n)+"%");
+const dif = d => ESC3 ? n3(Math.abs(d)) : Math.round(Math.abs(d))+" pontos";
+const corN = v => v==null ? "var(--r-na)" : v>=85 ? "var(--r-mb)" : v>=70 ? "var(--r-b)" : v>=50 ? "var(--r-r)" : "var(--r-c)";
+const chipR = r => r==="MB"||r==="B" ? "ok" : r==="R" ? "warn" : r==="C" ? "bad" : "na";
+
+/* ===== servidor ===== */
+const CFG = window.VITAL_CONFIG || {};
+const sb = (window.supabase && CFG.supabaseUrl && !/COLE/.test(CFG.supabaseUrl)) ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth:{persistSession:true, autoRefreshToken:true}}) : null;
+const APP_URL = location.origin + "/vitalagroenegocios/5s/";
+async function tudo(q, passo=1000){ const out=[]; for(let i=0;;i+=passo){ const {data,error}=await q().range(i,i+passo-1); if(error) throw error; out.push(...data); if(data.length<passo) break; } return out; }
+async function fn(nome, corpo){ const {data,error}=await sb.functions.invoke(nome,{body:corpo}); if(error){ let m=error.message; try{ const j=await error.context.json(); m=j.erro||m; }catch{} throw new Error(m); } if(data&&data.erro) throw new Error(data.erro); return data; }
+
+/* ===== estado ===== */
+const S = { papel:null, perfil:null, user:null, empresas:[], avs:[], outbox:store.get("v5s_outbox",[]), syncing:false, acessos:[] };
+let F = { emp:"", uni:"", mod:"", ano:"", de:"", ate:"" };
+
+/* fotos pendentes ficam no aparelho até o envio */
+const idb = (() => { let p=null; const abrir=()=>p||=new Promise((ok,err)=>{ try{ const r=indexedDB.open("vital-5s",1); r.onupgradeneeded=()=>r.result.createObjectStore("f"); r.onsuccess=()=>ok(r.result); r.onerror=()=>err(r.error);}catch(e){err(e);} });
+  const tx=(m,f)=>abrir().then(db=>new Promise((ok,err)=>{ const t=db.transaction("f",m), q=f(t.objectStore("f")); t.oncomplete=()=>ok(q&&q.result); t.onerror=()=>err(t.error); }));
+  return { put:(k,v)=>tx("readwrite",s=>s.put(v,k)), get:k=>tx("readonly",s=>s.get(k)), del:k=>tx("readwrite",s=>s.delete(k)) }; })();
+
+/* ===== abas ===== */
+let TABS = [], cur = "login";
+function definirAbas(){
+  TABS = !S.papel ? [] : [["avaliar","Avaliar"],["rel","Relatórios"],["lista","Vistorias"]].concat(S.papel==="admin" ? [["adm","Empresas e acessos"]] : []);
+  renderTabs();
+}
+function renderTabs(){
+  const p = S.outbox.length;
+  const h = TABS.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${cur===k}">${l}${k==="lista"&&p?`<span class="n">${p}</span>`:""}</button>`).join("")
+    + (S.papel ? `<button class="tab" data-sair="1">Sair</button>` : "");
+  $("#tabsTop").innerHTML = h; $("#tabsBottom").innerHTML = h;
+}
+function go(k){
+  if (!S.papel) k = "login";
+  cur = k; renderTabs();
+  document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== "v-"+k);
+  ({login:renderLogin, avaliar:renderAvaliar, rel:renderRel, lista:renderLista, adm:renderAdm})[k]?.();
+  try{ history.replaceState(null,"","#"+k); }catch{}
+  window.scrollTo({top:0});
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-tab]"); if (t) { go(t.dataset.tab); return; }
+  if (e.target.closest("[data-sair]")) sair();
+});
+
+/* ===== login ===== */
+let modoRecuperar = false;
+function renderLogin(){
+  const el = $("#loginBody");
+  if (!sb) { el.innerHTML = `<h2>Vital 5S</h2><p class="muted">O app ainda não foi ligado ao servidor (config.js).</p>`; return; }
+  if (modoRecuperar) {
+    el.innerHTML = `<div><div class="eyebrow">Nova senha</div><h2 style="font-size:1.3rem">Crie sua nova senha</h2></div>
+      <div class="field"><label for="ns1">Nova senha</label><input id="ns1" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="ns2">Repita a senha</label><input id="ns2" type="password" autocomplete="new-password"></div>
+      <p class="note" id="nsErr" role="alert"></p><button class="btn primary" id="nsOk">Salvar senha</button>`;
+    $("#nsOk").onclick = async () => { const a=$("#ns1").value, b=$("#ns2").value;
+      if (a.length<8 || !/[A-Za-z]/.test(a) || !/[0-9]/.test(a)) { $("#nsErr").textContent="Use pelo menos 8 caracteres, com letras e números."; return; }
+      if (a!==b) { $("#nsErr").textContent="As senhas não conferem."; return; }
+      const {error} = await sb.auth.updateUser({password:a}); if (error) { $("#nsErr").textContent="Não foi possível salvar: "+error.message; return; }
+      modoRecuperar=false; toast("Senha alterada."); const {data:{user}} = await sb.auth.getUser(); if (user) entrar(user); };
+    return;
+  }
+  el.innerHTML = `<div style="text-align:center"><img src="/vitalagroenegocios/logo.png" alt="" style="width:72px"><div class="eyebrow" style="margin-top:8px">Área restrita</div><h2 style="font-size:1.35rem">Entrar no Vital 5S</h2>
+      <p class="muted" style="margin:6px 0 0">Para o comitê 5S, os gestores e a equipe Vital.</p></div>
+    <form id="fLogin" class="stack" novalidate>
+      <div class="field"><label for="lLogin">Login ou e-mail</label><input id="lLogin" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+      <div class="field"><label for="lSenha">Senha</label><input id="lSenha" type="password" autocomplete="current-password"></div>
+      <p class="note" id="lErr" role="alert" style="margin:0"></p>
+      <button class="btn primary" id="lBtn" type="submit">Entrar</button></form>
+    <button class="linklike" id="lEsq" type="button">Esqueci minha senha</button>
+    <a class="linklike" href="/vitalagroenegocios/" style="text-decoration:none">← Voltar ao site da Vital</a>`;
+  const emailDe = async v => { v=v.trim().toLowerCase(); if (v.includes("@")) return v; const {data}=await sb.rpc("email_do_login",{p_login:v}); return data||""; };
+  $("#fLogin").addEventListener("submit", async e => { e.preventDefault();
+    const v=$("#lLogin").value, s=$("#lSenha").value; if (!v.trim()||!s) { $("#lErr").textContent="Informe login e senha."; return; }
+    $("#lBtn").disabled=true; $("#lBtn").textContent="Verificando…"; $("#lErr").textContent="";
+    try { const email=await emailDe(v); if(!email) throw 0; const {data,error}=await sb.auth.signInWithPassword({email,password:s}); if(error) throw error; await entrar(data.user); }
+    catch { $("#lErr").textContent="Login ou senha incorretos."; $("#lBtn").disabled=false; $("#lBtn").textContent="Entrar"; } });
+  $("#lEsq").onclick = async () => { const v=$("#lLogin").value; if(!v.trim()){ $("#lErr").textContent="Digite seu login ou e-mail acima e toque de novo em Esqueci minha senha."; return; }
+    const email=await emailDe(v); if(email) await sb.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});
+    $("#lErr").textContent="Se o login existir, enviamos um link para o e-mail cadastrado."; };
+}
+async function entrar(user){
+  const {data:perfil} = await sb.from("perfis").select("papel, nome, email, login").eq("user_id", user.id).maybeSingle();
+  if (!perfil) { await sb.auth.signOut(); toast("Este acesso não está liberado."); go("login"); return; }
+  if (perfil.papel === "cliente") { location.href = "/vitalagroenegocios/cliente/"; return; }
+  S.user = user; S.perfil = perfil; S.papel = perfil.papel;
+  definirAbas(); $("#sync").hidden = false;
+  await carregar();
+  const volta = new URLSearchParams(location.search).get("volta");
+  if (volta && /^\/[a-z0-9/_-]*$/i.test(volta)) { location.href = volta; return; }
+  go(location.hash==="#rel" ? "rel" : S.papel==="admin" ? "rel" : "avaliar");
+  sincronizar();
+}
+async function sair(){ await sb.auth.signOut().catch(()=>{}); S.papel=null; S.avs=[]; definirAbas(); $("#sync").hidden=true; go("login"); }
+
+/* ===== dados ===== */
+async function carregar(){
+  try {
+    const [emps, avs] = await Promise.all([
+      sb.from("s5_empresas").select("*").order("nome").then(r=>{ if(r.error) throw r.error; return r.data; }),
+      tudo(() => sb.from("s5_avaliacoes").select("id,empresa,unidade,modelo,local,data,avaliadores,ocupantes,itens,obs,fotos,nota,origem,autor,criado_em").order("data",{ascending:false}))
+    ]);
+    S.empresas = emps; S.avs = avs;
+    if (S.papel !== "admin") { const {data:ge} = await sb.from("gestor_empresas").select("empresa").eq("user_id", S.user.id); S.minhas = (ge||[]).map(x=>x.empresa); }
+    if (S.papel === "admin") S.acessos = await carregarAcessos();
+  } catch (e) { toast("Não foi possível carregar os dados agora."); }
+}
+async function carregarAcessos(){
+  const {data} = await sb.from("perfis").select("user_id, nome, email, login, papel, gestor_empresas(empresa)").in("papel",["gestor","comite"]).order("nome");
+  return (data||[]).map(g=>({id:g.user_id, nome:g.nome, email:g.email, login:g.login||g.email, papel:g.papel, empresas:(g.gestor_empresas||[]).map(x=>x.empresa)}));
+}
+const empresasUsuario = () => S.papel==="admin" ? S.empresas.filter(e=>e.ativo!==false).map(e=>e.nome)
+  : [...new Set([...(S.minhas||[]), ...S.empresas.map(e=>e.nome)])].filter(n => S.empresas.some(e=>norm(e.nome)===norm(n)) || (S.minhas||[]).some(m=>norm(m)===norm(n)));
+
+/* ===== vistoria ===== */
+let V = null;   // rascunho
+const RASC = "v5s_rascunho";
+function novoRascunho(){
+  const emps = empresasUsuario();
+  return { id: uuid(), emp: emps.length===1 ? emps[0] : "", uni:"", mod:"setores", local:"", data: hoje(), aval: (S.perfil&&S.perfil.nome)||"", ocup:"", obs:"",
+    itens: MODELOS.setores.itens.map(([s,q])=>({s,q,r:"",o:"",f:[]})), fotos:[] };
+}
+function salvarRasc(){ store.set(RASC, V); }
+function renderAvaliar(){
+  V = V || store.get(RASC, null) || novoRascunho();
+  const emps = empresasUsuario();
+  $("#aEmp").innerHTML = `<option value="">${emps.length?"Selecione":"Nenhuma empresa liberada"}</option>` + emps.map(n=>`<option ${n===V.emp?"selected":""}>${esc(n)}</option>`).join("");
+  renderUni();
+  $("#aMod").innerHTML = Object.entries(MODELOS).map(([k,m])=>`<option value="${k}" ${k===V.mod?"selected":""}>${m.nome}</option>`).join("");
+  $("#aLocal").value = V.local; $("#aData").value = V.data; $("#aAval").value = V.aval; $("#aOcup").value = V.ocup; $("#aObs").value = V.obs;
+  renderMod(); renderItens(); thumbs("geral");
+}
+function renderUni(){
+  const e = S.empresas.find(x=>norm(x.nome)===norm(V.emp));
+  const us = [...new Set([...(e&&e.unidades||[]), ...S.avs.filter(a=>norm(a.empresa)===norm(V.emp)).map(a=>a.unidade).filter(Boolean)])].sort();
+  $("#aUni").innerHTML = `<option value="">${us.length?"Selecione":"Única / não se aplica"}</option>` + us.map(u=>`<option ${u===V.uni?"selected":""}>${esc(u)}</option>`).join("") + `<option value="__nova">+ Outra unidade…</option>`;
+  const locais = [...new Set(S.avs.filter(a=>norm(a.empresa)===norm(V.emp) && a.modelo===V.mod && (!V.uni || a.unidade===V.uni)).map(a=>a.local))].sort();
+  $("#locaisList").innerHTML = locais.map(l=>`<option value="${esc(l)}">`).join("");
+}
+function renderMod(){
+  const m = MODELOS[V.mod]; $("#aLocalLbl").textContent = m.local; $("#aLocal").placeholder = m.ex; $("#boxOcup").hidden = !m.ocup;
+}
+function renderItens(){
+  const grupos = SENSOS.map(s => [s, V.itens.map((it,i)=>[it,i]).filter(([it])=>it.s===s)]).filter(([,l])=>l.length);
+  $("#itens").innerHTML = grupos.map(([s,l]) => `<div class="card senso"><h3><span>${s}</span><span class="note" style="font-family:var(--body);font-weight:600">${SENSO_DESC[s]}</span></h3>
+    ${l.map(([it,i]) => `<div class="item ${it.r?"done":""}" data-i="${i}">
+      <div class="q">${i+1}. ${esc(it.q)}</div>
+      <div class="notas" role="group" aria-label="Avaliação do item ${i+1}">${RESP.map(([k,t])=>`<button type="button" class="nota" data-r="${k}" data-item="${i}" aria-pressed="${it.r===k}">${t}</button>`).join("")}</div>
+      <div class="extras"><button type="button" class="btn sm" data-obs="${i}">${it.o?"✎ Observação":"+ Observação"}</button>
+        <label class="btn sm file">📷 Foto<input type="file" accept="image/*" capture="environment" multiple data-foto="${i}"></label>
+        <div class="thumbs" data-thumbs="${i}"></div></div>
+      <div class="field" ${it.o||it.abrirObs?"":"hidden"} data-obsbox="${i}"><textarea rows="2" data-obstxt="${i}" placeholder="O que foi observado neste item">${esc(it.o)}</textarea></div>
+    </div>`).join("")}</div>`).join("");
+  V.itens.forEach((_,i)=>thumbs(i)); progresso();
+}
+function progresso(){
+  const n = V.itens.filter(i=>i.r).length, t = V.itens.length;
+  $("#prog").style.width = (n/t*100)+"%"; $("#progTxt").textContent = `${n} de ${t} itens avaliados` + (n ? ` · nota parcial ${pct(nota(V.itens))}` : "");
+}
+$("#aEmp").onchange = e => { V.emp = e.target.value; V.uni=""; renderUni(); salvarRasc(); };
+$("#aUni").onchange = e => { if (e.target.value==="__nova") { $("#aUniNova").hidden=false; $("#aUniNova").focus(); V.uni=""; } else { $("#aUniNova").hidden=true; V.uni=e.target.value; } renderUni(); salvarRasc(); };
+$("#aUniNova").oninput = e => { V.uni = e.target.value.trim(); salvarRasc(); };
+$("#aMod").onchange = e => {
+  if (V.itens.some(i=>i.r) && !confirm("Trocar o tipo de vistoria apaga as notas já marcadas. Continuar?")) { e.target.value = V.mod; return; }
+  V.mod = e.target.value; V.itens = MODELOS[V.mod].itens.map(([s,q])=>({s,q,r:"",o:"",f:[]})); renderMod(); renderUni(); renderItens(); salvarRasc(); };
+for (const [id,k] of [["aLocal","local"],["aData","data"],["aAval","aval"],["aOcup","ocup"],["aObs","obs"]]) $("#"+id).addEventListener("input", e => { V[k] = e.target.value; salvarRasc(); });
+$("#itens").addEventListener("click", e => {
+  const b = e.target.closest(".nota"); if (b) { const i=+b.dataset.item; V.itens[i].r = b.dataset.r;
+    b.parentElement.querySelectorAll(".nota").forEach(x=>x.setAttribute("aria-pressed", x===b)); b.closest(".item").classList.add("done"); progresso(); salvarRasc();
+    if ((b.dataset.r==="C"||b.dataset.r==="R") && !V.itens[i].o) { const box=document.querySelector(`[data-obsbox="${i}"]`); box.hidden=false; }
+    return; }
+  const o = e.target.closest("[data-obs]"); if (o) { const box=document.querySelector(`[data-obsbox="${o.dataset.obs}"]`); box.hidden=!box.hidden; if(!box.hidden) box.querySelector("textarea").focus(); }
+});
+$("#itens").addEventListener("input", e => { const t=e.target.closest("[data-obstxt]"); if (t) { V.itens[+t.dataset.obstxt].o = t.value; salvarRasc(); } });
+
+/* fotos: reduz no aparelho e guarda até enviar */
+async function reduzir(file){
+  const img = await new Promise((ok,err)=>{ const i=new Image(); i.onload=()=>ok(i); i.onerror=err; i.src=URL.createObjectURL(file); });
+  const max=1600, k=Math.min(1, max/Math.max(img.width,img.height)), c=document.createElement("canvas");
+  c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(img.src);
+  return await new Promise(ok=>c.toBlob(ok,"image/jpeg",0.78));
+}
+document.addEventListener("change", async e => {
+  const inp = e.target.closest("[data-foto]"); if (!inp || !V) return;
+  const alvo = inp.dataset.foto, lista = alvo==="geral" ? V.fotos : V.itens[+alvo].f;
+  for (const f of [...inp.files].slice(0,6)) {
+    try { const blob = await reduzir(f); const k = V.id+"-"+uuid().slice(0,8); await idb.put(k, blob); lista.push("idb:"+k); }
+    catch { toast("Não foi possível ler uma das fotos."); }
+  }
+  inp.value = ""; salvarRasc(); thumbs(alvo);
+});
+const urlCache = new Map();
+async function fotoUrl(ref){
+  if (urlCache.has(ref)) return urlCache.get(ref);
+  let u = null;
+  if (ref.startsWith("idb:")) { const b = await idb.get(ref.slice(4)).catch(()=>null); if (b) u = URL.createObjectURL(b); }
+  else if (ref.startsWith("s:")) { const {data} = await sb.storage.from("fotos5s").createSignedUrl(ref.slice(2), 3600); u = data && data.signedUrl; }
+  else u = ref;
+  urlCache.set(ref, u); return u;
+}
+/* fotos antigas (formulário Google) ficam no Drive: mostra a miniatura para quem tem acesso; senão, link */
+const driveId = r => (String(r).match(/[?&]id=([\w-]{10,})|\/d\/([\w-]{10,})/)||[]).slice(1).find(Boolean) || "";
+const fotoSrc = async (r, w) => r.startsWith("http") ? (driveId(r) ? `https://drive.google.com/thumbnail?id=${driveId(r)}&sz=w${w||400}` : r) : await fotoUrl(r);
+const fotoOff = r => `<span class="ph-off">Foto no Google Drive<br>toque para abrir</span>`;
+async function encheFotos(raiz){
+  for (const im of raiz.querySelectorAll("img[data-src]")) {
+    const r = im.dataset.src; im.removeAttribute("data-src");
+    im.onerror = () => { im.replaceWith(document.createRange().createContextualFragment(fotoOff(r))); };
+    const u = await fotoSrc(r, 400); if (u) im.src = u; else im.onerror();
+  }
+}
+let LB = {lista:[], i:0};
+function lightbox(lista, i){
+  let d = document.getElementById("lb");
+  if (!d) {
+    d = document.createElement("dialog"); d.id = "lb"; d.className = "lb";
+    d.innerHTML = `<div class="in"><div class="bar"><span id="lbN"></span><span style="display:flex;gap:8px"><a id="lbAbrir" class="x" style="display:inline-grid;place-items:center;font-size:.85rem;padding:0 14px;text-decoration:none" target="_blank" rel="noopener">Abrir original</a><button class="x" id="lbX" aria-label="Fechar">×</button></span></div>
+      <div class="pic"><button class="nav p" id="lbP" aria-label="Foto anterior">‹</button><img id="lbImg" alt=""><button class="nav n" id="lbNx" aria-label="Próxima foto">›</button></div><div class="cap" id="lbCap"></div></div>`;
+    document.body.appendChild(d);
+    d.querySelector("#lbX").onclick = () => d.close();
+    d.querySelector("#lbP").onclick = () => mostraLb(LB.i-1);
+    d.querySelector("#lbNx").onclick = () => mostraLb(LB.i+1);
+    d.addEventListener("click", e => { if (e.target === d || e.target.classList.contains("pic")) d.close(); });
+    d.addEventListener("keydown", e => { if (e.key==="ArrowLeft") mostraLb(LB.i-1); if (e.key==="ArrowRight") mostraLb(LB.i+1); });
+    let x0 = null; d.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; }, {passive:true});
+    d.addEventListener("touchend", e => { if (x0==null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) mostraLb(LB.i + (dx<0?1:-1)); x0 = null; });
+  }
+  LB = {lista, i}; mostraLb(i); if (!d.open) d.showModal();
+}
+async function mostraLb(i){
+  const n = LB.lista.length; if (!n) return; i = (i+n)%n; LB.i = i;
+  const f = LB.lista[i], im = document.getElementById("lbImg"), ab = document.getElementById("lbAbrir");
+  document.getElementById("lbN").textContent = `${i+1} de ${n}`;
+  document.getElementById("lbCap").textContent = f.cap || "";
+  document.getElementById("lbP").hidden = document.getElementById("lbNx").hidden = n < 2;
+  im.removeAttribute("src"); im.alt = ""; im.hidden = true; im.onload = () => { im.hidden = false; };
+  const orig = f.r.startsWith("http") ? f.r : await fotoUrl(f.r);
+  ab.href = orig || "#"; ab.hidden = !orig;
+  im.onerror = () => { im.hidden = true; im.removeAttribute("src"); document.getElementById("lbCap").textContent = (f.cap ? f.cap+" · " : "") + "Sem permissão para mostrar aqui. Use \"Abrir original\" (precisa entrar na conta Google com acesso à pasta)."; };
+  const u = await fotoSrc(f.r, 1600); if (LB.i === i && u) im.src = u;
+}
+async function thumbs(alvo){
+  const box = document.querySelector(`[data-thumbs="${alvo}"]`); if (!box) return;
+  const lista = alvo==="geral" ? V.fotos : V.itens[+alvo].f;
+  box.innerHTML = lista.map((r,j)=>`<div class="thumb"><img alt="Foto ${j+1}" data-ref="${esc(r)}"><button type="button" aria-label="Remover foto" data-rmfoto="${alvo}|${j}">×</button></div>`).join("");
+  for (const im of box.querySelectorAll("img")) { const u = await fotoUrl(im.dataset.ref); if (u) im.src = u; }
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-rmfoto]"); if (!b) return;
+  const [alvo, j] = b.dataset.rmfoto.split("|"); const lista = alvo==="geral" ? V.fotos : V.itens[+alvo].f;
+  const [ref] = lista.splice(+j,1); if (ref && ref.startsWith("idb:")) idb.del(ref.slice(4)).catch(()=>{});
+  salvarRasc(); thumbs(alvo);
+});
+
+$("#btnConcluir").onclick = () => {
+  const falta = [];
+  if (!V.emp) falta.push("a empresa"); if (!V.local.trim()) falta.push(MODELOS[V.mod].local.toLowerCase()); if (!V.data) falta.push("a data");
+  const sem = V.itens.map((it,i)=>it.r?null:i+1).filter(Boolean);
+  if (sem.length) falta.push(`a nota dos itens ${sem.join(", ")}`);
+  if (falta.length) { toast("Falta informar " + falta.join(", ") + "."); if (sem.length) document.querySelector(`[data-i="${sem[0]-1}"]`)?.scrollIntoView({block:"center",behavior:"smooth"}); return; }
+  const reg = { id:V.id, empresa:V.emp, unidade:V.uni||"", modelo:V.mod, local:V.local.trim(), data:V.data, avaliadores:V.aval.trim(), ocupantes:V.ocup.trim(),
+    itens: V.itens.map(({s,q,r,o,f})=>({s,q,r,o:o.trim(),f})), obs:V.obs.trim(), fotos:V.fotos, nota: nota(V.itens), origem:"app" };
+  S.outbox.push(reg); store.set("v5s_outbox", S.outbox);
+  S.avs.unshift({...reg, autor:S.user.id, pendente:true});
+  store.set(RASC, null); const fim = reg; V = null;
+  mostrarFim(fim); sincronizar();
+};
+function mostrarFim(a){
+  const [cls, txt] = faixa(a.nota);
+  const porS = porSenso([a]);
+  $("#v-fim").innerHTML = `<div class="card stack">
+    <div class="row" style="justify-content:space-between"><div><div class="eyebrow">Vistoria concluída</div><h2 style="font-size:1.35rem">${esc(a.local)}</h2><div class="note">${esc(a.empresa)}${a.unidade?" · "+esc(a.unidade):""} · ${fmtD(a.data)}</div></div>
+      <div style="text-align:right"><b style="font-family:var(--display);font-size:2.2rem">${pct(a.nota)}</b><br><span class="chip ${cls}">${txt}</span></div></div>
+    <div class="stack">${porS.map(([s,v])=>barra(s,v)).join("")}</div>
+    <p class="note" id="fimSync">${S.outbox.length ? "Enviando para o servidor… se estiver sem internet, o envio acontece sozinho quando a conexão voltar." : "Enviada."}</p>
+    <div class="row"><button class="btn primary" id="btnNova">Nova vistoria</button><button class="btn" data-tab="rel">Ver relatórios</button></div></div>`;
+  document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== "v-fim"); window.scrollTo({top:0});
+  $("#btnNova").onclick = () => { V = {...novoRascunho(), emp:a.empresa, uni:a.unidade, mod:a.modelo, aval:a.avaliadores}; V.itens = MODELOS[V.mod].itens.map(([s,q])=>({s,q,r:"",o:"",f:[]})); salvarRasc(); go("avaliar"); };
+}
+
+/* envio: fotos primeiro, depois a vistoria (repetir não duplica) */
+async function sincronizar(){
+  renderSync();
+  if (S.syncing || !sb || !S.papel || !navigator.onLine || !S.outbox.length) return;
+  S.syncing = true; renderSync();
+  try {
+    while (S.outbox.length) {
+      const r = S.outbox[0];
+      const subir = async lista => { for (let j=0;j<lista.length;j++) { const ref = lista[j]; if (!ref.startsWith("idb:")) continue;
+        const k = ref.slice(4), blob = await idb.get(k); if (!blob) { lista.splice(j--,1); continue; }
+        const path = `${r.id}/${k.slice(-8)}.jpg`;
+        const {error} = await sb.storage.from("fotos5s").upload(path, blob, {contentType:"image/jpeg", upsert:false});
+        if (error && !/exist|duplicate/i.test(error.message)) throw error;
+        lista[j] = "s:"+path; store.set("v5s_outbox", S.outbox); idb.del(k).catch(()=>{}); } };
+      for (const it of r.itens) await subir(it.f);
+      await subir(r.fotos);
+      const {error} = await sb.from("s5_avaliacoes").upsert({...r, autor:S.user.id}, {onConflict:"id", ignoreDuplicates:true});
+      if (error) {
+        if (/violates|permission|row-level/i.test(error.message)) { S.outbox.shift(); store.set("v5s_outbox", S.outbox); toast("Uma vistoria não pôde ser gravada (sem permissão para a empresa). Fale com a Vital."); continue; }
+        throw error;
+      }
+      S.outbox.shift(); store.set("v5s_outbox", S.outbox);
+      const l = S.avs.find(a=>a.id===r.id); if (l) { Object.assign(l, r); delete l.pendente; }
+    }
+    const f = $("#fimSync"); if (f) f.textContent = "Enviada para o servidor.";
+  } catch (e) { setTimeout(sincronizar, 15000); }
+  finally { S.syncing = false; renderSync(); renderTabs(); }
+}
+function renderSync(){
+  const n = S.outbox.length, el = $("#sync");
+  el.dataset.s = !navigator.onLine ? "off" : n ? "pend" : "ok";
+  $("#syncTxt").textContent = !navigator.onLine ? (n ? `${n} aguardando conexão` : "Sem internet") : n ? (S.syncing ? "Enviando…" : `${n} para enviar`) : "Tudo enviado";
+}
+addEventListener("online", sincronizar); addEventListener("offline", renderSync);
+
+/* ===== relatórios ===== */
+function filtrar(){
+  return S.avs.filter(a => (!F.emp || a.empresa===F.emp) && (!F.uni || a.unidade===F.uni) && (!F.mod || a.modelo===F.mod) && (!F.ano || a.data.startsWith(F.ano)) && (!F.de || a.data>=F.de) && (!F.ate || a.data<=F.ate+"-31"));
+}
+function filtrosHtml(id){
+  const emps = [...new Set(S.avs.map(a=>a.empresa))].sort();
+  if (!F.emp && emps.length===1) F.emp = emps[0];
+  const unis = [...new Set(S.avs.filter(a=>!F.emp||a.empresa===F.emp).map(a=>a.unidade).filter(Boolean))].sort();
+  const meses = [...new Set(S.avs.map(a=>a.data.slice(0,7)))].sort();
+  const anos = [...new Set(meses.map(m=>m.slice(0,4)))].sort().reverse();
+  const mopt = (v) => meses.map(m=>`<option value="${m}" ${m===v?"selected":""}>${MESES[+m.slice(5)-1]}/${m.slice(0,4)}</option>`).join("");
+  $(id).innerHTML = `<div class="field"><label>Empresa</label><select data-f="emp"><option value="">Todas</option>${emps.map(e=>`<option ${e===F.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></div>
+    <div class="field"><label>Unidade</label><select data-f="uni"><option value="">Todas</option>${unis.map(e=>`<option ${e===F.uni?"selected":""}>${esc(e)}</option>`).join("")}</select></div>
+    <div class="field"><label>Tipo</label><select data-f="mod"><option value="">Todos</option>${Object.entries(MODELOS).map(([k,m])=>`<option value="${k}" ${k===F.mod?"selected":""}>${m.nome}</option>`).join("")}</select></div>
+    <div class="field"><label>Ano</label><select data-f="ano"><option value="">Todos</option>${anos.map(y=>`<option ${y===F.ano?"selected":""}>${y}</option>`).join("")}</select></div>
+    <div class="field"><label>De</label><select data-f="de"><option value="">Início</option>${mopt(F.de?F.de.slice(0,7):"")}</select></div>
+    <div class="field"><label>Até</label><select data-f="ate"><option value="">Hoje</option>${mopt(F.ate)}</select></div>`
+    + (id==="#filtros" ? `<div class="field"><label>Meta</label><select data-f="meta">${[60,70,75,80,85,90].map(v=>`<option value="${v}" ${v===META?"selected":""}>${pct(v)}</option>`).join("")}</select></div>
+    <div class="field"><label>Escala</label><select data-f="esc"><option value="100">0 a 100%</option><option value="3" ${ESC3?"selected":""}>0 a 3</option></select></div>` : "");
+}
+document.addEventListener("change", e => {
+  const s = e.target.closest("[data-f]"); if (!s) return;
+  const k = s.dataset.f;
+  if (k==="meta") { META = +s.value; store.set("v5s_meta", META); }
+  else if (k==="esc") { ESC3 = s.value==="3"; store.set("v5s_esc3", ESC3); }
+  else { F[k] = k==="de" && s.value ? s.value+"-01" : s.value; if (k==="emp") F.uni=""; }
+  cur==="rel" ? renderRel() : renderLista();
+});
+const media = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+function porSenso(avs){
+  return SENSOS.map(s => { const v=[]; for (const a of avs) for (const i of a.itens) if (i.s===s && i.r in PTS) v.push(PTS[i.r]/3*100); return [s, media(v)]; }).filter(([,v])=>v!=null);
+}
+const barra = (lab, v, extra="") => `<div class="hbar"><span>${esc(lab)}</span><div class="tr"><i style="width:${Math.max(2,v||0)}%;background:${corN(v)}"></i></div><span class="v">${pct(v)}</span>${extra}</div>`;
+function graficoLinha(pts){
+  if (pts.length < 2) return `<p class="note">A evolução aparece quando houver vistorias em pelo menos dois meses.</p>`;
+  const W=innerWidth<600?380:640, H=innerWidth<600?240:220, L=36, R=12, T=18, B=28, n=pts.length;
+  const x = i => L + (W-L-R) * (n===1?0.5:i/(n-1)), y = v => T + (H-T-B) * (1 - v/100);
+  const step = Math.ceil(n/(W<500?5:10));
+  return `<svg class="svgchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução da nota média por mês">
+    ${[0,25,50,75,100].map(v=>`<line class="grid" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${ESC3?String(+(v*0.03).toFixed(2)).replace(".",","):v}</text>`).join("")}
+    <line class="meta" x1="${L}" x2="${W-R}" y1="${y(META)}" y2="${y(META)}"/><text class="metal" x="${L+4}" y="${y(META)-5}">meta ${pct(META)}</text>
+    <polyline class="line" points="${pts.map((p,i)=>`${x(i)},${y(p[1])}`).join(" ")}"/>
+    ${pts.map((p,i)=>`<circle class="pt" cx="${x(i)}" cy="${y(p[1])}" r="3.5"><title>${MESES[+p[0].slice(5)-1]}/${p[0].slice(0,4)}: ${pct(p[1])}</title></circle>${i===n-1?`<text class="lbl" x="${x(i)}" y="${y(p[1])-8}" text-anchor="end">${pct(p[1])}</text>`:""}`).join("")}
+    ${pts.map((p,i)=> (i%step===0 && n-1-i>=step/2)||i===n-1 ? `<text x="${x(i)}" y="${H-8}" text-anchor="${i===n-1?"end":"middle"}">${MESES[+p[0].slice(5)-1]}/${p[0].slice(2,4)}</text>` : "").join("")}
+  </svg>`;
+}
+const chaveLocal = a => (a.unidade?a.unidade+" · ":"")+a.local;
+const rotMes = m => `${MESES[+m.slice(5)-1]}/${m.slice(2,4)}`;
+/* tabela "mapa de calor": linhas × meses (últimos 12 do filtro), com média e tendência */
+function tabelaCalor(linhas, o){
+  const meses = [...new Set(linhas.map(l=>l.m))].sort().slice(-12), noPer = new Set(meses);
+  const g = {}, tot = {};
+  for (const l of linhas) { const r = (g[l.k] ||= {t:[], m:{}}); r.t.push(l.v); if (noPer.has(l.m)) { (r.m[l.m] ||= []).push(l.v); (tot[l.m] ||= []).push(l.v); } }
+  let rows = Object.entries(g).map(([k,r]) => { const mm = Object.fromEntries(Object.entries(r.m).map(([m,v])=>[m, media(v)])); const ks = Object.keys(mm).sort(); const t = ks.length>=2 ? mm[ks.at(-1)] - mm[ks.at(-2)] : null; return {k, med:media(r.t), m:mm, t}; });
+  rows = o.ordem ? rows.sort(o.ordem) : rows;
+  const total = rows.length; rows = rows.slice(0, o.lim || 999);
+  const cel = v => v==null ? `<td></td>` : `<td class="hc" style="--h:${corN(v)}">${pct(v)}</td>`;
+  return `<div class="tablewrap"><table class="heat"><thead><tr><th class="k">${o.titulo}</th>${meses.map(m=>`<th class="m">${rotMes(m)}</th>`).join("")}<th class="m">Média</th>${o.tend?`<th class="m">Tendência</th>`:""}</tr></thead><tbody>
+    ${rows.map(r=>`<tr${o.click?` class="click" data-local="${esc(r.k)}"`:""}><td class="k">${esc(r.k)}</td>${meses.map(m=>cel(r.m[m])).join("")}${cel(r.med)}${o.tend?`<td class="m" style="text-align:center">${r.t==null||Math.abs(r.t)<0.5?'<span class="note">–</span>':r.t>0?'<span class="chip ok">▲ '+dif(r.t)+'</span>':'<span class="chip bad">▼ '+dif(r.t)+'</span>'}</td>`:""}</tr>`).join("")}
+    </tbody><tfoot><tr><td class="k">Média geral</td>${meses.map(m=>cel(media(tot[m]||[]))).join("")}${cel(media(linhas.map(l=>l.v)))}${o.tend?"<td></td>":""}</tr></tfoot></table></div>
+    ${total>rows.length?`<p class="note">Mostrando ${rows.length} de ${total}. Use os filtros para refinar.</p>`:""}`;
+}
+let ORD_R = "pior", ORD_L = "data", GAL_N = 24;
+const ORDENS = {
+  pior: (x,y)=>(x.med??101)-(y.med??101),
+  melhor: (x,y)=>(y.med??-1)-(x.med??-1),
+  setor: (x,y)=>x.k.localeCompare(y.k,"pt-BR",{numeric:true}),
+  tend: (x,y)=>(x.t??99)-(y.t??99) };
+/* todas as fotos das vistorias filtradas, das mais recentes para as mais antigas */
+function fotosDe(avs){
+  const out = [];
+  for (const a of [...avs].sort((x,y)=>y.data.localeCompare(x.data))) {
+    const base = `${chaveLocal(a)} · ${fmtD(a.data)}`;
+    for (const i of a.itens) for (const r of (i.f||[])) out.push({r, av:a.id, cap:`${base} · ${i.q}${i.r?" ("+(RNOME[i.r]||i.r)+")":""}`, lugar:chaveLocal(a), data:fmtD(a.data)});
+    for (const r of (a.fotos||[])) out.push({r, av:a.id, cap:`${base} · foto geral`, lugar:chaveLocal(a), data:fmtD(a.data)});
+  }
+  return out;
+}
+function galeriaHtml(fs){
+  return `<div class="gal">${fs.slice(0,GAL_N).map((f,k)=>`<button type="button" data-gal="${k}" aria-label="Ver foto: ${esc(f.cap)}"><span class="ph"><img data-src="${esc(f.r)}" alt="" loading="lazy"></span><small><b>${esc(f.lugar)}</b><br>${esc(f.data)}</small></button>`).join("")}</div>
+    ${fs.length>GAL_N?`<button class="btn sm" id="galMais" type="button">Ver mais fotos (${fs.length-GAL_N} restantes)</button>`:""}`;
+}
+let GAL = [];
+function renderRel(){
+  filtrosHtml("#filtros");
+  const avs = filtrar();
+  $("#relTit").textContent = F.emp ? `5S · ${F.emp}${F.uni?" · "+F.uni:""}` : "Resultados do 5S";
+  if (!avs.length) { $("#relBody").innerHTML = `<div class="card note">Nenhuma vistoria encontrada com esses filtros.</div>`; return; }
+  const notas = avs.map(a=>a.nota).filter(v=>v!=null);
+  const itensAval = avs.flatMap(a=>a.itens.filter(i=>i.r in PTS)), crit = itensAval.filter(i=>i.r==="C").length;
+  const porMes = {}; for (const a of avs) if (a.nota!=null) (porMes[a.data.slice(0,7)] ||= []).push(a.nota);
+  const serie = Object.keys(porMes).sort().map(m=>[m, media(porMes[m])]);
+  const locais = {}; for (const a of avs) (locais[chaveLocal(a)] ||= []).push(a);
+  const ultimas = Object.values(locais).map(l => l.reduce((x,y)=>y.data>x.data?y:x)).filter(a=>a.nota!=null);
+  const naMeta = ultimas.filter(a=>a.nota>=META).length;
+  const perg = {}; for (const a of avs) for (const i of a.itens) if (i.r in PTS) (perg[i.q] ||= []).push(PTS[i.r]/3*100);
+  const piores = Object.entries(perg).filter(([,v])=>v.length>=3).map(([q,v])=>[q, media(v), v.length]).sort((a,b)=>a[1]-b[1]).slice(0,6);
+  const ult = Object.keys(porMes).sort().slice(-2);
+  const delta = ult.length===2 ? media(porMes[ult[1]]) - media(porMes[ult[0]]) : null;
+  const [cls, txt] = faixa(media(notas));
+  /* distribuição das respostas */
+  const cont = {MB:0,B:0,R:0,C:0}; for (const i of itensAval) cont[i.r]++;
+  const COR = {MB:"var(--r-mb)",B:"var(--r-b)",R:"var(--r-r)",C:"var(--r-c)"}, NT = itensAval.length || 1;
+  /* comparativo: por unidade (sede) ou, se só houver uma, por tipo */
+  const porU = {}; for (const a of avs) if (a.nota!=null) (porU[a.unidade||"(sem unidade)"] ||= []).push(a.nota);
+  const porT = {}; for (const a of avs) if (a.nota!=null) (porT[MODELOS[a.modelo]?.nome||a.modelo] ||= []).push(a.nota);
+  const [compTit, comp] = Object.keys(porU).length>1 ? ["Comparativo por unidade", porU] : Object.keys(porT).length>1 ? ["Comparativo por tipo de local", porT] : ["", null];
+  /* linhas para os mapas de calor */
+  const linLocais = avs.filter(a=>a.nota!=null).map(a=>({k:chaveLocal(a), m:a.data.slice(0,7), v:a.nota}));
+  const linSensos = []; for (const a of avs) for (const i of a.itens) if (i.r in PTS) linSensos.push({k:i.s, m:a.data.slice(0,7), v:PTS[i.r]/3*100});
+  const ordS = (x,y) => SENSOS.indexOf(x.k) - SENSOS.indexOf(y.k);
+  /* observações recentes */
+  const comObs = avs.filter(a => a.obs || a.itens.some(i=>i.o)).sort((x,y)=>y.data.localeCompare(x.data));
+  const nFotos = a => (a.fotos?.length||0) + a.itens.reduce((t,i)=>t+(i.f?.length||0),0);
+  GAL = fotosDe(avs); GAL_N = 24;
+
+  $("#relBody").innerHTML = `
+    <div class="kpis">
+      <div class="card kpi"><b>${pct(media(notas))}</b><span>nota média <span class="chip ${cls}">${txt}</span></span></div>
+      <div class="card kpi"><b>${ultimas.length ? Math.round(naMeta/ultimas.length*100)+"%" : "–"}</b><span>locais na meta (${pct(META)}), pela última vistoria</span></div>
+      <div class="card kpi"><b>${avs.length}</b><span>vistorias</span></div>
+      <div class="card kpi"><b>${Object.keys(locais).length}</b><span>locais avaliados</span></div>
+      <div class="card kpi"><b>${itensAval.length ? Math.round(crit/itensAval.length*100)+"%" : "–"}</b><span>itens críticos</span></div>
+    </div>
+    <div class="card stack"><div class="row" style="justify-content:space-between"><h3 style="font-size:1.05rem">Evolução da nota média</h3>${delta!=null?`<span class="chip ${delta>=0?"ok":"bad"}">${delta>=0?"▲":"▼"} ${dif(delta)} no último mês</span>`:""}</div>${graficoLinha(serie)}</div>
+    <div class="two">
+      <div class="card stack"><h3 style="font-size:1.05rem">Nota por senso</h3>${porSenso(avs).map(([s,v])=>barra(s,v)).join("")}
+        <p class="note" style="margin:0">${ESC3?"Muito bom = 3 · Bom = 2 · Regular = 1 · Crítico = 0":"Muito bom = 100 · Bom = 67 · Regular = 33 · Crítico = 0"}. "Não se aplica" fica fora da conta.</p></div>
+      <div class="card stack"><h3 style="font-size:1.05rem">Itens que mais precisam de atenção</h3>
+        ${piores.length ? piores.map(([q,v])=>`<div><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span style="font-size:.92rem">${esc(q)}</span><b style="white-space:nowrap">${pct(v)}</b></div><div class="progress"><i style="width:${v}%;background:${corN(v)}"></i></div></div>`).join("") : `<p class="note">Poucos dados ainda.</p>`}</div>
+    </div>
+    <div class="two">
+      <div class="card stack"><h3 style="font-size:1.05rem">Como os itens foram avaliados</h3>
+        <div class="dist" role="img" aria-label="Distribuição das respostas">${Object.keys(cont).map(r=>cont[r]?`<i style="width:${cont[r]/NT*100}%;background:${COR[r]}" title="${RNOME[r]}: ${Math.round(cont[r]/NT*100)}%"></i>`:"").join("")}</div>
+        <div class="leg">${Object.keys(cont).map(r=>`<span><i style="background:${COR[r]}"></i>${RNOME[r]} <b>${Math.round(cont[r]/NT*100)}%</b> (${cont[r]})</span>`).join("")}</div></div>
+      ${comp ? `<div class="card stack"><h3 style="font-size:1.05rem">${compTit}</h3>${Object.entries(comp).map(([k,v])=>[k,media(v),v.length]).sort((a,b)=>b[1]-a[1]).map(([k,v,n])=>barra(k,v,`<span class="note" style="grid-column:1/-1;margin-top:-6px;font-size:.78rem">${n} vistorias</span>`)).join("")}</div>`
+              : `<div class="card stack"><h3 style="font-size:1.05rem">Fotos registradas</h3><b style="font-family:var(--display);font-size:1.7rem">${avs.reduce((t,a)=>t+nFotos(a),0)}</b><span class="note">fotos nas vistorias filtradas. Veja a galeria no fim da página.</span></div>`}
+    </div>
+    <div class="card stack"><div class="row" style="justify-content:space-between"><h3 style="font-size:1.05rem">Ranking · locais por mês</h3>
+        <label class="ordem noprint">Ordenar <select id="ordRank">${[["pior","Pior nota primeiro"],["melhor","Melhor nota primeiro"],["setor","Setor (A–Z)"],["tend","Maior queda recente"]].map(([v,t])=>`<option value="${v}"${v===ORD_R?" selected":""}>${t}</option>`).join("")}</select></label></div>
+      <span class="note">Toque no local para ver as vistorias.</span>
+      <div id="rankBox">${tabelaCalor(linLocais, {titulo:"Local", click:true, tend:true, lim:80, ordem:ORDENS[ORD_R]})}</div></div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Evolução de cada senso</h3>${tabelaCalor(linSensos, {titulo:"Senso", ordem:ordS})}</div>
+    <div class="card stack"><div class="row" style="justify-content:space-between"><h3 style="font-size:1.05rem">Observações recentes</h3><span class="note">${comObs.length} vistorias com observação · toque para abrir</span></div>
+      ${comObs.length ? `<div>${comObs.slice(0,30).map(a=>{ const it=a.itens.filter(i=>i.o); const nf=nFotos(a);
+        return `<div class="obs-l" data-av="${esc(a.id)}"><span class="note">${fmtD(a.data)}</span><div><b>${esc(chaveLocal(a))}</b>${a.obs?`<p>${esc(a.obs)}</p>`:""}${it.slice(0,4).map(i=>`<p><span class="chip ${chipR(i.r)}">${RNOME[i.r]||"–"}</span> ${esc(i.q)}: ${esc(i.o)}</p>`).join("")}${it.length>4?`<p class="note">+ ${it.length-4} observações</p>`:""}${nf?`<p class="note">${nf} foto${nf>1?"s":""}</p>`:""}</div><span class="chip ${faixa(a.nota)[0]}">${pct(a.nota)}</span></div>`; }).join("")}</div>${comObs.length>30?`<p class="note">Mostrando as 30 mais recentes. O arquivo CSV traz todas.</p>`:""}` : `<p class="note">Nenhuma observação nas vistorias filtradas.</p>`}</div>
+    <div class="card stack noprint" id="galCard"><div class="row" style="justify-content:space-between"><h3 style="font-size:1.05rem">Fotos das vistorias</h3><span class="note">${GAL.length} foto${GAL.length===1?"":"s"} · toque para ampliar</span></div>
+      ${GAL.length ? galeriaHtml(GAL) : `<p class="note">Nenhuma foto nas vistorias filtradas.</p>`}</div>`;
+  encheFotos($("#galCard"));
+  const sel = $("#ordRank"); if (sel) sel.onchange = () => { ORD_R = sel.value; $("#rankBox").innerHTML = tabelaCalor(linLocais, {titulo:"Local", click:true, tend:true, lim:80, ordem:ORDENS[ORD_R]}); };
+}
+$("#relBody").addEventListener("click", e => {
+  const g = e.target.closest("[data-gal]"); if (g) { lightbox(GAL, +g.dataset.gal); return; }
+  if (e.target.closest("#galMais")) { GAL_N += 48; const c = $("#galCard"); c.querySelector(".gal").outerHTML; const box = document.createElement("div"); box.innerHTML = galeriaHtml(GAL); c.querySelector(".gal").replaceWith(box.firstElementChild); const m = c.querySelector("#galMais"); if (m) m.remove(); if (box.querySelector("#galMais")) c.appendChild(box.querySelector("#galMais")); encheFotos(c); return; }
+  const v = e.target.closest("[data-av]"); if (v) { detalhe(v.dataset.av); return; } const t = e.target.closest("[data-local]"); if (!t) return; LF = t.dataset.local; go("lista"); });
+let LF = "";
+$("#btnPrint").onclick = () => window.print();
+$("#btnCsv").onclick = () => {
+  const avs = filtrar(); const q = v => `"${String(v??"").replace(/vitalagroenegocios/"/g,'""')}"`;
+  const linhas = [["id","empresa","unidade","tipo","local","data","avaliadores","nota","senso","item","resposta","observacao","fotos"].join(";")];
+  for (const a of avs) for (const i of a.itens) linhas.push([a.id,a.empresa,a.unidade,MODELOS[a.modelo]?.nome||a.modelo,a.local,a.data,a.avaliadores,a.nota??"",i.s,i.q,RNOME[i.r]||"",i.o,(i.f||[]).length].map(q).join(";"));
+  baixar(`5s_${hoje()}.csv`, "﻿"+linhas.join("\n"), "text/csv;charset=utf-8"); toast("Arquivo baixado.");
+};
+
+/* ===== lista e detalhe ===== */
+function renderLista(){
+  filtrosHtml("#filtros2");
+  let avs = filtrar(); if (LF) avs = avs.filter(a => ((a.unidade?a.unidade+" · ":"")+a.local)===LF);
+  const ordL = {data:(x,y)=>y.data.localeCompare(x.data), pior:(x,y)=>(x.nota??101)-(y.nota??101), melhor:(x,y)=>(y.nota??-1)-(x.nota??-1), setor:(x,y)=>chaveLocal(x).localeCompare(chaveLocal(y),"pt-BR",{numeric:true})||y.data.localeCompare(x.data)};
+  avs = [...avs].sort(ordL[ORD_L]);
+  const lim = 150;
+  $("#listaBody").innerHTML = `<div class="row" style="justify-content:space-between">${LF ? `<span class="row"><span class="chip ok">Local: ${esc(LF)}</span><button class="btn sm ghost" id="lfLimpa">Mostrar todos</button></span>` : "<span></span>"}
+      <label class="ordem">Ordenar <select id="ordLista">${[["data","Mais recentes"],["pior","Pior nota"],["melhor","Melhor nota"],["setor","Setor (A–Z)"]].map(([v,t])=>`<option value="${v}"${v===ORD_L?" selected":""}>${t}</option>`).join("")}</select></label></div>`
+    + (avs.length ? `<div class="tablewrap"><table><thead><tr><th>Data</th><th>Local</th><th>Tipo</th><th class="num">Nota</th><th>Avaliadores</th></tr></thead><tbody>
+    ${avs.slice(0,lim).map(a=>{ const [c]=faixa(a.nota); return `<tr class="click" data-av="${esc(a.id)}"><td>${fmtD(a.data)}${a.pendente?' <span class="chip warn">a enviar</span>':""}</td><td>${esc(a.empresa)}${a.unidade?" · "+esc(a.unidade):""}<br><b>${esc(a.local)}</b></td><td>${MODELOS[a.modelo]?.nome||esc(a.modelo)}</td><td class="num"><span class="chip ${c}">${pct(a.nota)}</span></td><td>${esc(a.avaliadores)}</td></tr>`; }).join("")}
+    </tbody></table></div>${avs.length>lim?`<p class="note">Mostrando ${lim} de ${avs.length} vistorias. Use os filtros para refinar.</p>`:""}` : `<div class="card note">Nenhuma vistoria encontrada.</div>`);
+  const l = $("#lfLimpa"); if (l) l.onclick = () => { LF = ""; renderLista(); };
+  const o = $("#ordLista"); if (o) o.onchange = () => { ORD_L = o.value; renderLista(); };
+}
+$("#listaBody").addEventListener("click", e => { const t = e.target.closest("[data-av]"); if (t) detalhe(t.dataset.av); });
+async function detalhe(id){
+  const a = S.avs.find(x=>x.id===id); if (!a) return;
+  const [cls, txt] = faixa(a.nota);
+  const DF = fotosDe([a]); let pos = 0;
+  const fotosHtml = refs => refs && refs.length ? `<div class="thumbs fs">${refs.map((r,j)=>`<button type="button" class="thumb" data-df="${pos++}" aria-label="Ampliar foto ${j+1}"><img data-src="${esc(r)}" alt="Foto ${j+1}"></button>`).join("")}</div>` : "";
+  const v = $("#v-det");
+  v.innerHTML = `<div class="row noprint"><button class="btn sm" data-tab="lista">← Voltar</button>${S.papel==="admin"?`<button class="btn sm ghost" id="btnExcluir">Excluir vistoria</button>`:""}<button class="btn sm" onclick="window.print()">Imprimir / PDF</button></div>
+    <div class="card stack"><div class="row" style="justify-content:space-between"><div><div class="eyebrow">${MODELOS[a.modelo]?.nome||esc(a.modelo)} · ${fmtD(a.data)}</div><h2 style="font-size:1.35rem">${esc(a.local)}</h2>
+      <div class="note">${esc(a.empresa)}${a.unidade?" · "+esc(a.unidade):""}${a.avaliadores?" · Avaliadores: "+esc(a.avaliadores):""}${a.ocupantes?" · Ocupantes: "+esc(a.ocupantes):""}</div></div>
+      <div style="text-align:right"><b style="font-family:var(--display);font-size:2rem">${pct(a.nota)}</b><br><span class="chip ${cls}">${txt}</span></div></div>
+      <div class="stack">${porSenso([a]).map(([s,v])=>barra(s,v)).join("")}</div></div>
+    <div class="card"><h3 style="font-size:1.05rem;margin-bottom:6px">Itens avaliados</h3>
+      ${a.itens.map((i,k)=>`<div class="det-item"><span>${k+1}. ${esc(i.q)} <span class="note">· ${esc(i.s)}</span></span><span class="chip ${chipR(i.r)}">${RNOME[i.r]||"–"}</span>${i.o?`<div class="o">${esc(i.o)}</div>`:""}${fotosHtml(i.f)}</div>`).join("")}</div>
+    ${a.obs||a.fotos?.length ? `<div class="card stack"><h3 style="font-size:1.05rem">Observações gerais</h3>${a.obs?`<p style="margin:0;white-space:pre-wrap">${esc(a.obs)}</p>`:""}${fotosHtml(a.fotos)}</div>` : ""}`;
+  document.querySelectorAll(".view").forEach(x => x.hidden = x.id !== "v-det"); window.scrollTo({top:0});
+  v.onclick = e => { const b = e.target.closest("[data-df]"); if (b) lightbox(DF, +b.dataset.df); };
+  encheFotos(v);
+  const ex = $("#btnExcluir"); if (ex) ex.onclick = async () => { if (!confirm("Excluir esta vistoria? Não dá para desfazer.")) return;
+    const {error} = await sb.from("s5_avaliacoes").delete().eq("id", a.id); if (error) { toast("Não foi possível excluir."); return; }
+    S.avs = S.avs.filter(x=>x.id!==a.id); toast("Vistoria excluída."); go("lista"); };
+}
+
+/* ===== admin: empresas, acessos, importação ===== */
+let EDIT = null, ACS = {sel:[]}, cred = null;
+function renderAdm(){
+  const contagem = n => S.avs.filter(a=>norm(a.empresa)===norm(n)).length;
+  $("#admEmp").innerHTML = `<div class="row" style="justify-content:space-between"><h3 style="font-size:1.1rem">Empresas atendidas no 5S</h3><button class="btn sm primary" id="empNova">+ Nova empresa</button></div>
+    ${EDIT ? `<div class="grid2"><div class="field"><label for="eNome">Nome da empresa</label><input id="eNome" value="${esc(EDIT.nome)}" ${EDIT.existe?"disabled":""}></div>
+      <div class="field"><label for="eUni">Unidades / sedes (uma por linha)</label><textarea id="eUni" rows="3" placeholder="Sede I&#10;Sede II">${esc((EDIT.unidades||[]).join("\n"))}</textarea></div></div>
+      <div class="row"><button class="btn primary sm" id="empSalvar">Salvar</button><button class="btn ghost sm" id="empCancelar">Cancelar</button></div>` : ""}
+    <div class="tablewrap"><table><thead><tr><th>Empresa</th><th>Unidades</th><th class="num">Vistorias</th><th></th></tr></thead><tbody>
+    ${S.empresas.map(e=>`<tr><td><b>${esc(e.nome)}</b>${e.ativo===false?' <span class="chip na">inativa</span>':""}</td><td>${esc((e.unidades||[]).join(", "))}</td><td class="num">${contagem(e.nome)}</td><td class="num"><button class="btn sm" data-eedit="${esc(e.nome)}">Editar</button> <button class="btn sm ghost" data-eativo="${esc(e.nome)}">${e.ativo===false?"Reativar":"Desativar"}</button></td></tr>`).join("") || `<tr><td colspan="4" class="note">Nenhuma empresa cadastrada.</td></tr>`}
+    </tbody></table></div>`;
+  $("#admAcesso").innerHTML = cred ? `<div><div class="eyebrow">Acesso pronto</div><h3 style="font-size:1.1rem">Envie estes dados para ${esc(cred.nome)}</h3></div>
+      <div class="callout" style="white-space:pre-wrap" id="credMsg">${esc(msgAcesso(cred))}</div>
+      <div class="row"><button class="btn primary sm" id="credCopiar">Copiar mensagem</button><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msgAcesso(cred))}">Enviar pelo WhatsApp</a><button class="btn sm" id="credOk">Concluído</button></div>`
+    : `<div><div class="eyebrow">Novo acesso</div><h3 style="font-size:1.1rem">Criar login para o comitê 5S</h3><p class="note" style="margin:4px 0 0">O comitê faz vistorias e vê os resultados do 5S das empresas marcadas. Não vê o DISC.</p></div>
+      <div class="grid2"><div class="field"><label for="cNome">Nome</label><input id="cNome" placeholder="Ex.: Comitê 5S Pamplona"></div>
+        <div class="field"><label for="cEmail">E-mail</label><input id="cEmail" type="email" placeholder="nome@empresa.com.br"><span class="note">Usado para recuperar a senha.</span></div>
+        <div class="field"><label for="cLogin">Login</label><input id="cLogin" autocapitalize="none" spellcheck="false" placeholder="Ex.: comite.pamplona"></div>
+        <div class="field"><label for="cSenha">Senha</label><div class="row" style="flex-wrap:nowrap;gap:8px"><input id="cSenha" type="text" autocomplete="new-password" style="flex:1;min-width:0"><button class="btn sm" type="button" id="cGerar">Gerar</button></div></div></div>
+      <div class="field"><label>Empresas</label><div class="emplist" data-cl="novo">${S.empresas.filter(e=>e.ativo!==false).map(e=>`<label class="${ACS.sel.includes(e.nome)?"on":""}"><input type="checkbox" value="${esc(e.nome)}" ${ACS.sel.includes(e.nome)?"checked":""}><span>${esc(e.nome)}</span></label>`).join("")}</div></div>
+      <p class="note" id="cErr" role="alert" style="margin:0"></p><div class="row"><button class="btn primary" id="cCriar">Criar acesso</button></div>`;
+  const nomes5s = new Set(S.empresas.map(e=>norm(e.nome)));
+  $("#admLista").innerHTML = `<h3 style="font-size:1.05rem">Acessos com 5S</h3>` + (S.acessos.filter(a=>a.papel==="comite"||a.empresas.some(e=>nomes5s.has(norm(e)))).map(a=>`<div class="gcard">
+      <div class="row" style="justify-content:space-between"><div><b>${esc(a.nome||a.login)}</b> <span class="chip ${a.papel==="comite"?"ok":"na"}">${a.papel==="comite"?"Comitê 5S":"Gestor (DISC + 5S)"}</span><div class="note">Login ${esc(a.login)} · ${esc(a.email)}</div></div>
+      <div class="row"><button class="btn sm" data-aedit="${esc(a.id)}">Empresas do 5S</button>${a.papel==="comite"?`<button class="btn sm" data-asenha="${esc(a.id)}">Nova senha</button><button class="btn sm ghost" data-arem="${esc(a.id)}">Remover</button>`:""}</div></div>
+      <div class="tags">${a.empresas.filter(e=>nomes5s.has(norm(e))).map(e=>`<span class="tag">${esc(e)}</span>`).join("") || '<span class="note">Nenhuma empresa do 5S</span>'}</div>
+      ${ACS["e-"+a.id] ? `<div class="emplist" data-cl="e-${esc(a.id)}">${S.empresas.map(e=>{ const on = ACS["e-"+a.id].includes(e.nome); return `<label class="${on?"on":""}"><input type="checkbox" value="${esc(e.nome)}" ${on?"checked":""}><span>${esc(e.nome)}</span></label>`; }).join("")}</div>
+        <div class="row"><button class="btn primary sm" data-asalvar="${esc(a.id)}">Salvar</button><button class="btn ghost sm" data-afechar="${esc(a.id)}">Cancelar</button></div>` : ""}
+    </div>`).join("") || `<div class="card note">Nenhum acesso com 5S ainda. Gestores do DISC também podem receber empresas do 5S aqui.</div>`);
+  $("#admImport").innerHTML = `<div><div class="eyebrow">Histórico</div><h3 style="font-size:1.1rem">Importar avaliações antigas (Google Forms)</h3>
+      <p class="note" style="margin:4px 0 0">Escolha o arquivo <b>historico_5s.json</b> preparado pela Vital. Pode importar de novo sem duplicar.</p></div>
+    <div class="row"><label class="btn file">Escolher arquivo<input type="file" accept=".json,application/json" id="impArq"></label><span class="note" id="impMsg"></span></div>`;
+}
+function msgAcesso(c){ return `Olá, ${c.nome}! Seu acesso ao 5S da Vital Consultoria:\n\nLink: ${APP_URL}\nLogin: ${c.login}\nSenha: ${c.senha}\n\nAbra o link e entre com o login (ou o e-mail) e a senha. Se esquecer a senha, use "Esqueci minha senha".`; }
+const limparLogin = s => String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim().replace(/\s+/g,".").replace(/[^a-z0-9._-]/g,"");
+$("#v-adm").addEventListener("change", e => { const box = e.target.closest("[data-cl]"); if (!box) return;
+  const lab = e.target.closest("label"); if (lab) lab.classList.toggle("on", e.target.checked);
+  const k = box.dataset.cl, vals = [...box.querySelectorAll("input:checked")].map(i=>i.value); if (k==="novo") ACS.sel = vals; else ACS[k] = vals; });
+$("#v-adm").addEventListener("change", async e => { if (e.target.id !== "impArq") return; const f = e.target.files[0]; if (f) importar(f); });
+$("#v-adm").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return; const d = b.dataset;
+  try {
+    if (b.id==="empNova") { EDIT = {nome:"", unidades:[]}; renderAdm(); $("#eNome").focus(); return; }
+    if (b.id==="empCancelar") { EDIT = null; renderAdm(); return; }
+    if (d.eedit) { const e0 = S.empresas.find(x=>x.nome===d.eedit); EDIT = {...e0, existe:true}; renderAdm(); return; }
+    if (b.id==="empSalvar") { const nome = (EDIT.existe ? EDIT.nome : $("#eNome").value).trim(); if (!nome) { toast("Informe o nome da empresa."); return; }
+      const unidades = $("#eUni").value.split("\n").map(s=>s.trim()).filter(Boolean);
+      const {error} = await sb.from("s5_empresas").upsert({nome, unidades, ativo:EDIT.ativo!==false}); if (error) throw error;
+      EDIT = null; await carregar(); renderAdm(); toast("Empresa salva."); return; }
+    if (d.eativo) { const e0 = S.empresas.find(x=>x.nome===d.eativo); const {error} = await sb.from("s5_empresas").update({ativo: e0.ativo===false}).eq("nome", e0.nome); if (error) throw error; await carregar(); renderAdm(); return; }
+    if (b.id==="cGerar") { $("#cSenha").value = gerarSenha(); return; }
+    if (b.id==="credCopiar") { copiar(msgAcesso(cred)); return; }
+    if (b.id==="credOk") { cred = null; renderAdm(); return; }
+    if (b.id==="cCriar") {
+      const nome=$("#cNome").value.trim(), email=$("#cEmail").value.trim().toLowerCase(), login=limparLogin($("#cLogin").value), senha=$("#cSenha").value.trim();
+      const err = !nome ? "Informe o nome." : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "Informe um e-mail válido." : login.length<3 ? "Informe um login com pelo menos 3 letras." :
+        (senha.length<8||!/[A-Za-z]/.test(senha)||!/[0-9]/.test(senha)) ? "A senha precisa de 8 caracteres, com letras e números." : !ACS.sel.length ? "Marque pelo menos uma empresa." : "";
+      if (err) { $("#cErr").textContent = err; return; }
+      b.disabled = true; b.textContent = "Criando…";
+      await fn("gestores", {acao:"criar", papel:"comite", nome, email, login, senha, empresas:ACS.sel});
+      cred = {nome, login, senha}; ACS.sel = []; S.acessos = await carregarAcessos(); renderAdm(); window.scrollTo({top:0,behavior:"smooth"}); return; }
+    const a = S.acessos.find(x=>x.id===(d.aedit||d.asalvar||d.afechar||d.asenha||d.arem));
+    if (d.aedit) { const n5 = new Set(S.empresas.map(e=>norm(e.nome))); ACS["e-"+a.id] = a.empresas.filter(e=>n5.has(norm(e))); renderAdm(); return; }
+    if (d.afechar) { delete ACS["e-"+a.id]; renderAdm(); return; }
+    if (d.asalvar) { const n5 = new Set(S.empresas.map(e=>norm(e.nome)));
+      const empresas = [...a.empresas.filter(e=>!n5.has(norm(e))), ...ACS["e-"+a.id]];   // mantém as empresas do DISC
+      if (!empresas.length) { toast("Marque pelo menos uma empresa."); return; }
+      b.disabled = true; await fn("gestores", {acao:"editar", id:a.id, nome:a.nome, login:a.login, email:a.email, empresas});
+      delete ACS["e-"+a.id]; S.acessos = await carregarAcessos(); renderAdm(); toast("Empresas atualizadas."); return; }
+    if (d.asenha) { const senha = gerarSenha(); if (!confirm(`Gerar nova senha para ${a.nome||a.login}? A anterior deixa de funcionar.`)) return;
+      await fn("gestores", {acao:"senha", id:a.id, senha}); cred = {nome:a.nome||a.login, login:a.login, senha}; renderAdm(); window.scrollTo({top:0,behavior:"smooth"}); return; }
+    if (d.arem) { if (!confirm(`Remover o acesso de ${a.nome||a.login}?`)) return; await fn("gestores", {acao:"remover", id:a.id}); S.acessos = await carregarAcessos(); renderAdm(); toast("Acesso removido."); return; }
+  } catch (x) { toast(x.message || "Não foi possível salvar agora."); b.disabled = false; }
+});
+async function importar(file){
+  const msg = $("#impMsg");
+  try {
+    const lista = JSON.parse(await file.text()); if (!Array.isArray(lista)) throw new Error("Arquivo inválido.");
+    const emps = [...new Set(lista.map(a=>a.empresa))];
+    for (const nome of emps) { const us = [...new Set(lista.filter(a=>a.empresa===nome).map(a=>a.unidade).filter(Boolean))].sort();
+      const ex = S.empresas.find(e=>norm(e.nome)===norm(nome)); const uni = [...new Set([...(ex&&ex.unidades||[]), ...us])];
+      const {error} = await sb.from("s5_empresas").upsert({nome: ex?ex.nome:nome, unidades:uni, ativo: ex? ex.ativo!==false : true}); if (error) throw error; }
+    let feitos = 0;
+    for (let i=0;i<lista.length;i+=400) {
+      const lote = lista.slice(i,i+400).map(a=>({...a, autor:S.user.id}));
+      const {error} = await sb.from("s5_avaliacoes").upsert(lote, {onConflict:"id", ignoreDuplicates:true}); if (error) throw error;
+      feitos += lote.length; msg.textContent = `Importando… ${feitos} de ${lista.length}`;
+    }
+    await carregar(); renderAdm(); $("#impMsg").textContent = `Pronto: ${lista.length} vistorias de ${emps.length} empresa(s) importadas.`;
+  } catch (e) { msg.textContent = "Não foi possível importar: " + (e.message||e); }
+}
+
+/* ===== início ===== */
+async function boot(){
+  definirAbas();
+  if (!sb) { go("login"); return; }
+  sb.auth.onAuthStateChange(ev => { if (ev==="PASSWORD_RECOVERY") { modoRecuperar = true; go("login"); } });
+  const {data:{session}} = await sb.auth.getSession();
+  if (session && !/type=recovery/.test(location.hash)) await entrar(session.user); else go("login");
+}
+boot();
+})();
+</script>
+</body>
+</html>

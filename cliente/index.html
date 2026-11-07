@@ -425,7 +425,7 @@ async function carregarPedidos(){
   if (!S.emp && S.empresas.length===1) S.emp = S.empresas[0];
 }
 const SIT_P = {pedido:["Pedido","p-ped"], producao:["Em produção","p-prod"], entregue:["Entregue","p-ok"], cancelado:["Cancelado","p-can"]};
-const fmtDia = d => d ? d.slice(0,10).split("-").reverse().join("/vitalagroenegocios/") : "";
+const fmtDia = d => d ? d.slice(0,10).split("-").reverse().join("/") : "";
 const chaveG = p => (S.emp?"":p.empresa+" · ")+(p.grupo||"Outros");
 function pedidosHtml(){
   const vital = S.papel==="admin";
@@ -819,7 +819,7 @@ async function renderPapo(){
     const {error} = await sb.from("papo_enquetes").insert({pergunta:perg, opcoes:ops, ativa:true});
     if (error) { $("#eErr").textContent="Não foi possível abrir a votação."; return; } toast("Votação aberta no site."); renderPapo(); });
   const fim = $("#eFim"); if (fim) fim.onclick = async () => { await sb.from("papo_enquetes").update({ativa:false}).eq("id",ativa.id); toast("Votação encerrada."); renderPapo(); };
-  const csv = $("#lCsv"); if (csv) csv.onclick = () => { const q=x=>`"${String(x??"").replace(/vitalagroenegocios/"/g,'""')}"`;
+  const csv = $("#lCsv"); if (csv) csv.onclick = () => { const q=x=>`"${String(x??"").replace(/"/g,'""')}"`;
     const t = "\ufeff"+["nome;whatsapp;desde"].concat(lemb.map(l=>[l.nome,l.whatsapp,fmtD(l.criado_em)].map(q).join(";"))).join("\n");
     const u=URL.createObjectURL(new Blob([t],{type:"text/csv;charset=utf-8"})); const a=document.createElement("a"); a.href=u; a.download="lembretes-papo.csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); };
   v.onclick = async e => {
@@ -842,7 +842,7 @@ async function boot(){
 /* ===== painéis financeiros (DRE, DFC, BP e análises) ===== */
 const P = { emp:"", ver:"c", per:"12", prev:true, sec:"resumo", an:null, ab:{}, mesBP:"", banco:null };
 const MC = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-const mesC = m => MC[+m.slice(5,7)-1]+"/vitalagroenegocios/"+m.slice(2,4);
+const mesC = m => MC[+m.slice(5,7)-1]+"/"+m.slice(2,4);
 const nfmt = new Intl.NumberFormat("pt-BR",{maximumFractionDigits:0});
 const fN = v => (Math.abs(v)<0.5 ? "–" : nfmt.format(Math.round(v)));
 const fR = v => { const a=Math.abs(v), s=v<0?"−":""; return a>=1e6 ? s+"R$ "+(a/1e6).toFixed(2).replace(".",",")+" mi" : a>=1e3 ? s+"R$ "+nfmt.format(Math.round(a/1e3))+" mil" : s+"R$ "+nfmt.format(Math.round(a)); };
@@ -949,7 +949,7 @@ function renderPainel(){
   if (D.tipo==="matriz") return renderMatriz(el, D, emps);
   const secs=[["resumo","Resumo"],["dre","DRE"],["dfc","DFC e conciliação"],["bp","Balanço (BP)"],["an","Análises"],["pend","Pendências"]];
   el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
-      <p class="note" style="margin:2px 0 0">Dados até ${mesC(D.meses[D.meses.length-1])} · atualizado em ${esc(D.gerado.split(" ")[0].split("-").reverse().join("/vitalagroenegocios/"))} · fonte: planilha Gestão BPO (lançamentos confirmados)</p></div>
+      <p class="note" style="margin:2px 0 0">Dados até ${mesC(D.meses[D.meses.length-1])} · atualizado em ${esc(D.gerado.split(" ")[0].split("-").reverse().join("/"))} · fonte: planilha Gestão BPO (lançamentos confirmados)</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
       <label>Empresa<select id="pnVer"><option value="c">Consolidado</option><option value="l">Arcanjos Life</option><option value="h">Arcanjos Health</option></select></label>
       <label>Período<select id="pnPer"><option value="12">Últimos 12 meses</option><option value="2026">2026</option><option value="2025">2025</option><option value="tudo">Tudo (desde jan/25)</option></select></label>
@@ -1161,7 +1161,7 @@ function baixarDRE(D){
   const idx=idxPer(D), {L,grupos,cats}=calcDRE(D), linhas=[["Conta",...idx.map(i=>D.meses[i]),"Total"]];
   const add=(n,a)=>linhas.push([n,...idx.map(i=>(a[i]||0).toFixed(2).replace(".",",")),soma(a,idx).toFixed(2).replace(".",",")]);
   DRE.forEach(l=>{ add(l.t,L[l.k]); if(l.p) Object.keys(grupos).filter(g=>l.p(g)).forEach(g=>{ add("   "+(D.grupos[g]||g),grupos[g]); D.cats.filter(c=>c.g===g&&cats[c.n]).forEach(c=>add("      "+c.n,cats[c.n])); }); });
-  const csv="﻿"+linhas.map(r=>r.map(c=>`"${String(c).replace(/vitalagroenegocios/"/g,'""')}"`).join(";")).join("\r\n");
+  const csv="﻿"+linhas.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(";")).join("\r\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`DRE ${P.emp} ${verNome()} ${perNome(D)}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
   reg("baixar_dre", P.emp).catch(()=>{});
 }
@@ -1187,7 +1187,7 @@ function renderMatriz(el, D, emps){
   if (!secs.some(s=>s[0]===MZ.sec)) MZ.sec="resumo";
   const anos=mzAnos(D), ult=mzUlt(D);
   el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
-      ${D.rascunho?`<p class="note" style="margin:2px 0 0;color:var(--c-desp)"><b>Em revisão</b> · visível só para a equipe Vital até ser liberado ao cliente.</p>`:""}<p class="note" style="margin:2px 0 0">${ult?"Dados até "+mesC(ult)+" · ":""}atualizado em ${esc(String(D.gerado||"").split(" ")[0].split("-").reverse().join("/vitalagroenegocios/"))} · fonte: ${esc(D.fonte||"planilha de gestão")}</p></div>
+      ${D.rascunho?`<p class="note" style="margin:2px 0 0;color:var(--c-desp)"><b>Em revisão</b> · visível só para a equipe Vital até ser liberado ao cliente.</p>`:""}<p class="note" style="margin:2px 0 0">${ult?"Dados até "+mesC(ult)+" · ":""}atualizado em ${esc(String(D.gerado||"").split(" ")[0].split("-").reverse().join("/"))} · fonte: ${esc(D.fonte||"planilha de gestão")}</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
       ${anos.length?`<label>Período<select id="mzPer"><option value="12">Últimos 12 meses</option>${anos.map(a=>`<option value="${a}">${a}</option>`).join("")}<option value="tudo">Tudo</option></select></label>`:""}</div></div>
     <nav class="pns" role="tablist">${secs.map(([k,l])=>`<button class="tab" role="tab" data-mzs="${k}" aria-selected="${MZ.sec===k}">${l}</button>`).join("")}</nav>
@@ -1249,7 +1249,7 @@ function mzLigar(D){ const b=$("#pnBody"); if(!b) return;
 function mzCsv(D,t){ const idx=mzIdx(t), f=v=>v==null||v===""?"":typeof v==="number"?v.toFixed(2).replace(".",","):String(v);
   const L=[["Conta",...idx.map(i=>t.cols[i]),...(t.meses?["Total"]:[])]];
   t.linhas.forEach(l=>L.push([(l.t==="item"?"   ":"")+l.n,...idx.map(i=>f(l.v[i])),...(t.meses?[f(mzTot(t,l,idx))]:[])]));
-  const csv="﻿"+L.map(r=>r.map(c=>`"${String(c).replace(/vitalagroenegocios/"/g,'""')}"`).join(";")).join("\r\n");
+  const csv="﻿"+L.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(";")).join("\r\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${t.titulo} ${P.emp} ${mzPerNome()}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
   reg("baixar_painel", P.emp).catch(()=>{});
 }
@@ -1278,7 +1278,7 @@ function mzLanc(D,ti,i,mi){
   let d=document.getElementById("mzLc"); if(!d){ d=document.createElement("dialog"); d.id="mzLc"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
   d.innerHTML=h; d.querySelector("[data-lcx]").onclick=()=>d.close();
   const c=d.querySelector("[data-lccsv]"); if(c) c.onclick=()=>{ const f=v=>v.toFixed(2).replace(".",","); const linhas=[["Mês","Data","Fornecedor","Descrição","Valor","Conta","Nota"],...sel.map(x=>[x[0],x[1],x[2],x[3],f(x[4]),x[5],x[6]])];
-    const csv="\ufeff"+linhas.map(r=>r.map(v=>`"${String(v).replace(/vitalagroenegocios/"/g,'""')}"`).join(";")).join("\r\n"); const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${l.n} ${P.emp} ${per}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
+    const csv="\ufeff"+linhas.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n"); const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${l.n} ${P.emp} ${per}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
   d.showModal(); reg("ver_lancamentos", P.emp+" · "+l.n).catch(()=>{});
 }
 

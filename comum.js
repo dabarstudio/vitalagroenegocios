@@ -56,7 +56,7 @@ window.Radar = (function () {
   }
   function dolar(d) {
     if (!d) return "";
-    return '<div class="dolar"><b>Dólar comercial</b><span class="v">R$ ' + num(d.v, 4) + "</span><small>PTAX venda · " + d.d.split("-").reverse().join("/vitalagroenegocios/") + "</small>" + variacao(d["var"]) + "</div>";
+    return '<div class="dolar"><b>Dólar comercial</b><span class="v">R$ ' + num(d.v, 4) + "</span><small>PTAX venda · " + d.d.split("-").reverse().join("/") + "</small>" + variacao(d["var"]) + "</div>";
   }
   function atualizado(j) {
     try { var d = new Date(j.atualizado); return "Atualizado " + (quando(j.atualizado) === "hoje" ? "hoje" : quando(j.atualizado)) + " às " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); } catch (_) { return ""; }
@@ -104,7 +104,7 @@ window.Papo = (function () {
   function agenda(e) {
     var f = function (t) { return new Date(t).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); };
     return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent("Papo de Porteira" + (e.tema ? " · " + e.tema : "")) +
-      "&dates=" + f(e.ini) + "/vitalagroenegocios/" + f(e.fim) + "&details=" + encodeURIComponent("Live da Vital Agro & Negócios no Instagram" + (e.convidado ? ", com " + e.convidado : "") + ". instagram.com/vital_consultoria") +
+      "&dates=" + f(e.ini) + "/" + f(e.fim) + "&details=" + encodeURIComponent("Live da Vital Agro & Negócios no Instagram" + (e.convidado ? ", com " + e.convidado : "") + ". instagram.com/vital_consultoria") +
       "&location=" + encodeURIComponent("Instagram @vital_consultoria");
   }
   function item(e, tipo) {
@@ -131,7 +131,7 @@ window.Graf = (function () {
   var M = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function num(v, d) { return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }); }
-  function rotulo(d) { var p = String(d).split("-"); return p.length >= 2 ? M[+p[1] - 1] + "/vitalagroenegocios/" + p[0].slice(2) : d; }
+  function rotulo(d) { var p = String(d).split("-"); return p.length >= 2 ? M[+p[1] - 1] + "/" + p[0].slice(2) : d; }
   /* linha: pts = [{d:"2026-09-01", v:15}], o = {un:"%", dec:2, alt:220} */
   function linha(pts, o) {
     o = o || {}; if (!pts || pts.length < 2) return '<p class="nota">Dados insuficientes.</p>';
@@ -198,9 +198,9 @@ window.Midias = (function () {
   "use strict";
   var CATS = { eventos: "Eventos (RESAR/REMAR)", visitas: "Visitas técnicas", papo: "Papo de Porteira", socios: "Sócios na mídia", bastidores: "Bastidores" };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function dataBR(d) { if (!d) return ""; var p = d.split("-"); return p[2] + "/vitalagroenegocios/" + p[1] + "/vitalagroenegocios/" + p[0]; }
+  function dataBR(d) { if (!d) return ""; var p = d.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
   function embed(u) {
-    var m = u.match(/instagram\.com\/(p|reel|tv)\/([\w-]+)/); if (m) return "https://www.instagram.com/" + m[1] + "/vitalagroenegocios/" + m[2] + "/embed";
+    var m = u.match(/instagram\.com\/(p|reel|tv)\/([\w-]+)/); if (m) return "https://www.instagram.com/" + m[1] + "/" + m[2] + "/embed";
     m = u.match(/(?:youtu\.be\/|v=|shorts\/)([\w-]{6,})/); if (m) return "https://www.youtube-nocookie.com/embed/" + m[1];
     return null;
   }

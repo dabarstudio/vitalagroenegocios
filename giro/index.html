@@ -65,7 +65,7 @@
   "use strict";
   function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]}) }
   function n(v){ return Number(v||0).toLocaleString("pt-BR") }
-  function dBR(d){ var p=String(d).split("-"); return p[2]+"/vitalagroenegocios/"+p[1]+"/vitalagroenegocios/"+p[0] }
+  function dBR(d){ var p=String(d).split("-"); return p[2]+"/"+p[1]+"/"+p[0] }
   var V=window.Vitrine=window.Vitrine||{};
   V.giroHtml=function(g){ if(!g) return '<p class="nota">O primeiro giro sai no próximo sábado.</p>';
     var it=g.itens||[], nots=it.filter(function(x){return x.tipo==="noticia"}), cots=it.filter(function(x){return x.tipo==="cot"}), dica=it.filter(function(x){return x.tipo==="dica"})[0];
@@ -94,7 +94,7 @@
 })();
 </script><script>
 (function(){
-  function dBR(d){ var p=String(d).split("-"); return p[2]+"/vitalagroenegocios/"+p[1]+"/vitalagroenegocios/"+p[0] }
+  function dBR(d){ var p=String(d).split("-"); return p[2]+"/"+p[1]+"/"+p[0] }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]}) }
   Api.ler("site_giro?select=*&order=semana.desc&limit=26").then(function(l){
     document.getElementById("gLista").innerHTML=l.length?l.map(function(g){ return '<div class="panel" style="margin-bottom:14px"><span class="eyebrow">Semana até '+dBR(g.semana)+'</span><h2 class="h3" style="margin:6px 0">'+esc(g.titulo)+'</h2><p class="sub">'+esc(g.resumo||"")+'</p>'+Vitrine.giroHtml(g)+'</div>' }).join("")

@@ -1,0 +1,1289 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#00582F">
+<title>Área do cliente · Vital Agro & Negócios</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/vitalagroenegocios/logo.png">
+<link rel="apple-touch-icon" href="/vitalagroenegocios/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: portal do cliente — barra superior com marca e abas (no celular, no rodapé), lista de entregáveis por mês, conta e administração */
+:root{
+  color-scheme:light;
+  --bg:#F3F6F1; --surface:#FFFFFF; --surface-2:#E8EFE4; --line:#D3DECD;
+  --fg:#18241B; --muted:#57665A; --brand:#00582F; --brand-2:#007941; --leaf:#79C25B; --on-brand:#FFFFFF;
+  --warn:#9A6200; --warn-bg:#FFF3D6; --bad:#B3261E; --bad-bg:#FBE4E1; --ok:#1F7A3F; --ok-bg:#E1F2E5;
+  --r-mb:#1F7A3F; --r-b:#5E9E2F; --r-r:#B07A00; --r-c:#B3261E; --r-na:#8A968C;
+  --display:"Poppins","Segoe UI",system-ui,sans-serif; --body:"Source Sans 3","Segoe UI",system-ui,sans-serif; --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522;
+  --r-mb:#5FBF7F; --r-b:#A3CF6B; --r-r:#E2B44C; --r-c:#F08A80; --r-na:#7E8C82; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522;
+  --r-mb:#5FBF7F; --r-b:#A3CF6B; --r-r:#E2B44C; --r-c:#F08A80; --r-na:#7E8C82; color-scheme:dark}
+html{padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+img{max-width:100%}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+.wrap{max-width:1020px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.logo{width:44px;height:44px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none;border:1px solid var(--line);text-decoration:none}
+.logo img{width:36px}
+.brandtxt{min-width:0}
+.brandtxt b{font-family:var(--display);display:block;color:var(--brand)}
+.brandtxt span{font-size:.8rem;color:var(--muted)}
+.spacer{flex:1}
+.sync{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 10px;font-size:.82rem;background:var(--surface);white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ok)}
+.sync[data-s="pend"] .dot{background:var(--warn)} .sync[data-s="off"] .dot{background:var(--muted)}
+.tabs{display:flex;gap:4px}
+.tab{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--muted);font-weight:600;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--surface-2);color:var(--brand)}
+.tab .n{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:var(--warn-bg);color:var(--warn);font-size:.75rem;margin-left:4px}
+.bottomnav{display:none}
+@media (max-width:820px){
+  .top .tabs{display:none}
+  .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);overflow-x:auto;
+    padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+  .bottomnav .tab{flex:1 0 auto;padding:8px 6px;font-size:.8rem}
+  main{padding-bottom:88px}
+  .brandtxt span{display:none}
+}
+main{padding-block:20px 40px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.stack{display:grid;gap:16px;align-content:start}
+.muted,.note{color:var(--muted)} .note{font-size:.88rem}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.btn{border:1px solid var(--line);background:var(--surface);padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.ghost{border-color:transparent;background:none;color:var(--brand)}
+.btn.sm{padding:6px 10px;font-size:.88rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.field{display:grid;gap:6px;min-width:0}
+.field label{font-weight:600;font-size:.92rem}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:700;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)} .chip.na{background:var(--surface-2);color:var(--muted)}
+.callout{background:var(--surface-2);border-radius:var(--r);padding:14px 16px;font-size:.93rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.login{max-width:440px;margin:24px auto}
+.linklike{border:0;background:none;color:var(--brand);font-weight:600;cursor:pointer;padding:4px 0;text-align:left}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface-2);white-space:nowrap}
+td.num,th.num{text-align:right;white-space:nowrap}
+/* ===== portal do cliente ===== */
+.ent-mes{display:grid;gap:8px}
+.ent-mes h3{font-size:1rem;color:var(--brand)}
+a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
+.ent{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:4px 14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.ent .tp{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font:700 .72rem var(--body);letter-spacing:.04em;color:#fff;align-self:start}
+.ent .tx{min-width:0;display:grid;gap:2px}
+.tp.pdf{background:#B3261E} .tp.xls{background:#1F7A3F} .tp.doc{background:#2B5797} .tp.ppt{background:#C2541B} .tp.out{background:#57665A}
+.ent b{font-weight:700} .ent .m{font-size:.84rem;color:var(--muted)}
+@media (max-width:560px){.ent{grid-template-columns:44px minmax(0,1fr)} .ent .ac{grid-column:2}}
+.termos{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--bg);font-size:.92rem}
+.termos h4{margin:12px 0 4px;font-family:var(--display);font-size:.95rem} .termos h4:first-child{margin-top:0}
+.chk{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--brand);margin-top:2px}
+.empty{text-align:center;padding:32px 16px;color:var(--muted)}
+.loglist td{font-size:.86rem}
+.mg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.mi{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);display:grid;align-content:start}
+.mi .pv{aspect-ratio:4/3;background:var(--surface-2);display:grid;place-items:center;overflow:hidden}
+.mi .pv img,.mi .pv video{width:100%;height:100%;object-fit:cover}
+.mi .pv a{font-weight:600;color:var(--brand);padding:10px;text-align:center;word-break:break-all;font-size:.85rem}
+.mi .bd{padding:10px 12px;display:grid;gap:6px;font-size:.88rem}
+.st-pendente{background:#FFF3CD;color:#7A5600} .st-aprovado{background:#DFF3E4;color:#1F6B3A} .st-recusado{background:#FBE3E1;color:#9B2C22}
+.st{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.76rem;font-weight:700}
+.pq{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:6px;background:var(--surface)}
+.pq p{margin:0}
+.pedres{display:flex;flex-wrap:wrap;gap:8px}.pedres span{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:.88rem}
+.pedg{display:grid;gap:6px}.pedg h4{margin:6px 0 0;font-family:var(--display);font-size:.95rem;color:var(--brand)}
+.ped{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.ped .m{font-size:.84rem;color:var(--muted)} .ped .ac select,.ped .ac input{font-size:.85rem;padding:6px 8px;min-height:auto}
+.ps{border-radius:999px;padding:3px 10px;font-size:.8rem;font-weight:700;white-space:nowrap}
+.p-ped{background:#E8EEF9;color:#1F3B73}.p-prod{background:#FFF1D6;color:#7A4B00}.p-ok{background:#DFF3E4;color:#1F6A35}.p-can{background:#EEE;color:#555}
+@media (max-width:560px){.ped{grid-template-columns:minmax(0,1fr)}}
+.hub{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.hubc{display:grid;gap:4px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;color:var(--fg);text-decoration:none;font:inherit;cursor:pointer}
+.hubc:hover{border-color:var(--brand)} .hubc b{font-family:var(--display);font-size:1.02rem;color:var(--brand)} .hubc span{font-size:.88rem;color:var(--muted)}
+/* ===== painéis ===== */
+:root{--c-rec:#2B5797;--c-desp:#C2541B}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--c-rec:#5C8EE0;--c-desp:#D9733F}}
+:root[data-theme="dark"]{--c-rec:#5C8EE0;--c-desp:#D9733F}
+.pnh{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-end}
+.pnf{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}.pnf label{display:grid;gap:2px;font-size:.8rem;color:var(--muted)}.pnf select{min-height:38px;padding:6px 8px}
+.pnchk{display:flex!important;align-items:center;gap:6px;grid-template-columns:none}
+.pns{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding-bottom:2px}.pns .tab{white-space:nowrap}
+.pnt{font-family:var(--display);font-size:1rem;margin:0 0 6px;color:var(--brand)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:2px}
+.kpi span{font-size:.8rem;color:var(--muted)}.kpi b{font-family:var(--display);font-size:1.25rem;color:var(--fg)}.kpi em{font-style:normal;font-size:.8rem;color:var(--muted)}
+.gw{position:relative}.gsv{width:100%;height:auto;display:block}
+.gl{stroke:var(--line);stroke-width:1}.g0{stroke:var(--muted);stroke-width:1}.gt{fill:var(--muted);font:11px var(--body)}.gt.gp{font-style:italic}
+.gh{fill:transparent}.gh:hover{fill:var(--fg);fill-opacity:.05}.gln{fill:none;stroke-width:2}.gdot{stroke:var(--surface);stroke-width:2}.gdot.gp{fill-opacity:.4}
+.gleg{display:flex;flex-wrap:wrap;gap:12px;font-size:.82rem;color:var(--muted);margin-bottom:4px}.gleg span{display:inline-flex;align-items:center;gap:6px}.gleg i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.gleg i.iprev{background:repeating-linear-gradient(45deg,var(--muted) 0 2px,transparent 2px 5px);border:1px dashed var(--muted)}
+.gtip{position:absolute;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.82rem;display:grid;gap:3px;box-shadow:0 6px 18px rgba(0,0,0,.12);pointer-events:none;min-width:170px}
+.gtip span{display:flex;align-items:center;gap:6px}.gtip i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.tw{overflow:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;max-height:min(78vh,calc(100dvh - 200px));overscroll-behavior:contain}
+.dre thead th{z-index:2;box-shadow:0 1px 0 var(--line)}.dre thead th:first-child{z-index:3}
+.dre tr.lc td[data-mzm]{cursor:pointer}.dre tr.lc td[data-mzm]:hover{background:var(--surface-2);text-decoration:underline dotted}
+.lcb{all:unset;cursor:pointer;color:inherit;text-decoration:underline dotted;text-underline-offset:3px}.lcb:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.lcdlg{width:min(640px,96vw);max-height:88vh;border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--surface);color:inherit}
+.lcdlg::backdrop{background:rgba(0,0,0,.55)}.lch{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px}
+.lcm{border-top:1px solid var(--line);padding:8px 0}.lcmh{display:flex;justify-content:space-between;font-size:.92rem;margin-bottom:4px}
+.lci{padding:6px 0 6px 8px;border-left:3px solid var(--line);margin:4px 0}.lcl{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.lcl .neg{color:var(--bad)}.lcd{font-size:.86rem}.lcd.note{margin:0;font-size:.78rem}.lcw{background:var(--surface-2);padding:8px;border-radius:8px}
+table.dre{border-collapse:collapse;width:100%;font-size:.84rem;font-variant-numeric:tabular-nums}
+.dre th,.dre td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.dre th:first-child,.dre td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1;white-space:normal;min-width:210px}
+.dre thead th{background:var(--surface-2);font-weight:700;position:sticky;top:0}.dre thead th:first-child{background:var(--surface-2);z-index:2}
+.dre .tp2{font-style:italic;color:var(--muted);background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(127,127,127,.06) 6px 8px)}
+.dre .neg{color:var(--bad)}.dre tr.dt td{font-weight:700;background:var(--surface-2)}.dre tr.dt td:first-child{background:var(--surface-2)}
+.dre tr.dtf td{border-top:2px solid var(--brand)}.dre tr.dg td{font-weight:600}.dre tr.di td{color:var(--muted);font-style:italic}
+.dre tr.dsub td{font-size:.82rem}.dre tr.dcat td{font-size:.8rem;color:var(--muted)}.dre tr.dalt td{font-weight:700;color:var(--bad)}
+.dre tr[data-ab]{cursor:pointer}.dre tr[data-ab]:hover td{background:var(--surface-2)}.tg{display:inline-block;width:14px;color:var(--brand)}
+.dre.bp td:first-child{min-width:260px}.bpg{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.bpg h4{margin:4px 0 6px;font-family:var(--display)}
+.cz{display:inline-block;border-radius:999px;padding:1px 8px;font-size:.78rem;font-weight:700}.cz-ok{background:var(--ok-bg);color:var(--ok)}.cz-at{background:#FFF1D6;color:#7A4B00}.cz-er{background:var(--bad-bg);color:var(--bad)}
+tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface-2)}
+.hbars{display:grid;gap:6px}.hb{display:grid;grid-template-columns:250px 1fr 90px 50px;gap:10px;align-items:center;font-size:.86rem}
+.hb div{background:var(--surface-2);border-radius:4px;height:12px;overflow:hidden}.hb i{display:block;height:100%;background:var(--c-rec);border-radius:4px}.hb em{font-style:normal;color:var(--muted);font-size:.8rem;min-width:46px;text-align:right}
+@media (max-width:560px){.hb{grid-template-columns:1fr auto}.hb div{grid-column:1/-1;order:3}.hb em{display:none}}
+.ang{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.anc{display:grid;gap:3px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;color:var(--fg);cursor:pointer}
+.anc:hover{border-color:var(--brand)}.anc span{font-size:.86rem;font-weight:600}.anc b{font-family:var(--display);font-size:1.15rem}.anc em{font-style:normal;font-size:.78rem;color:var(--muted)}.spk{width:100%;height:28px}
+.pnbanner{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;border:1px solid var(--brand);background:var(--surface);border-radius:12px;padding:12px 14px}
+.vdlg{border:0;border-radius:16px;padding:0;max-width:min(460px,calc(100vw - 32px));width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3);background:var(--surface,#fff);color:var(--ink,#132018)}
+.vdlg::backdrop{background:rgba(10,25,15,.45)}
+.vdlg form{padding:20px;display:grid;gap:14px}
+.vdlg-m{margin:0;white-space:pre-line;font-size:1rem;line-height:1.5}
+.vdlg-l{display:grid;gap:6px;font-size:.9rem;font-weight:600}
+.vdlg-l textarea{font:inherit;font-weight:400;padding:10px;border:1px solid var(--line,#d8e2d9);border-radius:10px;background:var(--bg,#f4f7f3);color:inherit}
+.vdlg-b{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.vdlg-b .btn{min-height:44px;padding:10px 16px}
+.vdlg .btn.perigo{background:#B3261E;color:#fff;border-color:#B3261E}
+.vmais{padding:16px}
+.vmais-h{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.vmais-l{display:grid;gap:4px}
+.vmais-l .tab{display:block;width:100%;text-align:left;padding:12px 14px;min-height:44px;border-radius:10px;border:1px solid var(--line,#d8e2d9);background:var(--bg,#f4f7f3);color:inherit;font:inherit;font-weight:600;text-decoration:none}
+.vmais-l .tab[aria-selected="true"]{background:var(--tint,#e5f1e0)}
+</style>
+<script src="/vitalagroenegocios/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<style id="vlarg">.wrap{max-width:1680px}dialog.pd.largo{max-width:1100px}</style></head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/vitalagroenegocios/" title="Página inicial da Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
+    <div class="brandtxt"><b role="heading" aria-level="1">Área do cliente</b><span>Entregáveis da Vital Agro &amp; Negócios</span></div>
+    <div class="spacer"></div>
+    <nav class="tabs" id="tabsTop" role="tablist" aria-label="Seções"></nav>
+  </div>
+</header>
+<nav class="bottomnav" id="tabsBottom" role="tablist" aria-label="Seções"></nav>
+<main class="wrap">
+  <section id="v-login" class="view" hidden><div class="card stack login" id="loginBody"></div></section>
+  <section id="v-termos" class="view" hidden><div class="card stack" style="max-width:720px;margin:12px auto" id="termosBody"></div></section>
+  <section id="v-inicio" class="view stack" hidden></section>
+  <section id="v-docs" class="view stack" hidden></section>
+  <section id="v-painel" class="view stack" hidden></section>
+  <section id="v-conta" class="view stack" hidden></section>
+  <section id="v-pub" class="view stack" hidden></section>
+  <section id="v-acessos" class="view stack" hidden></section>
+  <section id="v-midias" class="view stack" hidden></section>
+  <section id="v-vitrine" class="view stack" hidden></section>
+  <section id="v-papo" class="view stack" hidden></section>
+</main>
+<div class="toast" id="toast" hidden></div>
+<script>
+(() => {
+"use strict";
+const TERMOS_V = "2026-10";
+const INATIVO_MIN = 30;
+const WA = "5562991744354";
+const $ = s => document.querySelector(s);
+/* barra inferior do celular: até 4 seções + "Mais" (evita a faixa que precisa arrastar para o lado) */
+function navInferior(h){ const bn=document.getElementById("tabsBottom"); if (!bn) return;
+  const box=document.createElement("div"); box.innerHTML=h; const it=[...box.children];
+  if (it.length<=5) { bn.innerHTML=h; return; }
+  const sel=it.findIndex(x=>x.getAttribute("aria-selected")==="true");
+  const keep = sel>=4 ? it.slice(0,3).concat([it[sel]]) : it.slice(0,4);
+  bn.innerHTML = keep.map(x=>x.outerHTML).join("") + `<button class="tab" type="button" data-maisnav aria-haspopup="dialog">Mais</button>`;
+  bn.querySelector("[data-maisnav]").onclick = () => { const d=document.createElement("dialog"); d.className="vdlg vmais"; d.setAttribute("aria-label","Todas as seções");
+    d.innerHTML=`<div class="vmais-h"><b>Todas as seções</b><button type="button" class="btn ghost" data-x>Fechar</button></div><div class="vmais-l">${h}</div>`;
+    d.addEventListener("click", e => { if (e.target===d || e.target.closest("[data-x],[data-tab],[data-sair],a")) { d.close(); d.remove(); } });
+    d.addEventListener("close", () => d.remove());
+    document.body.appendChild(d); d.showModal(); };
+}
+
+/* diálogo de confirmação no padrão do site (substitui confirm/prompt do navegador) */
+function pergunta(msg, o){ o=o||{}; return new Promise(res=>{
+  const prim=(msg.match(/^(Excluir|Remover|Tirar|Cancelar)/)||[])[1];
+  const ok=o.ok||(prim==="Cancelar"?"Sim, cancelar":prim||"Confirmar"), no=o.no||(prim==="Cancelar"?"Voltar":"Cancelar"), perigo=o.perigo!=null?o.perigo:!!prim;
+  const d=document.createElement("dialog"); d.className="vdlg"; d.setAttribute("aria-label", o.titulo||"Confirmação");
+  d.innerHTML=`<form method="dialog"><p class="vdlg-m"></p>${o.campo?`<label class="vdlg-l">${o.campo}<textarea rows="3" maxlength="200"></textarea></label>`:""}<div class="vdlg-b"><button type="button" class="btn ghost" value="no"></button><button type="button" class="btn ${perigo?"perigo":"primary"}" value="ok"></button></div></form>`;
+  d.querySelector(".vdlg-m").textContent=msg; const [bn,bo]=d.querySelectorAll(".vdlg-b button"); bn.textContent=no; bo.textContent=ok;
+  const fim=v=>{ d.close(); d.remove(); res(v); };
+  bn.onclick=()=>fim(o.campo?null:false); bo.onclick=()=>fim(o.campo?d.querySelector("textarea").value.trim():true);
+  d.addEventListener("cancel",e=>{ e.preventDefault(); fim(o.campo?null:false); });
+  document.body.appendChild(d); d.showModal(); (o.campo?d.querySelector("textarea"):bn).focus();
+}); }
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s => String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+const slug = s => norm(s).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40) || "empresa";
+const uuid = () => crypto.randomUUID ? crypto.randomUUID() : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const mesAno = iso => { const m = MESES[+iso.slice(5,7)-1]; return m[0].toUpperCase() + m.slice(1) + " de " + iso.slice(0,4); };
+const fmtD = iso => iso ? new Date(iso).toLocaleDateString("pt-BR") : "";
+const tam = n => n==null ? "" : n<1024*1024 ? Math.max(1,Math.round(n/1024))+" KB" : (n/1048576).toFixed(1).replace(".",",")+" MB";
+let toastT; function toast(m){ const t=$("#toast"); t.textContent=m; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,3500); }
+function gerarSenha(){ const a="ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"; let s=[...crypto.getRandomValues(new Uint32Array(10))].map(n=>a[n%a.length]).join(""); if(!/[0-9]/.test(s)) s=s.slice(0,9)+"7"; return s; }
+const TIPOS = {pdf:["application/pdf","pdf","PDF"], xlsx:["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","xls","XLS"], xlsm:["application/vnd.ms-excel.sheet.macroEnabled.12","xls","XLS"], xls:["application/vnd.ms-excel","xls","XLS"], csv:["text/csv","xls","CSV"],
+  docx:["application/vnd.openxmlformats-officedocument.wordprocessingml.document","doc","DOC"], pptx:["application/vnd.openxmlformats-officedocument.presentationml.presentation","ppt","PPT"], zip:["application/zip","out","ZIP"], png:["image/png","out","IMG"], jpg:["image/jpeg","out","IMG"], jpeg:["image/jpeg","out","IMG"]};
+const ext = n => (String(n).split(".").pop()||"").toLowerCase();
+const CATS = ["Relatório gerencial","DRE","Fluxo de caixa (DFC)","Planilha de gestão","Diagnóstico","Apresentação","Fiscal e tributário","Contrato e proposta","Outros"];
+
+const CFG = window.VITAL_CONFIG || {};
+const sb = (window.supabase && CFG.supabaseUrl && !/COLE/.test(CFG.supabaseUrl)) ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth:{persistSession:true, autoRefreshToken:true}}) : null;
+const APP_URL = location.origin + "/vitalagroenegocios/cliente/";
+async function fn(nome, corpo){ const {data,error}=await sb.functions.invoke(nome,{body:corpo}); if(error){ let m=error.message; try{ const j=await error.context.json(); m=j.erro||m; }catch{} throw new Error(m); } if(data&&data.erro) throw new Error(data.erro); return data; }
+const reg = (acao, alvo="") => sb.rpc("registrar_acesso", {p_acao:acao, p_alvo:alvo}).then(({error}) => { if (error) throw error; });
+
+const S = { user:null, perfil:null, papel:null, empresas:[], arqs:[], emp:"", cat:"", ano:"" };
+let TABS = [], cur = "login";
+function definirAbas(){
+  TABS = !S.papel ? [] : S.papel==="admin" ? [["inicio","Início"],["docs","Entregáveis"],["pub","Publicar"],["midias","Mídias"],["vitrine","Vitrine do site"],["papo","Papo"],["acessos","Acessos"],["conta","Minha conta"]]
+    : S.papel==="equipe" ? [["inicio","Início"],["midias","Mídias"],["papo","Papo"],["conta","Minha conta"]] : [["docs","Entregáveis"],["conta","Minha conta"]];
+  if ((S.paineis||[]).length && !TABS.some(t=>t[0]==="painel")) TABS.splice(S.papel==="admin"||S.papel==="equipe"?1:0, 0, ["painel","Painéis"]);
+  const h = TABS.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${cur===k}">${l}</button>`).join("") + (["admin","equipe","cliente","gestor"].includes(S.papel) ? `<a class="tab" href="/vitalagroenegocios/projetos/">Projetos</a>` : "") + (S.papel ? `<button class="tab" data-sair="1">Sair</button>` : "");
+  $("#tabsTop").innerHTML = h; navInferior(h);
+}
+function go(k){
+  if (!S.papel) k = "login";
+  cur = k; definirAbas();
+  document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== "v-"+k);
+  ({painel:renderPainel, inicio:renderInicio, login:renderLogin, termos:renderTermos, docs:renderDocs, conta:renderConta, pub:renderPub, acessos:renderAcessos, midias:renderMidias, vitrine:renderVitrine, papo:renderPapo})[k]?.();
+  try{ history.replaceState(null,"","#"+k); }catch{}
+  window.scrollTo({top:0});
+}
+document.addEventListener("click", e => { const t=e.target.closest("[data-tab]"); if (t) { go(t.dataset.tab); return; } if (e.target.closest("[data-sair]")) sair(); });
+
+/* encerra a sessão depois de um tempo sem uso (segurança) */
+let inat; const reinicia = () => { clearTimeout(inat); if (S.papel) inat = setTimeout(() => { sair(); toast("Sessão encerrada por inatividade."); }, INATIVO_MIN*60e3); };
+["click","keydown","touchstart","scroll"].forEach(ev => addEventListener(ev, reinicia, {passive:true}));
+
+/* ===== login ===== */
+let modoRecuperar = false;
+function renderLogin(){
+  const el = $("#loginBody");
+  if (!sb) { el.innerHTML = `<h2>Área do cliente</h2><p class="muted">O portal ainda não foi ligado ao servidor.</p>`; return; }
+  if (modoRecuperar) {
+    el.innerHTML = `<div><div class="eyebrow">Nova senha</div><h2 style="font-size:1.3rem">Crie sua nova senha</h2></div>
+      <div class="field"><label for="ns1">Nova senha</label><input id="ns1" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="ns2">Repita a senha</label><input id="ns2" type="password" autocomplete="new-password"></div>
+      <p class="note" id="nsErr" role="alert"></p><button class="btn primary" id="nsOk">Salvar senha</button>`;
+    $("#nsOk").onclick = () => trocarSenha($("#ns1").value, $("#ns2").value, $("#nsErr"), async () => { modoRecuperar=false; const {data:{user}} = await sb.auth.getUser(); if (user) entrar(user); });
+    return;
+  }
+  if (S.sessUser) {
+    el.innerHTML = `<div style="text-align:center"><img src="/vitalagroenegocios/logo.png" alt="" style="width:72px"><div class="eyebrow" style="margin-top:8px">Área restrita</div><h2 style="font-size:1.35rem">Você já está conectado</h2>
+        <p class="muted" style="margin:6px 0 0">Conectado como <b>${esc(S.sessNome)}</b>.</p></div>
+      <button class="btn primary" id="sessOk" type="button">Continuar</button>
+      <button class="btn ghost" id="sessTroca" type="button">Sair e entrar com outro usuário</button>
+      <a class="linklike" href="/vitalagroenegocios/" style="text-decoration:none">← Voltar ao site da Vital</a>`;
+    $("#sessOk").onclick = async () => { const u = S.sessUser; S.sessUser = null; await entrar(u, false); };
+    $("#sessTroca").onclick = async () => { S.sessUser = null; try { localStorage.removeItem("vital_user"); } catch {} await sb.auth.signOut().catch(()=>{}); renderLogin(); };
+    return;
+  }
+  el.innerHTML = `<div style="text-align:center"><img src="/vitalagroenegocios/logo.png" alt="" style="width:72px"><div class="eyebrow" style="margin-top:8px">Área restrita</div><h2 style="font-size:1.35rem">Área do cliente</h2>
+      <p class="muted" style="margin:6px 0 0">Relatórios, planilhas e painéis que a Vital prepara para a sua empresa.</p></div>
+    <form id="fLogin" class="stack" novalidate>
+      <div class="field"><label for="lLogin">Login ou e-mail</label><input id="lLogin" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+      <div class="field"><label for="lSenha">Senha</label><input id="lSenha" type="password" autocomplete="current-password"></div>
+      <p class="note" id="lErr" role="alert" style="margin:0"></p>
+      <button class="btn primary" id="lBtn" type="submit">Entrar</button></form>
+    <button class="linklike" id="lEsq" type="button">Esqueci minha senha</button>
+    <p class="note" style="margin:0">Seus dados são tratados conforme a LGPD. <a href="/vitalagroenegocios/privacidade/" style="color:var(--brand)">Aviso de privacidade</a></p>
+    <a class="linklike" href="/vitalagroenegocios/" style="text-decoration:none">← Voltar ao site da Vital</a>`;
+  const emailDe = async v => { v=v.trim().toLowerCase(); if (v.includes("@")) return v; const {data}=await sb.rpc("email_do_login",{p_login:v}); return data||""; };
+  $("#fLogin").addEventListener("submit", async e => { e.preventDefault();
+    const v=$("#lLogin").value, s=$("#lSenha").value; if (!v.trim()||!s) { $("#lErr").textContent="Informe login e senha."; return; }
+    $("#lBtn").disabled=true; $("#lBtn").textContent="Verificando…"; $("#lErr").textContent="";
+    try { const email=await emailDe(v); if(!email) throw 0; const {data,error}=await sb.auth.signInWithPassword({email,password:s}); if(error) throw error; await entrar(data.user, true); }
+    catch { $("#lErr").textContent="Login ou senha incorretos."; $("#lBtn").disabled=false; $("#lBtn").textContent="Entrar"; } });
+  $("#lEsq").onclick = async () => { const v=$("#lLogin").value; if(!v.trim()){ $("#lErr").textContent="Digite seu login ou e-mail acima e toque de novo em Esqueci minha senha."; return; }
+    const email=await emailDe(v); if(email) await sb.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});
+    $("#lErr").textContent="Se o login existir, enviamos um link para o e-mail cadastrado."; };
+}
+async function trocarSenha(a, b, errEl, depois){
+  if (a.length<8 || !/[A-Za-z]/.test(a) || !/[0-9]/.test(a)) { errEl.textContent="Use pelo menos 8 caracteres, com letras e números."; return; }
+  if (a!==b) { errEl.textContent="As senhas não conferem."; return; }
+  const {error} = await sb.auth.updateUser({password:a}); if (error) { errEl.textContent="Não foi possível salvar: "+error.message; return; }
+  toast("Senha alterada."); depois && depois();
+}
+async function entrar(user, novoLogin){
+  const {data:perfil} = await sb.from("perfis").select("papel, nome, email, login, socio").eq("user_id", user.id).maybeSingle();
+  if (!perfil || !["admin","cliente","gestor","equipe"].includes(perfil.papel)) { await sb.auth.signOut(); S.papel=null; toast("Este acesso não está liberado para a área do cliente."); go("login"); return; }
+  S.user = user; S.perfil = perfil; S.papel = perfil.papel; reinicia();
+  try { localStorage.setItem("vital_user", JSON.stringify({n:perfil.nome||perfil.login||"", p:perfil.papel})); } catch {}
+  if (novoLogin) reg("entrar").catch(()=>{});
+  if (perfil.papel !== "admin") {
+    const {data:ac} = await sb.from("aceites").select("versao").eq("versao", TERMOS_V).maybeSingle();
+    if (!ac) { definirAbas(); go("termos"); return; }
+  }
+  if (volta()) return;
+  await inicio();
+}
+async function inicio(){ await carregarPaineis(); if (S.papel==="equipe") { go("inicio"); return; } await carregar(); go(S.papel==="admin" ? "inicio" : (S.paineis||[]).length ? "painel" : "docs"); }
+function volta(){ const v = new URLSearchParams(location.search).get("volta"); if (v && /^\/[a-z0-9/_-]*$/i.test(v)) { location.href = v; return true; } return false; }
+async function sair(){ clearTimeout(inat); try { localStorage.removeItem("vital_user"); } catch {} await sb.auth.signOut().catch(()=>{}); S.papel=null; S.arqs=[]; go("login"); }
+
+/* ===== termos de uso e aviso de privacidade ===== */
+function renderTermos(){
+  $("#termosBody").innerHTML = `<div><div class="eyebrow">Primeiro acesso</div><h2 style="font-size:1.3rem">Termos de uso e privacidade</h2></div>
+    <div class="termos" tabindex="0">
+      <h4>O que é esta área</h4><p>Espaço reservado para a Vital Agro &amp; Negócios entregar à sua empresa os relatórios, planilhas e demais materiais dos serviços contratados.</p>
+      <h4>Seu acesso é pessoal</h4><p>O login e a senha são de uso individual. Não compartilhe. Se suspeitar de uso indevido, troque a senha em "Minha conta" e avise a Vital.</p>
+      <h4>Quais dados usamos</h4><p>Nome, e-mail, login e o registro de acessos (data, hora e arquivos baixados). Usamos esses dados só para liberar o acesso, manter a segurança e cumprir obrigações legais, como a guarda de registros de acesso prevista no Marco Civil da Internet.</p>
+      <h4>Onde ficam</h4><p>Em servidores com controle de acesso, localizados no Brasil (São Paulo). Os arquivos só são liberados por links temporários, para quem tem permissão na empresa.</p>
+      <h4>Seus direitos (LGPD, art. 18)</h4><p>Você pode pedir a confirmação, o acesso, a correção ou a exclusão dos seus dados, entre outros direitos, em "Minha conta" ou pelo WhatsApp (62) 99174-4354.</p>
+      <p>O aviso completo está em <a href="/vitalagroenegocios/privacidade/" target="_blank" rel="noopener" style="color:var(--brand)">vital-disc.netlify.app/privacidade</a>.</p>
+    </div>
+    <label class="chk"><input type="checkbox" id="tOk"><span>Li e concordo com os termos de uso e o aviso de privacidade.</span></label>
+    <p class="note" id="tErr" role="alert" style="margin:0"></p>
+    <div class="row"><button class="btn primary" id="tBtn">Continuar</button><button class="btn ghost" data-sair="1">Sair</button></div>`;
+  $("#tBtn").onclick = async () => {
+    if (!$("#tOk").checked) { $("#tErr").textContent = "Marque a caixa para continuar."; return; }
+    const {error} = await sb.from("aceites").insert({versao:TERMOS_V});
+    if (error && !/duplicate/i.test(error.message)) { $("#tErr").textContent = "Não foi possível registrar: "+error.message; return; }
+    reg("aceitar_termos", TERMOS_V).catch(()=>{});
+    if (volta()) return;
+    await inicio();
+  };
+}
+
+/* ===== início: recursos de cada perfil ===== */
+function renderInicio(){
+  const adm = S.papel==="admin", soc = adm || !!(S.perfil && S.perfil.socio), nome = (S.perfil.nome||"").split(" ")[0];
+  const C = [
+    ["Projetos e tarefas", "Andamento dos trabalhos de cada cliente, etapas e horas lançadas.", "/vitalagroenegocios/projetos/#lista", true],
+    ["Minhas tarefas", "Tudo o que está no seu nome, de todos os projetos.", "/vitalagroenegocios/projetos/#minhas", true],
+    ["Quadros", "Demandas internas e funil de vendas (leads).", "/vitalagroenegocios/projetos/#quadros", true],
+    ["Comercial e indicadores", "Leads por responsável, origem e serviço; prazos e rentabilidade.", "/vitalagroenegocios/projetos/#comercial", true],
+    ["Financeiro", "Lançamentos, contas a pagar, orçado × realizado e comissões.", "/vitalagroenegocios/projetos/#financeiro", soc],
+    ["Painéis financeiros", "DRE, fluxo de caixa, balanço e análises dos clientes com BPO.", "#painel", (S.paineis||[]).length>0],
+    ["Entregáveis e pedidos", "Relatórios publicados e pedidos de cada cliente.", "#docs", adm],
+    ["Publicar entregável", "Enviar um relatório para a área de um cliente.", "#pub", adm],
+    ["Acessos", "Criar login de cliente, colaborador ou sócio.", "#acessos", adm],
+    ["Mídias", "Fotos e vídeos para o Instagram e o site.", "#midias", true],
+    ["Papo de Porteira", "Perguntas e programação das lives.", "#papo", true],
+    ["Simulador tributário", "Regimes, Fator R mês a mês e transição da Reforma.", "/vitalagroenegocios/simulador/", adm||S.papel==="equipe"],
+    ["Teste DISC", "Perfis comportamentais das equipes dos clientes.", "/vitalagroenegocios/disc/", adm||S.papel==="equipe"],
+    ["Avaliação 5S", "Vistorias, fotos e evolução dos clientes.", "/vitalagroenegocios/5s/", adm||S.papel==="equipe"],
+    ["Vitrine do site", "Depoimentos e galeria de clientes.", "#vitrine", adm],
+    ["Minha conta", "Seus dados e troca de senha.", "#conta", true]].filter(c=>c[3]);
+  $("#v-inicio").innerHTML = `<div><div class="eyebrow">${adm?"Administração":soc?"Sócio(a)":"Equipe Vital"}</div><h2 style="font-size:1.35rem">Olá${nome?", "+esc(nome):""}! O que vamos fazer?</h2></div>
+    <div class="hub">${C.map(([t,d,h])=>h.startsWith("#") ? `<button class="hubc" type="button" data-tab="${h.slice(1)}"><b>${t}</b><span>${d}</span></button>` : `<a class="hubc" href="${h}"><b>${t}</b><span>${d}</span></a>`).join("")}</div>`;
+}
+
+/* ===== entregáveis ===== */
+async function carregar(){
+  const {data, error} = await sb.from("ent_arquivos").select("*").order("competencia",{ascending:false}).order("criado_em",{ascending:false}).limit(2000);
+  if (error) { toast("Não foi possível carregar os arquivos."); S.arqs=[]; } else S.arqs = data;
+  S.empresas = [...new Set(S.arqs.map(a=>a.empresa))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  if (S.emp && !S.empresas.includes(S.emp)) S.emp="";
+  await carregarPedidos();
+}
+async function carregarPedidos(){
+  const r = await sb.from("ent_pedidos").select("*").order("ordem").order("criado_em"); S.peds = r.error ? [] : r.data;
+  S.minhasEmp = [];
+  if (S.papel!=="admin") { const g = await sb.from("gestor_empresas").select("empresa").eq("user_id", S.user.id); S.minhasEmp = (g.data||[]).map(x=>x.empresa); }
+  S.empresas = [...new Set([...S.empresas, ...S.peds.map(p=>p.empresa), ...S.minhasEmp])].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  if (!S.emp && S.empresas.length===1) S.emp = S.empresas[0];
+}
+const SIT_P = {pedido:["Pedido","p-ped"], producao:["Em produção","p-prod"], entregue:["Entregue","p-ok"], cancelado:["Cancelado","p-can"]};
+const fmtDia = d => d ? d.slice(0,10).split("-").reverse().join("/vitalagroenegocios/") : "";
+const chaveG = p => (S.emp?"":p.empresa+" · ")+(p.grupo||"Outros");
+function pedidosHtml(){
+  const vital = S.papel==="admin";
+  const L = (S.peds||[]).filter(p=>(!S.emp||p.empresa===S.emp) && (vital||p.situacao!=="cancelado"));
+  const n = k => L.filter(p=>p.situacao===k).length;
+  const grupos = [...new Set(L.map(chaveG))];
+  const emps = vital ? S.empresas : (S.minhasEmp.length ? S.minhasEmp : S.empresas);
+  return `<div class="card stack" id="pedCard">
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div><h3 style="margin:0">Relatórios pedidos</h3><p class="note" style="margin:2px 0 0">Acompanhe cada pedido. Quando o relatório fica pronto, o arquivo aparece aqui mesmo.</p></div>
+      <button class="btn sm primary" id="pedNovo" type="button">+ Pedir um relatório</button></div>
+    <div class="pedres"><span><b>${n("pedido")}</b> pedido${n("pedido")===1?"":"s"}</span><span><b>${n("producao")}</b> em produção</span><span><b>${n("entregue")}</b> entregue${n("entregue")===1?"":"s"}</span></div>
+    <form id="pedForm" class="stack" hidden novalidate>
+      ${emps.length>1||vital ? `<div class="field"><label for="pEmpN">Empresa</label><select id="pEmpN">${emps.map(e=>`<option ${e===S.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></div>` : ""}
+      <div class="field"><label for="pTitN">Qual relatório você precisa?</label><input id="pTitN" maxlength="300" placeholder="Ex.: resultado do contrato X nos últimos 12 meses"></div>
+      <div class="field"><label for="pDetN">Detalhes (opcional)</label><textarea id="pDetN" rows="3" maxlength="2000" placeholder="Período, comparações, para quando precisa…"></textarea></div>
+      <p class="note" id="pErrN" role="alert" style="margin:0"></p>
+      <div class="row"><button class="btn primary" id="pEnvN" type="submit">Enviar pedido</button><button class="btn ghost" id="pCanN" type="button">Cancelar</button></div></form>
+    ${!L.length ? `<p class="note" style="margin:0">Nenhum pedido ainda. Use “Pedir um relatório” para solicitar.</p>` :
+      grupos.map(g=>`<div class="pedg"><h4>${esc(g)}</h4>${L.filter(p=>chaveG(p)===g).map(linhaPed).join("")}</div>`).join("")}
+  </div>`;
+}
+function linhaPed(p){
+  const [txt,cls] = SIT_P[p.situacao]||SIT_P.pedido, vital = S.papel==="admin";
+  const arq = p.arquivo && S.arqs.some(a=>a.id===p.arquivo);
+  const ctl = vital ? `<select data-psit="${p.id}" aria-label="Situação">${Object.entries(SIT_P).map(([k,[l]])=>`<option value="${k}" ${k===p.situacao?"selected":""}>${l}</option>`).join("")}</select>
+      <input type="date" data-pprazo="${p.id}" value="${p.prazo||""}" aria-label="Prazo">
+      <select data-parq="${p.id}" aria-label="Arquivo entregue"><option value="">Ligar arquivo…</option>${S.arqs.filter(a=>a.empresa===p.empresa).map(a=>`<option value="${a.id}" ${a.id===p.arquivo?"selected":""}>${esc(a.titulo)}</option>`).join("")}</select>`
+    : `<span class="ps ${cls}">${txt}</span>`;
+  return `<div class="ped"><div class="tx"><b>${esc(p.titulo)}</b>${p.detalhe?`<div class="m">${esc(p.detalhe)}</div>`:""}<div class="m">${p.prazo?"Prazo: "+fmtDia(p.prazo)+" · ":""}pedido em ${fmtD(p.criado_em)}${p.resposta?" · "+esc(p.resposta):""}</div></div>
+    <div class="ac row" style="gap:6px;flex-wrap:wrap">${ctl}${arq?`<button class="btn sm primary" data-baixar="${p.arquivo}">Abrir</button>`:""}</div></div>`;
+}
+$("#v-docs").addEventListener("change", async e => {
+  const el = e.target; const id = el.dataset.psit||el.dataset.pprazo||el.dataset.parq; if (!id || S.papel!=="admin") return;
+  const d = el.dataset.psit ? {situacao:el.value} : el.dataset.pprazo ? {prazo:el.value||null} : {arquivo:el.value||null, ...(el.value?{situacao:"entregue"}:{})};
+  const {error} = await sb.from("ent_pedidos").update(d).eq("id", id);
+  if (error) { toast("Não foi possível salvar: "+error.message); return; }
+  Object.assign(S.peds.find(p=>p.id===id)||{}, d); toast("Pedido atualizado."); renderDocs();
+});
+$("#v-docs").addEventListener("click", e => {
+  if (e.target.closest("#pedNovo")) { const f=$("#pedForm"); f.hidden=!f.hidden; if(!f.hidden) $("#pTitN").focus(); }
+  if (e.target.closest("#pCanN")) $("#pedForm").hidden = true;
+});
+$("#v-docs").addEventListener("submit", async e => {
+  if (e.target.id!=="pedForm") return; e.preventDefault();
+  const emp = $("#pEmpN") ? $("#pEmpN").value : (S.minhasEmp[0]||S.emp||S.empresas[0]||""), tit=$("#pTitN").value.trim(), det=$("#pDetN").value.trim();
+  if (!emp) { $("#pErrN").textContent="Seu acesso não está ligado a uma empresa. Fale com a Vital."; return; }
+  if (!tit) { $("#pErrN").textContent="Descreva o relatório que você precisa."; return; }
+  $("#pEnvN").disabled = true;
+  const {error} = await sb.rpc("ent_pedir", {p_empresa:emp, p_titulo:tit, p_detalhe:det});
+  if (error) { $("#pErrN").textContent="Não foi possível enviar: "+error.message; $("#pEnvN").disabled=false; return; }
+  await carregarPedidos(); toast("Pedido enviado. A Vital vai acompanhar por aqui."); renderDocs();
+});
+function renderDocs(){
+  const v = $("#v-docs");
+  const anos = [...new Set(S.arqs.map(a=>a.competencia.slice(0,4)))].sort().reverse();
+  const lista = S.arqs.filter(a => (!S.emp||a.empresa===S.emp) && (!S.cat||a.categoria===S.cat) && (!S.ano||a.competencia.startsWith(S.ano)));
+  const porMes = {}; for (const a of lista) (porMes[a.competencia.slice(0,7)] ||= []).push(a);
+  const nome = (S.perfil.nome||"").split(" ")[0];
+  v.innerHTML = ((S.paineis||[]).length ? `<div class="pnbanner"><div><b>Painéis financeiros disponíveis</b><div class="note" style="margin:0">DRE, fluxo de caixa com conciliação, balanço e as análises pedidas.</div></div><button class="btn primary sm" type="button" data-tab="painel">Abrir painéis</button></div>` : "") + `<div class="row" style="justify-content:space-between"><div><div class="eyebrow">${S.papel==="admin"?"Equipe Vital":"Olá"+(nome?", "+esc(nome):"")}</div><h2 style="font-size:1.35rem">Entregáveis${S.emp?" · "+esc(S.emp):""}</h2></div>
+      <a class="btn sm" href="https://wa.me/${WA}?text=${encodeURIComponent("Olá! Sou cliente da Vital"+(S.emp?" ("+S.emp+")":"")+" e tenho uma dúvida sobre os entregáveis.")}" target="_blank" rel="noopener">Falar com a Vital</a></div>
+    ${pedidosHtml()}
+    <h3 style="margin:8px 0 0">Arquivos entregues</h3>
+    <div class="card filters" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      ${S.empresas.length>1 ? `<div class="field"><label for="fEmp">Empresa</label><select id="fEmp"><option value="">Todas</option>${S.empresas.map(e=>`<option ${e===S.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></div>` : ""}
+      <div class="field"><label for="fCat">Tipo</label><select id="fCat"><option value="">Todos</option>${CATS.map(c=>`<option ${c===S.cat?"selected":""}>${c}</option>`).join("")}</select></div>
+      <div class="field"><label for="fAno">Ano</label><select id="fAno"><option value="">Todos</option>${anos.map(y=>`<option ${y===S.ano?"selected":""}>${y}</option>`).join("")}</select></div>
+    </div>
+    ${!lista.length ? `<div class="card empty"><b>Nenhum arquivo por aqui ainda.</b><br>Quando a Vital publicar um relatório para a sua empresa, ele aparece nesta tela.</div>` :
+      Object.keys(porMes).sort().reverse().map(m => `<div class="ent-mes"><h3>${mesAno(m+"-01")}</h3>${porMes[m].map(itemArq).join("")}</div>`).join("")}`;
+  const on = (id, k) => { const el=$(id); if (el) el.onchange = () => { S[k]=el.value; renderDocs(); }; };
+  on("#fEmp","emp"); on("#fCat","cat"); on("#fAno","ano");
+}
+function itemArq(a){
+  const t = TIPOS[ext(a.nome_arquivo)] || [null,"out",ext(a.nome_arquivo).toUpperCase().slice(0,4)||"ARQ"];
+  return `<div class="ent"><div class="tp ${t[1]}" aria-hidden="true">${esc(t[2])}</div>
+    <div class="tx"><div><b>${esc(a.titulo)}</b> <span class="chip na">${esc(a.categoria)}</span></div>
+    <div class="m">${S.empresas.length>1&&!S.emp?esc(a.empresa)+" · ":""}${a.descricao?esc(a.descricao)+" · ":""}${tam(a.tamanho)} · publicado em ${fmtD(a.criado_em)}</div></div>
+    <div class="ac row" style="gap:6px"><button class="btn sm primary" data-baixar="${esc(a.id)}">Baixar</button>${S.papel==="admin"?`<button class="btn sm ghost" data-apagar="${esc(a.id)}">Excluir</button>`:""}</div></div>`;
+}
+$("#v-docs").addEventListener("click", async e => {
+  const b = e.target.closest("[data-baixar]");
+  if (b) { const a = S.arqs.find(x=>x.id===b.dataset.baixar); if (!a) return;
+    b.disabled = true; b.textContent = "Abrindo…";
+    try { await reg("baixar", a.id);
+      const {data, error} = await sb.storage.from("entregaveis").createSignedUrl(a.caminho, 60, {download: a.nome_arquivo}); if (error) throw error;
+      location.assign(data.signedUrl);
+    } catch { toast("Não foi possível baixar agora. Tente de novo."); }
+    finally { b.disabled = false; b.textContent = "Baixar"; } return; }
+  const d = e.target.closest("[data-apagar]");
+  if (d && S.papel==="admin") { const a = S.arqs.find(x=>x.id===d.dataset.apagar); if (!a || !await pergunta(`Excluir "${a.titulo}"? O cliente deixa de ver o arquivo.`)) return;
+    const r1 = await sb.storage.from("entregaveis").remove([a.caminho]); const r2 = await sb.from("ent_arquivos").delete().eq("id", a.id);
+    if (r1.error || r2.error) { toast("Não foi possível excluir."); return; }
+    S.arqs = S.arqs.filter(x=>x.id!==a.id); toast("Arquivo excluído."); renderDocs(); }
+});
+
+/* ===== minha conta e direitos do titular ===== */
+function renderConta(){
+  const p = S.perfil;
+  $("#v-conta").innerHTML = `<div><div class="eyebrow">Minha conta</div><h2 style="font-size:1.35rem">${esc(p.nome||"Meus dados")}</h2></div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Meus dados</h3>
+      <div class="grid2"><div><div class="note">Nome</div><b>${esc(p.nome||"–")}</b></div><div><div class="note">E-mail</div><b>${esc(p.email||"–")}</b></div><div><div class="note">Login</div><b>${esc(p.login||"–")}</b></div><div><div class="note">Acesso</div><b>${{admin:"Equipe Vital (administração)",equipe:"Equipe Vital",cliente:"Cliente",gestor:"Gestor"}[p.papel]||p.papel}</b></div></div>
+      <div class="row"><button class="btn sm" id="cBaixar">Baixar uma cópia dos meus dados</button>
+        <a class="btn sm" href="https://wa.me/${WA}?text=${encodeURIComponent("Olá! Quero solicitar a correção ou a exclusão dos meus dados na área do cliente da Vital (login: "+(p.login||p.email||"")+").")}" target="_blank" rel="noopener">Pedir correção ou exclusão</a>
+        <a class="btn sm ghost" href="/vitalagroenegocios/privacidade/" target="_blank" rel="noopener">Aviso de privacidade</a></div>
+      <p class="note" style="margin:0">Direitos previstos no art. 18 da LGPD. Respondemos em até 15 dias.</p></div>
+    <div class="card stack" style="max-width:520px"><h3 style="font-size:1.05rem">Trocar senha</h3>
+      <div class="field"><label for="c1">Nova senha</label><input id="c1" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="c2">Repita a nova senha</label><input id="c2" type="password" autocomplete="new-password"></div>
+      <p class="note" id="cErr" role="alert" style="margin:0"></p><button class="btn primary" id="cOk">Salvar nova senha</button></div>`;
+  $("#cOk").onclick = () => trocarSenha($("#c1").value, $("#c2").value, $("#cErr"), () => { $("#c1").value=$("#c2").value=""; $("#cErr").textContent=""; });
+  $("#cBaixar").onclick = async () => {
+    const {data:ac} = await sb.from("aceites").select("versao, em").eq("user_id", S.user.id);
+    const {data:emps} = await sb.from("gestor_empresas").select("empresa").eq("user_id", S.user.id);
+    const j = {gerado_em:new Date().toISOString(), titular:{nome:p.nome, email:p.email, login:p.login, tipo_de_acesso:p.papel}, empresas_liberadas:(emps||[]).map(x=>x.empresa), aceites_de_termos:ac||[], controlador:"Vital Agro e Negócios LTDA · CNPJ 54.146.859/0001-32"};
+    const u = URL.createObjectURL(new Blob([JSON.stringify(j,null,2)],{type:"application/json"})); const a=document.createElement("a"); a.href=u; a.download="meus-dados-vital.json"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000);
+  };
+}
+
+/* ===== admin: publicar ===== */
+async function empresasConhecidas(){
+  const nomes = new Set(S.arqs.map(a=>a.empresa));
+  for (const t of ["gestor_empresas","s5_empresas"]) { const {data} = await sb.from(t).select(t==="s5_empresas"?"nome":"empresa").limit(2000); (data||[]).forEach(r=>nomes.add(r.empresa||r.nome)); }
+  return [...nomes].filter(Boolean).sort((a,b)=>a.localeCompare(b,"pt-BR"));
+}
+async function renderPub(){
+  const v = $("#v-pub"); const emps = await empresasConhecidas();
+  const d = new Date(); d.setMonth(d.getMonth()-1); const comp = d.toISOString().slice(0,7);
+  v.innerHTML = `<div><div class="eyebrow">Equipe Vital</div><h2 style="font-size:1.35rem">Publicar entregável</h2></div>
+    <form class="card stack" id="fPub" novalidate>
+      <div class="grid2">
+        <div class="field"><label for="pEmp">Empresa *</label><input id="pEmp" list="pEmps" placeholder="Ex.: SOS Diesel" value="${esc(S.emp)}"><datalist id="pEmps">${emps.map(e=>`<option value="${esc(e)}">`).join("")}</datalist></div>
+        <div class="field"><label for="pComp">Mês de referência *</label><input id="pComp" type="month" value="${comp}"></div>
+        <div class="field"><label for="pTit">Título *</label><input id="pTit" placeholder="Ex.: Relatório gerencial de setembro"></div>
+        <div class="field"><label for="pCat">Tipo</label><select id="pCat">${CATS.map(c=>`<option>${c}</option>`).join("")}</select></div>
+      </div>
+      <div class="field"><label for="pDesc">Observação para o cliente</label><input id="pDesc" maxlength="200" placeholder="Opcional"></div>
+      <div class="field"><label for="pArq">Arquivo * (PDF, Excel, Word, PowerPoint, CSV, ZIP ou imagem, até 50 MB)</label><input id="pArq" type="file" accept=".pdf,.xlsx,.xlsm,.xls,.csv,.docx,.pptx,.zip,.png,.jpg,.jpeg"></div>
+      <div class="callout">O cliente só vê arquivos da própria empresa. Antes de publicar, confira se o arquivo não tem dados de outra empresa ou dados pessoais desnecessários.</div>
+      <p class="note" id="pErr" role="alert" style="margin:0"></p>
+      <div><button class="btn primary" id="pBtn" type="submit">Publicar</button></div>
+    </form>`;
+  $("#pArq").onchange = () => { const f=$("#pArq").files[0]; if (f && !$("#pTit").value) $("#pTit").value = f.name.replace(/\.[^.]+$/,"").replace(/[_-]+/g," "); };
+  $("#fPub").addEventListener("submit", async e => { e.preventDefault();
+    const emp=$("#pEmp").value.trim(), compV=$("#pComp").value, tit=$("#pTit").value.trim(), f=$("#pArq").files[0], err=$("#pErr");
+    if (!emp||!compV||!tit||!f) { err.textContent="Preencha empresa, mês, título e escolha o arquivo."; return; }
+    const t = TIPOS[ext(f.name)]; if (!t) { err.textContent="Tipo de arquivo não aceito."; return; }
+    if (f.size > 50*1048576) { err.textContent="O arquivo passa de 50 MB."; return; }
+    const nomeArq = f.name.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9._-]+/g,"_").slice(-100);
+    const caminho = `${slug(emp)}/${uuid()}/${nomeArq}`;
+    $("#pBtn").disabled=true; $("#pBtn").textContent="Enviando…"; err.textContent="";
+    try {
+      const up = await sb.storage.from("entregaveis").upload(caminho, f, {contentType:t[0], upsert:false}); if (up.error) throw up.error;
+      const {data, error} = await sb.from("ent_arquivos").insert({empresa:emp, titulo:tit, categoria:$("#pCat").value, competencia:compV+"-01", caminho, nome_arquivo:f.name, tamanho:f.size, tipo:t[0], descricao:$("#pDesc").value.trim()}).select().single();
+      if (error) { await sb.storage.from("entregaveis").remove([caminho]); throw error; }
+      S.arqs.unshift(data); if (!S.empresas.includes(emp)) S.empresas.push(emp);
+      toast("Publicado. O cliente já pode baixar."); S.emp = emp; go("docs");
+    } catch (x) { err.textContent = "Não foi possível publicar: " + (x.message||x); $("#pBtn").disabled=false; $("#pBtn").textContent="Publicar"; }
+  });
+}
+
+/* ===== admin: acessos dos clientes e registro ===== */
+function msgAcesso(c){ return `Olá, ${c.nome}! Seu acesso à Área do cliente da Vital Agro & Negócios:\n\nLink: ${APP_URL}\nLogin: ${c.login}\nSenha provisória: ${c.senha}\n\nNo primeiro acesso, leia e aceite os termos e troque a senha em "Minha conta". O acesso é pessoal: não compartilhe.`; }
+async function renderAcessos(){
+  const v = $("#v-acessos"); v.innerHTML = `<p class="note">Carregando…</p>`;
+  const [{data:perfis}, {data:ges}, {data:log}] = await Promise.all([
+    sb.from("perfis").select("user_id, papel, nome, email, login, socio").in("papel",["cliente","gestor","equipe"]),
+    sb.from("gestor_empresas").select("user_id, empresa"),
+    sb.from("acessos_log").select("user_id, acao, alvo, empresa, em").order("em",{ascending:false}).limit(200)]);
+  const nomeDe = {}; (perfis||[]).forEach(p => nomeDe[p.user_id] = p.nome || p.login || p.email);
+  nomeDe[S.user.id] = (S.perfil.nome||"Equipe Vital")+" (Vital)";
+  const tituloDe = Object.fromEntries(S.arqs.map(a=>[a.id, a.titulo]));
+  const clientes = (perfis||[]).filter(p=>p.papel==="cliente"||p.papel==="equipe").map(p => ({...p, empresas:(ges||[]).filter(g=>g.user_id===p.user_id).map(g=>g.empresa)}));
+  const emps = await empresasConhecidas();
+  const ACAO = {entrar:"Entrou", baixar:"Baixou", aceitar_termos:"Aceitou os termos", ver_simulacao:"Consultou simulação"};
+  v.innerHTML = `<div><div class="eyebrow">Equipe Vital</div><h2 style="font-size:1.35rem">Acessos dos clientes</h2></div>
+    <form class="card stack" id="fAc" novalidate><h3 style="font-size:1.05rem">Novo acesso de cliente</h3>
+      <div class="grid2">
+        <div class="field"><label for="aNome">Nome da pessoa *</label><input id="aNome" autocomplete="off"></div>
+        <div class="field"><label for="aEmail">E-mail *</label><input id="aEmail" type="email" autocomplete="off"></div>
+        <div class="field"><label for="aLogin">Login *</label><input id="aLogin" autocapitalize="none" placeholder="ex.: tulio.sosdiesel"></div>
+        <div class="field"><label for="aTipo">Tipo de acesso</label><select id="aTipo"><option value="cliente">Cliente (vê os entregáveis da empresa)</option><option value="colab">Colaborador(a) da Vital (vê só os projetos em que for incluído)</option><option value="socio">Sócio(a) da Vital (vê todos os projetos, Financeiro e comissões)</option></select></div>
+        <div class="field" id="aEmpF"><label for="aEmp">Empresa *</label><input id="aEmp" list="aEmps" placeholder="Ex.: SOS Diesel"><datalist id="aEmps">${emps.map(e=>`<option value="${esc(e)}">`).join("")}</datalist></div>
+      </div>
+      <p class="note" style="margin:0">Libere só quem precisa ver os relatórios da empresa (princípio da necessidade da LGPD). A senha é gerada aqui e a pessoa troca no primeiro acesso.</p>
+      <p class="note" id="aErr" role="alert" style="margin:0"></p>
+      <div><button class="btn primary" id="aBtn" type="submit">Criar acesso</button></div><div id="aOk"></div></form>
+    <div class="card stack"><h3 style="font-size:1.05rem">Pessoas com acesso (${clientes.length})</h3>
+      ${clientes.length ? `<div class="tablewrap"><table><thead><tr><th>Pessoa</th><th>Login</th><th>Empresa / tipo</th><th></th></tr></thead><tbody>
+        ${clientes.map(c=>`<tr><td>${esc(c.nome)}<br><span class="note">${esc(c.email)}</span></td><td>${esc(c.login)}</td><td>${c.papel==="equipe"?(c.socio?"<b>Sócio(a) Vital</b>":"<b>Colaborador(a) Vital</b>"):c.empresas.map(esc).join(", ")}</td>
+          <td class="num"><button class="btn sm" data-senha="${c.user_id}">Nova senha</button> <button class="btn sm ghost" data-remover="${c.user_id}">Remover</button></td></tr>`).join("")}
+      </tbody></table></div>` : `<p class="note">Nenhum cliente com acesso ainda.</p>`}</div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Registro de acessos</h3><p class="note" style="margin:0">Últimos 200 eventos. Guardados por 12 meses (Marco Civil da Internet exige ao menos 6).</p>
+      ${(log||[]).length ? `<div class="tablewrap"><table class="loglist"><thead><tr><th>Quando</th><th>Quem</th><th>O quê</th><th>Empresa</th></tr></thead><tbody>
+        ${log.map(l=>`<tr><td>${new Date(l.em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}</td><td>${esc(nomeDe[l.user_id]||"(removido)")}</td><td>${ACAO[l.acao]||esc(l.acao)}${l.acao==="baixar"?": "+esc(tituloDe[l.alvo]||"arquivo excluído"):""}</td><td>${esc(l.empresa)}</td></tr>`).join("")}
+      </tbody></table></div>` : `<p class="note">Nenhum acesso registrado ainda.</p>`}</div>`;
+  $("#aTipo").onchange = () => { $("#aEmpF").hidden = $("#aTipo").value!=="cliente"; };
+  $("#fAc").addEventListener("submit", async e => { e.preventDefault();
+    const tsel=$("#aTipo").value, tipo=tsel==="cliente"?"cliente":"equipe", nome=$("#aNome").value.trim(), email=$("#aEmail").value.trim().toLowerCase(), login=$("#aLogin").value.trim().toLowerCase(), emp=$("#aEmp").value.trim(), err=$("#aErr");
+    if (!nome||!email||!login||(tipo==="cliente"&&!emp)) { err.textContent="Preencha todos os campos."; return; }
+    const senha = gerarSenha(); $("#aBtn").disabled=true; err.textContent="";
+    try { const novo = await fn("gestores", {acao:"criar", papel:tipo, nome, email, login, senha, empresas:tipo==="cliente"?[emp]:[]});
+      if (tsel==="socio" && novo && novo.id) { const r = await sb.rpc("proj_definir_socio", {p_user:novo.id, p_socio:true}); if (r.error) throw new Error("Acesso criado, mas não foi possível marcar como sócio(a): "+r.error.message); }
+      const msg = msgAcesso({nome, login, senha});
+      $("#aOk").innerHTML = `<div class="callout stack"><b>Acesso criado.</b><span>Envie a mensagem abaixo só para ${esc(nome)}, por um canal privado:</span><textarea readonly rows="7" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px">${esc(msg)}</textarea>
+        <div class="row"><a class="btn sm primary" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">Enviar pelo WhatsApp</a></div></div>`;
+      $("#aBtn").disabled=false; ["#aNome","#aEmail","#aLogin"].forEach(s=>$(s).value="");
+    } catch (x) { err.textContent = x.message; $("#aBtn").disabled=false; }
+  });
+  v.querySelectorAll("[data-senha]").forEach(b => b.onclick = async () => { const c=clientes.find(x=>x.user_id===b.dataset.senha); const senha=gerarSenha();
+    try { await fn("gestores",{acao:"senha", id:c.user_id, senha}); const msg=msgAcesso({nome:c.nome, login:c.login, senha});
+      b.closest("td").innerHTML = `<a class="btn sm primary" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">Enviar nova senha</a>`; } catch (x) { toast(x.message); } });
+  v.querySelectorAll("[data-remover]").forEach(b => b.onclick = async () => { const c=clientes.find(x=>x.user_id===b.dataset.remover);
+    if (!await pergunta(`Remover o acesso de ${c.nome}? A pessoa não consegue mais entrar.`)) return;
+    try { await fn("gestores",{acao:"remover", id:c.user_id}); toast("Acesso removido."); renderAcessos(); } catch (x) { toast(x.message); } });
+}
+
+/* ===== mídias: equipe envia, Vital aprova ===== */
+const CATM = {eventos:"Eventos (RESAR/REMAR)", visitas:"Visitas técnicas", papo:"Papo de Porteira", socios:"Sócios na mídia", bastidores:"Bastidores da equipe (giro semanal)"};
+const TIPOM = {jpg:["image/jpeg","foto"], jpeg:["image/jpeg","foto"], png:["image/png","foto"], webp:["image/webp","foto"], mp4:["video/mp4","video"], mov:["video/quicktime","video"]};
+async function renderMidias(){
+  const v = $("#v-midias"); v.innerHTML = `<p class="note">Carregando…</p>`;
+  const adm = S.papel==="admin";
+  const {data, error} = await sb.from("midias").select("*").order("criado_em",{ascending:false}).limit(300);
+  const L = error ? [] : (data||[]);
+  const caminhos = L.filter(m=>m.caminho).map(m=>m.caminho);
+  const urls = {}; if (caminhos.length) { const {data:sg} = await sb.storage.from("midias").createSignedUrls(caminhos, 3600); (sg||[]).forEach(x=>{ if (x.signedUrl) urls[x.path]=x.signedUrl; }); }
+  const card = m => `<div class="mi"><div class="pv">${m.caminho&&urls[m.caminho] ? (m.tipo==="video" ? `<video src="${esc(urls[m.caminho])}" controls preload="metadata"></video>` : `<img src="${esc(urls[m.caminho])}" alt="">`) : `<a href="${esc(m.url||"#")}" target="_blank" rel="noopener">${esc(m.url||"arquivo")}</a>`}</div>
+    <div class="bd"><div><span class="st st-${m.status}">${{pendente:"Aguardando aprovação",aprovado:"No site",recusado:"Não publicado"}[m.status]}</span></div>
+      <b>${esc(m.titulo)}</b><span class="note">${esc(CATM[m.categoria])}${m.data?" · "+fmtD(m.data+"T12:00"):""}</span>${m.legenda?`<span>${esc(m.legenda)}</span>`:""}${m.motivo?`<span class="note">Motivo: ${esc(m.motivo)}</span>`:""}
+      <div class="row" style="gap:6px">${adm&&m.status!=="aprovado"?`<button class="btn sm primary" data-mok="${m.id}">Aprovar e publicar</button>`:""}${adm&&m.status==="pendente"?`<button class="btn sm ghost" data-mno="${m.id}">Recusar</button>`:""}${adm&&m.status==="aprovado"?`<button class="btn sm ghost" data-mno="${m.id}">Tirar do site</button>`:""}${(adm||m.status==="pendente")?`<button class="btn sm ghost" data-mdel="${m.id}">Excluir</button>`:""}</div></div></div>`;
+  const pend = L.filter(m=>m.status==="pendente"), resto = L.filter(m=>m.status!=="pendente");
+  v.innerHTML = `<div><div class="eyebrow">Equipe Vital</div><h2 style="font-size:1.35rem">Mídias do site</h2></div>
+    <form class="card stack" id="fMid" novalidate><h3 style="font-size:1.05rem">Enviar foto, vídeo ou post</h3>
+      <div class="grid2">
+        <div class="field"><label for="mTit">Título *</label><input id="mTit" maxlength="120" placeholder="Ex.: Visita técnica na Fazenda Boa Vista"></div>
+        <div class="field"><label for="mCat">Tema</label><select id="mCat">${Object.entries(CATM).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>
+        <div class="field"><label for="mData">Data</label><input id="mData" type="date"></div>
+        <div class="field"><label for="mLeg">Legenda</label><input id="mLeg" maxlength="400" placeholder="Opcional"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="mArq">Foto ou vídeo (JPG, PNG, WEBP, MP4 ou MOV, até 100 MB)</label><input id="mArq" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov"></div>
+        <div class="field"><label for="mUrl">…ou link do post (Instagram ou YouTube)</label><input id="mUrl" type="url" placeholder="https://www.instagram.com/p/…"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="mAut"><span>Tenho autorização das pessoas que aparecem para publicar a imagem no site da Vital. Em posts de parceiros com a Vital como colaboradora, o autor concordou com a publicação.</span></label>
+      <div class="callout">${adm?"Você pode aprovar o envio logo depois na lista abaixo.":"O envio vai para aprovação da Vital e só aparece no site depois de aprovado."}</div>
+      <p class="note" id="mErr" role="alert" style="margin:0"></p>
+      <div><button class="btn primary" id="mBtn" type="submit">Enviar</button></div></form>
+    ${adm ? `<div class="card stack"><h3 style="font-size:1.05rem">Aguardando aprovação (${pend.length})</h3>${pend.length?`<div class="mg">${pend.map(card).join("")}</div>`:`<p class="note">Nada pendente.</p>`}</div>` : ""}
+    <div class="card stack"><h3 style="font-size:1.05rem">${adm?"Publicadas e recusadas":"Meus envios"} (${adm?resto.length:L.length})</h3>${(adm?resto:L).length?`<div class="mg">${(adm?resto:L).map(card).join("")}</div>`:`<p class="note">Nenhum envio ainda.</p>`}
+      <p class="note" style="margin:0">Veja como fica no site: <a href="/vitalagroenegocios/midias/" target="_blank" rel="noopener" style="color:var(--brand)">vital-disc.netlify.app/midias</a></p></div>`;
+  $("#fMid").addEventListener("submit", async e => { e.preventDefault();
+    const tit=$("#mTit").value.trim(), f=$("#mArq").files[0], url=$("#mUrl").value.trim(), err=$("#mErr");
+    if (tit.length<2) { err.textContent="Dê um título."; return; }
+    if (!f && !url) { err.textContent="Escolha um arquivo ou cole o link do post."; return; }
+    if (url && !/^https:\/\/(www\.)?(instagram\.com|youtube\.com|youtu\.be)\//.test(url)) { err.textContent="O link precisa ser de um post do Instagram ou de um vídeo do YouTube."; return; }
+    if (!$("#mAut").checked) { err.textContent="Confirme a autorização de uso de imagem."; return; }
+    let caminho=null, tipo="link";
+    $("#mBtn").disabled=true; $("#mBtn").textContent="Enviando…"; err.textContent="";
+    try {
+      if (f) { const t=TIPOM[ext(f.name)]; if (!t) throw new Error("Tipo de arquivo não aceito."); if (f.size>100*1048576) throw new Error("O arquivo passa de 100 MB.");
+        caminho = `${S.user.id}/${uuid()}.${ext(f.name)}`; tipo=t[1];
+        const up = await sb.storage.from("midias").upload(caminho, f, {contentType:t[0], upsert:false}); if (up.error) throw up.error; }
+      const reg = {tipo, categoria:$("#mCat").value, titulo:tit, legenda:$("#mLeg").value.trim(), data:$("#mData").value||null, caminho, url:f?null:url, autorizacao_imagem:true, enviado_por:S.user.id};
+      const {error} = await sb.from("midias").insert(reg);
+      if (error) { if (caminho) await sb.storage.from("midias").remove([caminho]); throw error; }
+      toast(adm?"Enviado. Aprove na lista para publicar.":"Enviado para aprovação da Vital."); renderMidias();
+    } catch (x) { err.textContent = "Não foi possível enviar: " + (x.message||x); $("#mBtn").disabled=false; $("#mBtn").textContent="Enviar"; }
+  });
+  v.onclick = async e => {
+    const ok=e.target.closest("[data-mok]"), no=e.target.closest("[data-mno]"), del=e.target.closest("[data-mdel]");
+    if (ok) { const {error}=await sb.from("midias").update({status:"aprovado", aprovado_por:S.user.id, motivo:""}).eq("id",ok.dataset.mok); toast(error?"Não foi possível aprovar.":"Publicado no site."); renderMidias(); }
+    if (no) { const motivo = await pergunta("Tirar esta mídia do site?", {campo:"Motivo (opcional, aparece para quem enviou)", ok:"Tirar do site", perigo:true}) ; if (motivo===null) return; const {error}=await sb.from("midias").update({status:"recusado", motivo:motivo.slice(0,200)}).eq("id",no.dataset.mno); toast(error?"Não foi possível alterar.":"Não aparece mais no site."); renderMidias(); }
+    if (del) { const m=L.find(x=>x.id===del.dataset.mdel); if (!m||!await pergunta(`Excluir "${m.titulo}"?`)) return; if (m.caminho) await sb.storage.from("midias").remove([m.caminho]); const {error}=await sb.from("midias").delete().eq("id",m.id); toast(error?"Não foi possível excluir.":"Excluído."); renderMidias(); }
+  };
+}
+
+
+/* ===== vitrine do site: depoimentos e galeria de clientes (só admin) ===== */
+async function renderVitrine(){
+  const v = $("#v-vitrine"); v.innerHTML = `<p class="note">Carregando…</p>`;
+  const [{data:deps}, {data:cls}] = await Promise.all([
+    sb.from("site_depoimentos").select("*").order("criado_em",{ascending:false}).limit(200),
+    sb.from("site_clientes").select("*").order("ordem").order("nome")]);
+  const D = deps||[], C = cls||[];
+  const caminhos = C.filter(c=>c.caminho).map(c=>c.caminho), urls = {};
+  if (caminhos.length) { const {data:sg} = await sb.storage.from("midias").createSignedUrls(caminhos, 3600); (sg||[]).forEach(x=>{ if (x.signedUrl) urls[x.path]=x.signedUrl; }); }
+  const link = location.origin + "/vitalagroenegocios/depoimento/";
+  const msg = `Olá! Aqui é da Vital Agro & Negócios. Se puder, conte em 2 minutos como foi trabalhar com a gente: ${link} . O depoimento só vai para o site com a sua autorização. Obrigado!`;
+  const est = n => n ? "★".repeat(n) + "☆".repeat(5-n) : "";
+  const dCard = d => `<div class="card stack" style="gap:6px"><div><span class="st st-${d.status}">${{pendente:"Aguardando",aprovado:"No site",recusado:"Fora do site"}[d.status]}</span> <span class="note">${fmtD(d.criado_em)}</span></div>
+    <b>${esc(d.nome)}${d.empresa?" · "+esc(d.empresa):""}${d.cidade?" · "+esc(d.cidade):""}</b>${d.servico?`<span class="note">${esc(d.servico)}</span>`:""}${d.nota?`<span style="color:#D9A23A">${est(d.nota)}</span>`:""}
+    <span>${esc(d.texto)}</span>
+    <div class="row" style="gap:6px">${d.status!=="aprovado"?`<button class="btn sm primary" data-dok="${d.id}">Publicar no site</button>`:`<button class="btn sm ghost" data-dno="${d.id}">Tirar do site</button>`}${d.status==="pendente"?`<button class="btn sm ghost" data-dno="${d.id}">Recusar</button>`:""}<button class="btn sm ghost" data-ddel="${d.id}">Excluir</button></div></div>`;
+  const cCard = c => `<div class="mi"><div class="pv">${c.caminho&&urls[c.caminho]?`<img src="${esc(urls[c.caminho])}" alt="" style="object-fit:contain;background:#fff">`:`<span class="note">sem logo</span>`}</div>
+    <div class="bd"><div><span class="st st-${c.ativo?"aprovado":"recusado"}">${c.ativo?"No site":"Escondido"}</span></div><b>${esc(c.nome)}</b><span class="note">${[c.segmento,c.cidade].filter(Boolean).map(esc).join(" · ")}</span>
+      <span class="note">Autorização: ${esc(c.autorizacao_obs||"")} ${c.autorizado_em?"("+fmtDia(c.autorizado_em)+")":""}</span>
+      <div class="row" style="gap:6px"><button class="btn sm ghost" data-cat="${c.id}">${c.ativo?"Esconder":"Mostrar no site"}</button><button class="btn sm ghost" data-cdel="${c.id}">Excluir</button></div></div></div>`;
+  const pend = D.filter(d=>d.status==="pendente"), resto = D.filter(d=>d.status!=="pendente");
+  v.innerHTML = `<div><div class="eyebrow">Site da Vital</div><h2 style="font-size:1.35rem">Vitrine: depoimentos e galeria de clientes</h2>
+      <p class="note">Bastidores do giro semanal: envie em <b>Mídias</b> com o tema “Bastidores”. As fotos aprovadas aparecem no site no sábado.</p></div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Pedir depoimento a um cliente</h3>
+      <p class="note" style="margin:0">Mande este texto no WhatsApp do cliente:</p><textarea id="vMsg" rows="3" readonly style="width:100%">${esc(msg)}</textarea>
+      <div class="row" style="gap:6px"><button class="btn sm primary" id="vCopy" type="button">Copiar mensagem</button><a class="btn sm ghost" href="/vitalagroenegocios/depoimento/" target="_blank" rel="noopener">Ver o formulário</a></div></div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Depoimentos aguardando (${pend.length})</h3>${pend.length?pend.map(dCard).join(""):`<p class="note">Nada pendente.</p>`}</div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Depoimentos publicados e recusados (${resto.length})</h3>${resto.length?resto.map(dCard).join(""):`<p class="note">Nenhum ainda.</p>`}</div>
+    <form class="card stack" id="fCli" novalidate><h3 style="font-size:1.05rem">Adicionar cliente à galeria</h3>
+      <div class="grid2">
+        <div class="field"><label for="cNome">Nome da empresa *</label><input id="cNome" maxlength="120"></div>
+        <div class="field"><label for="cSeg">Segmento</label><input id="cSeg" maxlength="80" placeholder="Ex.: Produtor de grãos"></div>
+        <div class="field"><label for="cCid">Cidade</label><input id="cCid" maxlength="80" placeholder="Ex.: Alexânia/GO"></div>
+        <div class="field"><label for="cLogo">Logomarca (PNG, JPG ou WEBP)</label><input id="cLogo" type="file" accept=".png,.jpg,.jpeg,.webp"></div>
+        <div class="field"><label for="cObs">Como o cliente autorizou *</label><input id="cObs" maxlength="300" placeholder="Ex.: WhatsApp com o sócio João em 31/10"></div>
+        <div class="field"><label for="cDt">Data da autorização *</label><input id="cDt" type="date"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="cAut"><span>O cliente autorizou a Vital a mostrar o nome e a logomarca no site. Guardei o registro dessa autorização.</span></label>
+      <p class="note" id="cErr" role="alert" style="margin:0"></p><div><button class="btn primary" id="cBtn" type="submit">Adicionar</button></div></form>
+    <div class="card stack"><h3 style="font-size:1.05rem">Galeria de clientes (${C.length})</h3>${C.length?`<div class="mg">${C.map(cCard).join("")}</div>`:`<p class="note">Nenhum cliente na galeria. A seção só aparece no site quando houver pelo menos um.</p>`}</div>`;
+  $("#vCopy").onclick = () => { navigator.clipboard?.writeText(msg).then(()=>toast("Mensagem copiada."), ()=>{ $("#vMsg").select(); document.execCommand("copy"); toast("Mensagem copiada."); }); };
+  $("#fCli").addEventListener("submit", async e => { e.preventDefault(); const err=$("#cErr"), f=$("#cLogo").files[0];
+    const reg = {nome:$("#cNome").value.trim(), segmento:$("#cSeg").value.trim()||null, cidade:$("#cCid").value.trim()||null, autorizacao_obs:$("#cObs").value.trim(), autorizado_em:$("#cDt").value||null, autorizado:$("#cAut").checked};
+    if (reg.nome.length<2) { err.textContent="Informe o nome da empresa."; return; }
+    if (!reg.autorizado || !reg.autorizacao_obs || !reg.autorizado_em) { err.textContent="Sem autorização registrada (como e quando), o cliente não pode aparecer no site."; return; }
+    $("#cBtn").disabled=true; err.textContent="";
+    try { if (f) { const e2=ext(f.name); if (!["png","jpg","jpeg","webp"].includes(e2)) throw new Error("Use PNG, JPG ou WEBP."); if (f.size>5*1048576) throw new Error("A logo passa de 5 MB.");
+        reg.caminho = `${S.user.id}/site/${uuid()}.${e2}`; const up = await sb.storage.from("midias").upload(reg.caminho, f, {contentType:e2==="png"?"image/png":e2==="webp"?"image/webp":"image/jpeg", upsert:false}); if (up.error) throw up.error; }
+      const {error} = await sb.from("site_clientes").insert(reg); if (error) { if (reg.caminho) await sb.storage.from("midias").remove([reg.caminho]); throw error; }
+      toast("Cliente adicionado à galeria."); renderVitrine();
+    } catch (x) { err.textContent="Não foi possível salvar: "+(x.message||x); $("#cBtn").disabled=false; } });
+  v.onclick = async e => {
+    const ok=e.target.closest("[data-dok]"), no=e.target.closest("[data-dno]"), dd=e.target.closest("[data-ddel]"), ca=e.target.closest("[data-cat]"), cd=e.target.closest("[data-cdel]");
+    if (ok) { const {error}=await sb.from("site_depoimentos").update({status:"aprovado", aprovado_por:S.user.id}).eq("id",ok.dataset.dok); toast(error?"Não foi possível publicar.":"Publicado no site."); renderVitrine(); }
+    if (no) { const {error}=await sb.from("site_depoimentos").update({status:"recusado"}).eq("id",no.dataset.dno); toast(error?"Não foi possível alterar.":"Fora do site."); renderVitrine(); }
+    if (dd) { if (!await pergunta("Excluir este depoimento?")) return; const {error}=await sb.from("site_depoimentos").delete().eq("id",dd.dataset.ddel); toast(error?"Não foi possível excluir.":"Excluído."); renderVitrine(); }
+    if (ca) { const c=C.find(x=>x.id===ca.dataset.cat); const {error}=await sb.from("site_clientes").update({ativo:!c.ativo}).eq("id",c.id); toast(error?"Não foi possível alterar.":(c.ativo?"Escondido do site.":"Aparece no site.")); renderVitrine(); }
+    if (cd) { const c=C.find(x=>x.id===cd.dataset.cdel); if (!c||!await pergunta(`Excluir ${c.nome} da galeria?`)) return; if (c.caminho) await sb.storage.from("midias").remove([c.caminho]); const {error}=await sb.from("site_clientes").delete().eq("id",c.id); toast(error?"Não foi possível excluir.":"Excluído."); renderVitrine(); }
+  };
+}
+
+/* ===== Papo de Porteira: perguntas, lembretes, enquete e resumo ===== */
+async function renderPapo(){
+  const v = $("#v-papo"); v.innerHTML = `<p class="note">Carregando…</p>`;
+  const [{data:pergs}, {data:lemb}, {data:enqs}, {data:eps}] = await Promise.all([
+    sb.from("papo_perguntas").select("*").order("criado_em",{ascending:false}).limit(300),
+    sb.from("papo_lembretes").select("*").eq("ativo",true).order("criado_em",{ascending:false}),
+    sb.from("papo_enquetes").select("*").order("id",{ascending:false}).limit(10),
+    sb.from("papo_episodios").select("data,tema,convidado,link,resumo,aprendizados").order("data",{ascending:false})]);
+  const ativa = (enqs||[]).find(e=>e.ativa);
+  let res = {}; if (ativa) { const {data:r} = await sb.rpc("papo_resultado",{p_enquete:ativa.id}); (r||[]).forEach(x=>res[x.opcao]=+x.votos); }
+  const ST = {nova:"Nova", pauta:"Na pauta", respondida:"Respondida", descartada:"Descartada"};
+  const hoje = new Date().toISOString().slice(0,10);
+  const passados = (eps||[]).filter(e=>e.data<=hoje);
+  v.innerHTML = `<div><div class="eyebrow">Equipe Vital</div><h2 style="font-size:1.35rem">Papo de Porteira</h2></div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Perguntas dos ouvintes (${(pergs||[]).filter(q=>q.status==="nova").length} novas)</h3>
+      ${(pergs||[]).length ? (pergs||[]).map(q=>`<div class="pq"><div class="row" style="justify-content:space-between"><b>${esc(q.nome)}${q.cidade?" · "+esc(q.cidade):""}</b><span class="note">${new Date(q.criado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})} · ${ST[q.status]}</span></div>
+        <p>${esc(q.pergunta)}</p><span class="note">${q.citar_nome?"Pode citar o nome na live":"Não citar o nome"}${q.contato?" · Retorno: "+esc(q.contato):""}</span>
+        <div class="row" style="gap:6px">${["pauta","respondida","descartada"].filter(k=>k!==q.status).map(k=>`<button class="btn sm ghost" data-qst="${q.id}|${k}">${ST[k]}</button>`).join("")}</div></div>`).join("") : `<p class="note">Nenhuma pergunta ainda. O formulário fica na página do Papo de Porteira.</p>`}</div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Enquete do próximo tema</h3>
+      ${ativa ? `<p style="margin:0"><b>${esc(ativa.pergunta)}</b></p>${ativa.opcoes.map((o,i)=>`<div class="row" style="justify-content:space-between"><span>${esc(o)}</span><b>${res[i]||0} voto${(res[i]||0)===1?"":"s"}</b></div>`).join("")}
+        <div><button class="btn sm ghost" id="eFim">Encerrar votação</button></div>` : `<p class="note" style="margin:0">Nenhuma votação aberta.</p>`}
+      <form class="stack" id="fEnq" novalidate><div class="field"><label for="eP">Nova pergunta</label><input id="eP" value="Qual tema você quer na próxima live?"></div>
+        <div class="field"><label for="eO">Opções (uma por linha, de 2 a 6)</label><textarea id="eO" rows="4" style="border:1px solid var(--line);border-radius:10px;padding:10px"></textarea></div>
+        <p class="note" id="eErr" role="alert" style="margin:0"></p><div><button class="btn primary" type="submit">${ativa?"Encerrar a atual e abrir esta":"Abrir votação"}</button></div></form></div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Programação automática</h3>
+      <p class="note" style="margin:0">O site lê a agenda Google <b>"Lives"</b> sozinho, de hora em hora: todo evento com “Papo de porteira” no título vira episódio (formato: <i>Papo de porteira - Tema - Convidado</i>). Os episódios que já aconteceram continuam no site.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm" id="pSync">Atualizar agora</button><span class="note" id="pSyncMsg"></span></div></div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Resumo pós-live</h3><p class="note" style="margin:0">Aparece em "Episódios anteriores", no site.</p>
+      ${passados.length ? `<div class="field"><label for="rEp">Episódio</label><select id="rEp">${passados.map(e=>`<option value="${e.data}">${fmtD(e.data+"T12:00")} · ${esc(e.tema||"Tema a definir")}</option>`).join("")}</select></div>
+        <div class="field"><label for="rLk">Link da gravação (Instagram ou YouTube)</label><input id="rLk" type="url" placeholder="https://www.instagram.com/reel/…"></div>
+        <div class="field"><label for="rRes">Resumo em uma frase</label><input id="rRes" maxlength="300"></div>
+        ${[0,1,2].map(i=>`<div class="field"><label for="rA${i}">Aprendizado ${i+1}</label><input id="rA${i}" maxlength="200"></div>`).join("")}
+        <p class="note" id="rErr" role="alert" style="margin:0"></p><div><button class="btn primary" id="rOk">Salvar resumo</button></div>` : `<p class="note">Ainda não houve episódio.</p>`}</div>
+    <div class="card stack"><h3 style="font-size:1.05rem">Lista de lembretes no WhatsApp (${(lemb||[]).length})</h3>
+      <p class="note" style="margin:0">Pessoas que pediram o aviso das lives. Use só para isso e tire da lista quem pedir para sair.</p>
+      ${(lemb||[]).length ? `<div class="tablewrap"><table><thead><tr><th>Nome</th><th>WhatsApp</th><th>Desde</th><th></th></tr></thead><tbody>${lemb.map(l=>`<tr><td>${esc(l.nome)}</td><td><a href="https://wa.me/${esc(l.whatsapp)}" target="_blank" rel="noopener">${esc(l.whatsapp)}</a></td><td>${fmtD(l.criado_em)}</td><td class="num"><button class="btn sm ghost" data-lsai="${l.id}">Tirar da lista</button></td></tr>`).join("")}</tbody></table></div>
+        <div class="row"><button class="btn sm" id="lCsv">Baixar lista (CSV)</button></div>` : `<p class="note">Ninguém inscrito ainda.</p>`}</div>`;
+  const epSel = $("#rEp");
+  const enche = () => { const e = passados.find(x=>x.data===epSel.value); $("#rRes").value = e.resumo||""; $("#rLk").value = e.link||""; [0,1,2].forEach(i=>$("#rA"+i).value=(e.aprendizados||[])[i]||""); };
+  if (epSel) { enche(); epSel.onchange = enche;
+    $("#rOk").onclick = async () => { const apr=[0,1,2].map(i=>$("#rA"+i).value.trim()).filter(Boolean); const lk=$("#rLk").value.trim();
+      if (lk && !/^https:\/\/(www\.)?(instagram\.com|youtube\.com|youtu\.be)\//.test(lk)) { $("#rErr").textContent="O link precisa ser do Instagram ou do YouTube."; return; }
+      const {error} = await sb.from("papo_episodios").update({resumo:$("#rRes").value.trim(), aprendizados:apr, link:lk}).eq("data", epSel.value);
+      if (error) { $("#rErr").textContent="Não foi possível salvar."; return; } const e=passados.find(x=>x.data===epSel.value); e.resumo=$("#rRes").value.trim(); e.aprendizados=apr; e.link=lk; toast("Salvo. Já aparece no site."); }; }
+  $("#pSync").onclick = async () => { const m=$("#pSyncMsg"); m.textContent="Lendo a agenda…";
+    try { const r=await fetch((CFG.supabaseUrl||"")+"/functions/v1/papo?atualizar=1",{cache:"no-store"}); const j=await r.json(); if(!r.ok) throw 0;
+      const fut=(j.episodios||[]).filter(e=>e.data>=new Date().toISOString().slice(0,10)); m.textContent=`Pronto: ${fut.length} episódio(s) programado(s).`; setTimeout(renderPapo,1200); }
+    catch { m.textContent="Não foi possível ler a agenda agora. Confira se a agenda “Lives” está pública."; } };
+  $("#fEnq").addEventListener("submit", async e => { e.preventDefault();
+    const perg=$("#eP").value.trim(), ops=$("#eO").value.split("\n").map(x=>x.trim()).filter(Boolean);
+    if (!perg || ops.length<2 || ops.length>6) { $("#eErr").textContent="Escreva a pergunta e de 2 a 6 opções."; return; }
+    if (ativa) await sb.from("papo_enquetes").update({ativa:false}).eq("id",ativa.id);
+    const {error} = await sb.from("papo_enquetes").insert({pergunta:perg, opcoes:ops, ativa:true});
+    if (error) { $("#eErr").textContent="Não foi possível abrir a votação."; return; } toast("Votação aberta no site."); renderPapo(); });
+  const fim = $("#eFim"); if (fim) fim.onclick = async () => { await sb.from("papo_enquetes").update({ativa:false}).eq("id",ativa.id); toast("Votação encerrada."); renderPapo(); };
+  const csv = $("#lCsv"); if (csv) csv.onclick = () => { const q=x=>`"${String(x??"").replace(/vitalagroenegocios/"/g,'""')}"`;
+    const t = "\ufeff"+["nome;whatsapp;desde"].concat(lemb.map(l=>[l.nome,l.whatsapp,fmtD(l.criado_em)].map(q).join(";"))).join("\n");
+    const u=URL.createObjectURL(new Blob([t],{type:"text/csv;charset=utf-8"})); const a=document.createElement("a"); a.href=u; a.download="lembretes-papo.csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); };
+  v.onclick = async e => {
+    const b=e.target.closest("[data-qst]"); if (b) { const [id,st]=b.dataset.qst.split("|"); await sb.from("papo_perguntas").update({status:st}).eq("id",+id); renderPapo(); return; }
+    const l=e.target.closest("[data-lsai]"); if (l) { if (!await pergunta("Tirar este número da lista de lembretes?")) return; await sb.from("papo_lembretes").delete().eq("id",+l.dataset.lsai); toast("Removido da lista."); renderPapo(); }
+  };
+}
+
+async function boot(){
+  definirAbas();
+  if (!sb) { go("login"); return; }
+  sb.auth.onAuthStateChange(ev => { if (ev==="PASSWORD_RECOVERY") { modoRecuperar = true; go("login"); } });
+  const {data:{session}} = await sb.auth.getSession();
+  if (session && !/type=recovery/.test(location.hash)) {
+    if (new URLSearchParams(location.search).get("volta")) { await entrar(session.user, false); return; }
+    const {data:p} = await sb.from("perfis").select("nome, login").eq("user_id", session.user.id).maybeSingle();
+    S.sessUser = session.user; S.sessNome = (p && (p.nome || p.login)) || session.user.email || ""; go("login");
+  } else go("login");
+}
+/* ===== painéis financeiros (DRE, DFC, BP e análises) ===== */
+const P = { emp:"", ver:"c", per:"12", prev:true, sec:"resumo", an:null, ab:{}, mesBP:"", banco:null };
+const MC = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const mesC = m => MC[+m.slice(5,7)-1]+"/vitalagroenegocios/"+m.slice(2,4);
+const nfmt = new Intl.NumberFormat("pt-BR",{maximumFractionDigits:0});
+const fN = v => (Math.abs(v)<0.5 ? "–" : nfmt.format(Math.round(v)));
+const fR = v => { const a=Math.abs(v), s=v<0?"−":""; return a>=1e6 ? s+"R$ "+(a/1e6).toFixed(2).replace(".",",")+" mi" : a>=1e3 ? s+"R$ "+nfmt.format(Math.round(a/1e3))+" mil" : s+"R$ "+nfmt.format(Math.round(a)); };
+const fP = v => isFinite(v) ? (v*100).toFixed(1).replace(".",",")+"%" : "–";
+async function carregarPaineis(){ if (!sb) return; const r = await sb.from("ent_paineis").select("empresa,chave,dados,atualizado_em"); S.paineis = r.error ? [] : (r.data||[]).filter(x=>x.dados && (x.dados.fatos || x.dados.tipo==="matriz") && !(x.dados.rascunho && (S.papel==="cliente"||S.papel==="gestor"))).sort((a,b)=>a.empresa.localeCompare(b.empresa,"pt")); }
+function pac(){ const l=S.paineis||[]; const x = l.find(p=>p.empresa===P.emp) || l[0]; if (x) P.emp = x.empresa; return x && x.dados; }
+function mesesPrev(D){ const u=D.meses[D.meses.length-1]; let y=+u.slice(0,4), m=+u.slice(5,7); const o=[]; for(let i=0;i<4;i++){ m++; if(m>12){m=1;y++;} o.push(y+"-"+String(m).padStart(2,"0")); } return o; }
+function idxPer(D){ const n=D.meses.length, a=[...Array(n).keys()];
+  if (P.per==="12") return a.slice(Math.max(0,n-12)); if (P.per==="tudo") return a; return a.filter(i=>D.meses[i].startsWith(P.per)); }
+const passa = f => P.ver==="c" ? !f[5] : P.ver==="l" ? f[1]===0 : f[1]===1;
+const passaCx = f => P.ver==="c" ? true : P.ver==="l" ? f[1]===0 : f[1]===1;
+function serie(D, pred){ const o=new Array(D.meses.length).fill(0); for (const f of D.fatos) if (passa(f) && pred(f)) o[f[0]]+=f[7]; return o; }
+const g_ = (D,f) => D.cats[f[2]].g;
+const byG = (D, test) => f => test(g_(D,f));
+const prevDe = arr => { const u=arr.slice(-6); const m=u.reduce((a,b)=>a+b,0)/(u.length||1); return [m,m,m,m]; };
+const soma = (arr, idx) => idx.reduce((s,i)=>s+(arr[i]||0),0);
+const verNome = () => ({c:"Consolidado (Life + Health)", l:"Arcanjos Life", h:"Arcanjos Health"})[P.ver];
+
+/* --- gráfico de barras (com linha opcional), em SVG, com dica ao passar o mouse --- */
+function grafico(labels, series, opt={}){
+  const W=760, H=opt.h||250, L=64, R=12, T=14, B=34, n=labels.length; if (!n) return "";
+  const barras=series.filter(s=>!s.linha), linhas=series.filter(s=>s.linha);
+  let mn=0, mx=0; series.forEach(s=>s.v.forEach(v=>{ mn=Math.min(mn,v); mx=Math.max(mx,v); })); if (mx===mn) mx=mn+1;
+  const pas = (()=>{ const r=(mx-mn)/4, p=Math.pow(10,Math.floor(Math.log10(r))); return [1,2,2.5,5,10].map(k=>k*p).find(k=>k>=r); })();
+  mn=Math.floor(mn/pas)*pas; mx=Math.ceil(mx/pas)*pas;
+  const y=v=>T+(H-T-B)*(1-(v-mn)/(mx-mn)), cw=(W-L-R)/n, bw=Math.max(3,Math.min(26,(cw-6)/Math.max(1,barras.length)-2));
+  let g=`<svg viewBox="0 0 ${W} ${H}" class="gsv" role="img" aria-label="${esc(opt.titulo||"Gráfico")}">`;
+  for (let v=mn; v<=mx+1e-6; v+=pas) g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" class="${Math.abs(v)<1e-6?"g0":"gl"}"/><text x="${L-6}" y="${y(v)+4}" class="gt" text-anchor="end">${fR(v).replace("R$ ","")}</text>`;
+  const passoL = Math.ceil(n/12);
+  labels.forEach((lb,i)=>{ const x0=L+i*cw; const pv=opt.prev&&opt.prev[i];
+    barras.forEach((s,j)=>{ const v=s.v[i]; if(!v) return; const x=x0+(cw-(bw+2)*barras.length)/2+j*(bw+2), y1=y(Math.max(v,0)), y2=y(Math.min(v,0));
+      g+=`<rect x="${x}" y="${y1}" width="${bw}" height="${Math.max(1,y2-y1)}" rx="3" class="gb" style="fill:${s.cor};${pv?"fill-opacity:.38;stroke:"+s.cor+";stroke-dasharray:3 2":""}"/>`; });
+    if (i%passoL===0) g+=`<text x="${x0+cw/2}" y="${H-B+16}" class="gt${pv?" gp":""}" text-anchor="middle">${esc(lb)}</text>`;
+    const tt = `<b>${esc(lb)}${pv?" (previsão)":""}</b>`+series.map(s=>`<span><i style="background:${s.cor}"></i>${esc(s.nome)}: ${fR(s.v[i]||0)}</span>`).join("");
+    g+=`<rect x="${x0}" y="${T}" width="${cw}" height="${H-T-B}" class="gh" data-tt="${esc(tt)}"/>`; });
+  linhas.forEach(s=>{ const pts=s.v.map((v,i)=>[L+i*cw+cw/2,y(v)]); g+=`<path d="${pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join("")}" class="gln" style="stroke:${s.cor}"/>`+pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.2" style="fill:${s.cor}" class="gdot${opt.prev&&opt.prev[i]?" gp":""}"/>`).join(""); });
+  g+=`</svg>`;
+  const leg = series.length>1 ? `<div class="gleg">${series.map(s=>`<span><i style="background:${s.cor}${s.linha?";height:3px":""}"></i>${esc(s.nome)}</span>`).join("")}${opt.prev&&opt.prev.some(Boolean)?`<span><i class="iprev"></i>Previsão (média dos últimos 6 meses)</span>`:""}</div>` : (opt.prev&&opt.prev.some(Boolean)?`<div class="gleg"><span><i class="iprev"></i>Previsão (média dos últimos 6 meses)</span></div>`:"");
+  return `<div class="gw">${leg}${g}<div class="gtip" hidden></div></div>`;
+}
+document.addEventListener("mousemove", e => { const h=e.target.closest&&e.target.closest(".gh"); document.querySelectorAll(".gtip").forEach(t=>{ if(!h||!t.parentNode.contains(h)) t.hidden=true; });
+  if (!h) return; const w=h.closest(".gw"), t=w.querySelector(".gtip"), r=w.getBoundingClientRect(); t.innerHTML=h.dataset.tt; t.hidden=false;
+  const x=e.clientX-r.left, y=e.clientY-r.top; t.style.left=Math.min(Math.max(8,x+14), r.width-t.offsetWidth-8)+"px"; t.style.top=Math.max(4,y-t.offsetHeight-10)+"px"; });
+const COR = { rec:"var(--c-rec)", desp:"var(--c-desp)", res:"var(--fg)" };
+
+/* --- estrutura do DRE --- */
+const DRE = [
+  {k:"rb", t:"Receita bruta", p:g=>g.startsWith("R_")},
+  {k:"ded", t:"(−) Deduções (impostos e devoluções)", p:g=>g.startsWith("D_")},
+  {k:"rl", t:"= Receita líquida", s:["rb","ded"]},
+  {k:"cv", t:"(−) Custos variáveis da operação", p:g=>g.startsWith("C_")},
+  {k:"mc", t:"= Margem de contribuição", s:["rl","cv"], pct:1},
+  {k:"pes", t:"(−) Pessoal (despesa fixa)", p:g=>g.startsWith("P_")},
+  {k:"adm", t:"(−) Administrativas (despesa fixa)", p:g=>g.startsWith("A_")},
+  {k:"eb", t:"= EBITDA (resultado operacional)", s:["mc","pes","adm"], pct:1},
+  {k:"fin", t:"(±) Resultado financeiro", p:g=>g.startsWith("F_")},
+  {k:"nr", t:"(−) Não recorrentes: processos e bloqueios", p:g=>g.startsWith("N_")},
+  {k:"ir", t:"(−) IRPJ e CSLL", p:g=>g.startsWith("T_")},
+  {k:"rlq", t:"= Resultado líquido", s:["eb","fin","nr","ir"], pct:1, forte:1},
+  {k:"fx", t:"Fora do resultado: empréstimos, investimentos, lucros, repasses Life/Health", p:g=>g.startsWith("X_"), info:1},
+  {k:"cx", t:"= Resultado de caixa do período", s:["rlq","fx"]}];
+function calcDRE(D){
+  const nm=D.meses.length, L={}, grupos={}, cats={};
+  D.grupos.X_IC ||= "Repasses entre Life e Health"; D.grupos.X_CARTAO = "Pagamento de fatura de cartão";
+  for (const f of D.fatos){ if(!passaCx(f)) continue; const c=D.cats[f[2]], g=(P.ver==="c"&&f[5])?"X_IC":c.g; const lin=DRE.find(l=>l.p&&l.p(g)); if(!lin) continue;
+    const cn=g==="X_IC"?c.n+" (repasse)":c.n;
+    (L[lin.k] ||= new Array(nm).fill(0))[f[0]]+=f[7]; (grupos[g] ||= new Array(nm).fill(0))[f[0]]+=f[7]; (cats[cn] ||= new Array(nm).fill(0))[f[0]]+=f[7]; }
+  DRE.forEach(l=>{ if (l.s) { L[l.k]=new Array(nm).fill(0); l.s.forEach(k=>(L[k]||[]).forEach((v,i)=>L[l.k][i]+=v)); } else L[l.k] ||= new Array(nm).fill(0); });
+  return {L, grupos, cats};
+}
+
+/* --- análises pedidas pela Silvana --- */
+const AN = [
+ {id:"geral", gr:"Resultados e despesas", t:"Resultado geral: despesas fixas × variáveis", tipo:"geral"},
+ {id:"hosp", gr:"Resultados e despesas", t:"Resultado dos 4 hospitais", tipo:"res", rec:(D,f)=>f[4]>=0&&/IMPAR|ESHO/.test(D.cps[f[4]]), desp:(D,f)=>/Hospital|Maternidade/.test(D.ccs[f[3]])||(f[6]&&/Materiais Hosp/.test(D.cats[f[2]].n)), dim:"cc",
+   nota:"Receita: pagamentos da IMPAR e da ESHO (donas dos hospitais). Despesa: lançamentos com centro de custo de um dos 4 hospitais + materiais hospitalares pagos nos cartões do Victor. Há poucos lançamentos com centro de custo de hospital; veja Pendências."},
+ {id:"ceasa", gr:"Resultados e despesas", t:"Resultado do Ceasa", tipo:"res", rec:(D,f)=>f[4]>=0&&D.cps[f[4]]==="Ceasa-DF", desp:(D,f)=>D.ccs[f[3]]==="Ceasa", dim:"cat", nota:"Receita: pagamentos das Centrais de Abastecimento (Ceasa-DF). Despesa: centro de custo Ceasa."},
+ {id:"amb", gr:"Resultados e despesas", t:"Ambulâncias: contrato e frota", tipo:"res", rec:(D,f)=>["R_PLANO","R_LOCAC"].includes(g_(D,f)), desp:(D,f)=>D.ccs[f[3]]==="Frota (ambulâncias)", dim:"cat",
+   nota:"Receita: Plano Ambulância + locação de equipamentos/veículos. Despesa: tudo lançado no centro de custo de uma viatura (VTR/Sprinter). Confirme com a Silvana qual é o contrato da ambulância para refinarmos."},
+ {id:"manut", gr:"Resultados e despesas", t:"Gasto com manutenção", tipo:"desp", p:(D,f)=>g_(D,f)==="C_MANUT", dim:"cat"},
+ {id:"comb", gr:"Resultados e despesas", t:"Gasto com combustível", tipo:"desp", p:(D,f)=>D.cats[f[2]].n==="Combustivel e translados", dim:"cc"},
+ {id:"farm", gr:"Resultados e despesas", t:"Medicamentos e insumos de farmácia", tipo:"desp", p:(D,f)=>g_(D,f)==="C_FARM", dim:"cat"},
+ {id:"jud", gr:"Resultados e despesas", t:"Processos trabalhistas pagos", tipo:"desp", p:(D,f)=>g_(D,f)==="N_JUDIC", dim:"cat"},
+ {id:"juros", gr:"Resultados e despesas", t:"Juros da conta garantida e encargos financeiros", tipo:"desp", p:(D,f)=>["Conta Garantida","Despesas financeiras"].includes(D.cats[f[2]].n), dim:"cat"},
+ {id:"emp", gr:"Resultados e despesas", t:"Empréstimos: situação atual", tipo:"emp"},
+ {id:"enc", gr:"Resultados e despesas", t:"Encargos trabalhistas", tipo:"desp", p:(D,f)=>g_(D,f)==="P_ENC", dim:"cat"},
+ {id:"imp", gr:"Resultados e despesas", t:"Impostos (Life e Health)", tipo:"desp", p:(D,f)=>["D_IMP","T_IR"].includes(g_(D,f)), dim:"emp"},
+ {id:"parc", gr:"Resultados e despesas", t:"Parcelamentos e previsão de parcelas", tipo:"parc"},
+ {id:"dem", gr:"Resultados e despesas", t:"Despesas com demissões", tipo:"desp", p:(D,f)=>g_(D,f)==="P_DEMIS", dim:"cat"},
+ {id:"com", gr:"Resultados e despesas", t:"Comissões e folha Adm/COE", tipo:"desp", p:(D,f)=>["Folha de Pagamento - Administrativo","Folha de Pagamento - COE","Comissionamento Parceiros","Comissão de vendedores"].includes(D.cats[f[2]].n), dim:"cat"},
+ {id:"r_area", gr:"Receitas", t:"Receita de Área protegida", tipo:"rec", p:(D,f)=>g_(D,f)==="R_AREA", dim:"cp"},
+ {id:"r_ev", gr:"Receitas", t:"Receita de eventos", tipo:"rec", p:(D,f)=>g_(D,f)==="R_EVENT", dim:"cat", nota:"Inclui as categorias Eventos, CICB, Ulisses e Arena. A categoria \"Outros\" (R$ 2 mi em 22 meses, quase tudo evento) está separada; veja Pendências."},
+ {id:"r_rp", gr:"Receitas", t:"Receita de remoção particular", tipo:"rec", p:(D,f)=>g_(D,f)==="R_REMOC", dim:"emp"},
+ {id:"r_re", gr:"Receitas", t:"Receita de remoção eletiva (operadoras e home care)", tipo:"rec", p:(D,f)=>g_(D,f)==="R_HOME", dim:"cp", nota:"Não existe categoria \"remoção eletiva\" no sistema; usamos Home Care/Operador de Saúde, que são as remoções agendadas pelas operadoras."},
+ {id:"r_pl", gr:"Receitas", t:"Receita do nosso plano", tipo:"rec", p:(D,f)=>g_(D,f)==="R_PLANO", dim:"emp"},
+ {id:"r_pf", gr:"Receitas", t:"Receita dos postos fixos", tipo:"rec", p:(D,f)=>g_(D,f)==="R_POSTO", dim:"cp"},
+ {id:"r_tr", gr:"Receitas", t:"Receita de treinamentos", tipo:"rec", p:(D,f)=>g_(D,f)==="R_TREIN", dim:"emp"}];
+
+/* --- tela principal --- */
+function renderPainel(){
+  const el=$("#v-painel"), D=pac();
+  if (!D) { el.innerHTML=`<div class="card empty">Nenhum painel disponível ainda.</div>`; return; }
+  const emps=(S.paineis||[]).map(p=>p.empresa);
+  if (D.tipo==="matriz") return renderMatriz(el, D, emps);
+  const secs=[["resumo","Resumo"],["dre","DRE"],["dfc","DFC e conciliação"],["bp","Balanço (BP)"],["an","Análises"],["pend","Pendências"]];
+  el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
+      <p class="note" style="margin:2px 0 0">Dados até ${mesC(D.meses[D.meses.length-1])} · atualizado em ${esc(D.gerado.split(" ")[0].split("-").reverse().join("/vitalagroenegocios/"))} · fonte: planilha Gestão BPO (lançamentos confirmados)</p></div>
+    <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
+      <label>Empresa<select id="pnVer"><option value="c">Consolidado</option><option value="l">Arcanjos Life</option><option value="h">Arcanjos Health</option></select></label>
+      <label>Período<select id="pnPer"><option value="12">Últimos 12 meses</option><option value="2026">2026</option><option value="2025">2025</option><option value="tudo">Tudo (desde jan/25)</option></select></label>
+      <label class="chk pnchk"><input type="checkbox" id="pnPrev" ${P.prev?"checked":""}><span>Previsão até ${mesC(mesesPrev(D)[3])}</span></label></div></div>
+    <nav class="pns" role="tablist">${secs.map(([k,l])=>`<button class="tab" role="tab" data-pns="${k}" aria-selected="${P.sec===k}">${l}</button>`).join("")}</nav>
+    <div id="pnBody" class="stack"></div>`;
+  $("#pnVer").value=P.ver; $("#pnPer").value=P.per;
+  $("#pnVer").onchange=e=>{P.ver=e.target.value; corpo();}; $("#pnPer").onchange=e=>{P.per=e.target.value; corpo();}; $("#pnPrev").onchange=e=>{P.prev=e.target.checked; corpo();};
+  if ($("#pnEmp")) $("#pnEmp").onchange=e=>{P.emp=e.target.value; renderPainel();};
+  el.querySelectorAll("[data-pns]").forEach(b=>b.onclick=()=>{ P.sec=b.dataset.pns; P.an=null; el.querySelectorAll("[data-pns]").forEach(x=>x.setAttribute("aria-selected", x===b)); corpo(); });
+  corpo();
+}
+function corpo(){ const D=pac(), b=$("#pnBody"); b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, an:secAN, pend:secPend})[P.sec](D); ligar(D); }
+function cab(D, idx, prev){ return [...idx.map(i=>mesC(D.meses[i])), ...(prev?mesesPrev(D).map(mesC):[])]; }
+
+function secResumo(D){
+  const idx=idxPer(D), {L}=calcDRE(D), rb=soma(L.rb,idx), rl=soma(L.rlq,idx), mc=soma(L.mc,idx), eb=soma(L.eb,idx);
+  const desp = L.rb.map((v,i)=>L.rlq[i]-v);
+  const bk=bancosVer(D), ult=D.meses.length-1, caixa=bk.reduce((s,b)=>s+b.m[ult][3],0);
+  const rec=P.ver==="h"?D.receber.total[1]:P.ver==="l"?D.receber.total[0]:D.receber.total[0]+D.receber.total[1];
+  const pag=P.ver==="h"?D.pagar.total[1]:P.ver==="l"?D.pagar.total[0]:D.pagar.total[0]+D.pagar.total[1];
+  const pv=P.prev, lab=cab(D,idx,pv), pr=[...idx.map(()=>0),...(pv?[1,1,1,1]:[])];
+  const sr=[...idx.map(i=>L.rb[i]),...(pv?prevDe(L.rb):[])], sd=[...idx.map(i=>-desp[i]),...(pv?prevDe(desp).map(v=>-v):[])], sres=[...idx.map(i=>L.rlq[i]),...(pv?prevDe(L.rlq):[])];
+  const linhas=Object.entries(calcDRE(D).grupos).filter(([g])=>g.startsWith("R_")).map(([g,a])=>[D.grupos[g],soma(a,idx)]).sort((a,b)=>b[1]-a[1]);
+  const mxl=Math.max(...linhas.map(x=>x[1]),1);
+  return `<div class="kpis">
+      ${kpi("Receita bruta", fR(rb), verNome())}${kpi("Resultado líquido", fR(rl), "margem "+fP(rl/rb))}${kpi("Margem de contribuição", fP(mc/rb), fR(mc))}${kpi("EBITDA", fR(eb), fP(eb/rb)+" da receita")}
+      ${kpi("Saldo em bancos", fR(caixa), "fim de "+mesC(D.meses[ult]))}${kpi("A receber em aberto", fR(rec), "a pagar: "+fR(pag))}</div>
+    <div class="card"><h3 class="pnt">Receitas, despesas e resultado por mês</h3>${grafico(lab,[{nome:"Receitas",v:sr,cor:COR.rec},{nome:"Despesas",v:sd.map(v=>-v),cor:COR.desp},{nome:"Resultado",v:sres,cor:COR.res,linha:1}],{prev:pr,titulo:"Receitas e despesas por mês"})}
+      <p class="note">Despesas = tudo o que entra no resultado (custos, despesas, impostos, financeiro). Empréstimos, investimentos e distribuição de lucros ficam fora.</p></div>
+    <div class="card"><h3 class="pnt">Receita por linha de serviço · ${esc(perNome(D))}</h3><div class="hbars">${linhas.map(([n,v])=>`<div class="hb"><span>${esc(n)}</span><div><i style="width:${Math.max(0,v/mxl*100)}%"></i></div><b>${fR(v)}</b><em>${fP(v/rb)}</em></div>`).join("")}</div></div>`;
+}
+const kpi=(t,v,s)=>`<div class="kpi"><span>${esc(t)}</span><b>${esc(v)}</b><em>${esc(s||"")}</em></div>`;
+const perNome = D => ({"12":"últimos 12 meses","2025":"2025","2026":"2026","tudo":"desde jan/25"})[P.per];
+
+function secDRE(D){
+  const idx=idxPer(D), pv=P.prev, {L,grupos,cats}=calcDRE(D), rb=soma(L.rb,idx);
+  const cols=cab(D,idx,pv), lin=(arr)=>[...idx.map(i=>arr[i]),...(pv?prevDe(arr):[])];
+  let h=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">DRE gerencial · ${esc(verNome())} · ${esc(perNome(D))}</h3>
+     <div class="row" style="gap:6px"><button class="btn sm ghost" id="dreAbre">Abrir tudo</button><button class="btn sm ghost" id="dreCsv">Baixar planilha (CSV)</button></div></div>
+     <p class="note">Toque numa linha para ver o detalhe. Valores em R$, pela data do pagamento/recebimento. ${P.ver==="c"?"No consolidado, os repasses entre Life e Health foram retirados.":""}</p>
+     <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${cols.map((c,i)=>`<th class="${i>=idx.length?"tp2":""}">${c}</th>`).join("")}<th>Total</th><th>% rec.</th></tr></thead><tbody>`;
+  const row=(nome,arr,cls,key,nivel)=>{ const v=lin(arr), t=soma(arr,idx);
+    return `<tr class="${cls}" ${key?`data-ab="${esc(key)}"`:""}><td style="padding-left:${8+nivel*16}px">${key?`<span class="tg">${P.ab[key]?"▾":"▸"}</span>`:""}${esc(nome)}</td>${v.map((x,i)=>`<td class="${i>=idx.length?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}<td class="${t<0?"neg":""}"><b>${fN(t)}</b></td><td>${rb?fP(t/rb):"–"}</td></tr>`; };
+  DRE.forEach(l=>{
+    const cls = l.s ? (l.forte?"dt dtf":"dt") : (l.info?"di":"dg");
+    h+=row(l.t, L[l.k], cls, l.p?"L:"+l.k:null, 0);
+    if (l.p && P.ab["L:"+l.k]) Object.keys(grupos).filter(g=>l.p(g)).sort((a,b)=>soma(grupos[a],idx)-soma(grupos[b],idx)).forEach(g=>{
+      h+=row(D.grupos[g]||g, grupos[g], "dsub", "G:"+g, 1);
+      if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>h+=row(n, cats[n], "dcat", null, 2)); });
+  });
+  h+=`</tbody></table></div></div>`;
+  // fixo × variável
+  const fixo=[], vari=[]; for (let i=0;i<D.meses.length;i++){ fixo.push(-(L.pes[i]+L.adm[i])); vari.push(-(L.cv[i]+L.ded[i])); }
+  h+=`<div class="card"><h3 class="pnt">Despesas fixas × variáveis</h3>${grafico(cols,[{nome:"Variáveis (custos da operação e impostos)",v:lin(vari),cor:COR.desp},{nome:"Fixas (pessoal e administrativas)",v:lin(fixo),cor:COR.rec}],{prev:cols.map((c,i)=>i>=idx.length)})}
+    <div class="kpis">${kpi("Fixas no período", fR(soma(fixo,idx)), fP(soma(fixo,idx)/rb)+" da receita")}${kpi("Variáveis no período", fR(soma(vari,idx)), fP(soma(vari,idx)/rb)+" da receita")}${kpi("Ponto de equilíbrio (mês)", fR(soma(fixo,idx)/idx.length/Math.max(0.01,(soma(L.mc,idx)/rb))), "receita mínima para cobrir as fixas")}</div></div>`;
+  return h;
+}
+
+function bancosVer(D){ return D.bancos.filter(b=>P.ver==="c"||b.emp===(P.ver==="h"?1:0)); }
+function secDFC(D){
+  const idx=idxPer(D), nm=D.meses.length, z=()=>new Array(nm).fill(0);
+  const A={O:[z(),z()],I:[z(),z()],F:[z(),z()]};
+  for (const f of D.fatos){ if(!passaCx(f)) continue; let d=D.cats[f[2]].dfc; if(d==="T") d="O"; if(!A[d]) continue; A[d][f[7]>=0?0:1][f[0]]+=f[7]; }
+  const ger=z(); for(let i=0;i<nm;i++) ger[i]=A.O[0][i]+A.O[1][i]+A.I[0][i]+A.I[1][i]+A.F[0][i]+A.F[1][i];
+  const rec=z().map((_,i)=>A.O[0][i]+A.I[0][i]+A.F[0][i]), pag=z().map((_,i)=>A.O[1][i]+A.I[1][i]+A.F[1][i]);
+  const X=D.dfcx||{}, xv=k=>D.meses.map(m=>(X[m]||[0,0,0,0])[k]);
+  const sIni=xv(0), eEnt=xv(1), eSai=xv(2), sFim=xv(3);
+  const dE=z().map((_,i)=>rec[i]-eEnt[i]), dS=z().map((_,i)=>pag[i]-eSai[i]), dT=z().map((_,i)=>dE[i]+dS[i]);
+  const cols=idx.map(i=>mesC(D.meses[i]));
+  const r=(t,a,c="")=>`<tr class="${c}"><td>${t}</td>${idx.map(i=>`<td class="${a[i]<0?"neg":""}">${fN(a[i])}</td>`).join("")}<td class="${soma(a,idx)<0?"neg":""}"><b>${fN(soma(a,idx))}</b></td></tr>`;
+  const rd=(t,a)=>`<tr><td>${t}</td>${idx.map(i=>`<td><span class="cz ${Math.abs(a[i])<1?"cz-ok":Math.abs(a[i])<1000?"cz-at":"cz-er"}">${Math.abs(a[i])<1?"✓":fN(a[i])}</span></td>`).join("")}<td><b>${fN(soma(a,idx))}</b></td></tr>`;
+  const sumA=(x)=>z().map((_,i)=>x[0][i]+x[1][i]);
+  const cons=P.ver==="c", qd=idx.filter(i=>Math.abs(dT[i])>=1).length;
+  let h=`<div class="card"><h3 class="pnt">Fluxo de caixa (DFC) · ${esc(verNome())}</h3><p class="note">Método direto: somente lançamentos com situação <b>Confirmado</b>. Os demais (Não encontrado, Verificar, Atrasado, Duplicado, transferências) são ignorados.</p>
+    <div class="tw"><table class="dre"><thead><tr><th>Atividade</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>
+    <tr class="dg"><td colspan="${cols.length+2}"><b>Atividades operacionais</b></td></tr>${r("Recebimentos",A.O[0])}${r("Pagamentos",A.O[1])}${r("= Caixa das operações",sumA(A.O),"dt")}
+    <tr class="dg"><td colspan="${cols.length+2}"><b>Atividades de investimento</b></td></tr>${r("Recebimentos",A.I[0])}${r("Pagamentos (equipamentos, aplicações)",A.I[1])}${r("= Caixa de investimentos",sumA(A.I),"dt")}
+    <tr class="dg"><td colspan="${cols.length+2}"><b>Atividades de financiamento</b></td></tr>${r("Empréstimos recebidos",A.F[0])}${r("Empréstimos, consórcios e lucros pagos",A.F[1])}${r("= Caixa de financiamentos",sumA(A.F),"dt")}
+    ${r("= Geração de caixa do período",ger,"dt dtf")}`;
+  if (cons) h+=`<tr class="dg"><td colspan="${cols.length+2}"><b>Validação com os bancos (extrato conciliado pela equipe)</b></td></tr>${r("Saldo inicial dos bancos",sIni)}${r("Entradas no extrato",eEnt)}${r("Saídas no extrato",eSai)}${r("Saldo final dos bancos",sFim,"dt")}
+    ${rd("Diferença nas entradas (sistema − extrato)",dE)}${rd("Diferença nas saídas (sistema − extrato)",dS)}${rd("Diferença de conciliação",dT)}`;
+  h+=`</tbody></table></div>${cons?`<p class="note">${qd?`<b>${qd} ${qd>1?"meses":"mês"} com diferença no período.</b> `:"<b>Todos os meses do período conciliados.</b> "}Entradas e saídas do extrato vêm da aba DFC da planilha, já com os ajustes de transferências entre contas feitos pela equipe.</p>`:`<p class="note">A validação com os bancos é feita no consolidado (Life + Health), porque as transferências entre as contas das duas empresas se anulam ali. Escolha "Consolidado" para ver.</p>`}</div>`;
+  // saldos por conta
+  const bk=bancosVer(D);
+  h+=`<div class="card"><h3 class="pnt">Saldo final por conta (extratos)</h3><p class="note">Toque numa conta para ver entradas e saídas do extrato.</p>
+    <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${cols.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>
+    ${bk.map((b,bi)=>`<tr data-banco="${bi}" class="clk"><td>${esc(b.n)}</td>${idx.map(i=>`<td class="${b.m[i][3]<0?"neg":""}">${fN(b.m[i][3])}</td>`).join("")}</tr>`).join("")}</tbody></table></div><div id="concDet"></div></div>`;
+  return h;
+}
+function detBanco(D, bi){
+  const b=bancosVer(D)[bi], idx=idxPer(D); if(!b) return "";
+  return `<h4 style="margin:14px 0 6px">${esc(b.n)}: extrato</h4><div class="tw"><table class="dre"><thead><tr><th>Mês</th><th>Saldo inicial</th><th>Entradas</th><th>Saídas</th><th>Saldo final</th></tr></thead><tbody>
+   ${idx.map(i=>{ const x=b.m[i]; return `<tr><td>${mesC(D.meses[i])}</td><td>${fN(x[0])}</td><td>${fN(x[1])}</td><td>${fN(x[2])}</td><td class="${x[3]<0?"neg":""}">${fN(x[3])}</td></tr>`; }).join("")}</tbody></table></div>`;
+}
+
+function secBP(D){
+  const nm=D.meses.length; if (!P.mesBP || !D.meses.includes(P.mesBP)) P.mesBP=D.meses[nm-1];
+  const mi=D.meses.indexOf(P.mesBP), atual=mi===nm-1, bk=bancosVer(D);
+  const pos=bk.reduce((s,b)=>s+Math.max(0,b.m[mi][3]),0), neg=bk.reduce((s,b)=>s+Math.min(0,b.m[mi][3]),0);
+  const e = P.ver==="c"?null:(P.ver==="h"?1:0), sel=a=>e===null?a[0]+a[1]:a[e];
+  const ben=D.bens.filter(b=>e===null||(/HEALTH/i.test(b.fin)?1:0)===e);
+  const [y,m]=P.mesBP.split("-").map(Number);
+  let bruto=0, dep=0; ben.forEach(b=>{ const [ay,am]=b.aq.split("-").map(Number); const meses=(y-ay)*12+(m-am); if(meses<0) return; bruto+=b.v; dep+=Math.min(b.v, b.v/b.vida/12*meses); });
+  const rec=atual?sel(D.receber.total):null, pag=atual?sel(D.pagar.total):null;
+  const pimp=D.parc.filter(p=>p.tipo==="Parcelamento de impostos"&&(e===null||p.emp===e)).reduce((s,p)=>s+p.saldo,0);
+  const fin=ben.filter(b=>b.fin);
+  const ativo=pos+(rec||0)+bruto-dep, passivo=-neg+(pag||0)+(atual?pimp:0), pl=ativo-passivo;
+  const ln=(t,v,c="")=>`<tr class="${c}"><td>${t}</td><td class="${v<0?"neg":""}">${v==null?"<span class='note'>só na posição atual</span>":fN(v)}</td></tr>`;
+  // evolução
+  const cx=D.meses.map((_,i)=>bk.reduce((s,b)=>s+b.m[i][3],0)), imo=D.meses.map(mm=>{ const [yy,m2]=mm.split("-").map(Number); let v=0; ben.forEach(b=>{ const [ay,am]=b.aq.split("-").map(Number); const k=(yy-ay)*12+(m2-am); if(k>=0) v+=b.v-Math.min(b.v,b.v/b.vida/12*k); }); return v; });
+  return `<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">Balanço patrimonial gerencial · ${esc(verNome())}</h3>
+     <label class="note">Posição no fim de <select id="bpMes">${D.meses.map(mm=>`<option value="${mm}" ${mm===P.mesBP?"selected":""}>${mesC(mm)}</option>`).join("")}</select></label></div>
+    <div class="bpg"><div><h4>Ativo</h4><table class="dre bp"><tbody>
+      ${ln("Caixa e bancos (saldos positivos)",pos)}${ln("Contas a receber em aberto",rec)}${ln("Imobilizado (viaturas e equipamentos)",bruto)}${ln("(−) Depreciação acumulada",-dep)}${ln("<b>Total do ativo</b>",ativo,"dt")}</tbody></table></div>
+    <div><h4>Passivo e patrimônio líquido</h4><table class="dre bp"><tbody>
+      ${ln("Saldos bancários negativos (conta garantida)",-neg)}${ln("Contas a pagar em aberto",pag)}${ln("Parcelamentos de impostos (saldo)",atual?pimp:null)}${ln("Financiamentos de viaturas",0,"")}
+      ${ln("<b>Total do passivo</b>",passivo,"dt")}${ln("Patrimônio líquido (por diferença)",pl,"dt dtf")}</tbody></table></div></div>
+    <p class="note">Balanço gerencial montado com o que existe na planilha: saldos dos extratos, contas a receber e a pagar do sistema (posição de hoje), patrimônio com depreciação linear pela vida útil. <b>Falta o saldo devedor dos ${fin.length} financiamentos de viaturas</b> (BNDES, FCO e CDC); assim que o banco informar, ele entra no passivo.</p></div>
+    <div class="card"><h3 class="pnt">Evolução: saldo em bancos e imobilizado líquido</h3>${grafico(D.meses.map(mesC),[{nome:"Saldo em bancos",v:cx,cor:COR.rec},{nome:"Imobilizado líquido",v:imo,cor:COR.desp}],{})}</div>
+    <div class="card"><h3 class="pnt">Bens financiados</h3><div class="tw"><table class="dre"><thead><tr><th>Bem</th><th>Valor</th><th>Aquisição</th><th>Financiamento</th><th>Parcelas</th></tr></thead><tbody>
+      ${fin.map(b=>`<tr><td>${esc(b.n)}</td><td>${fN(b.v)}</td><td>${mesC(b.aq)}</td><td>${esc(b.fin)}</td><td>${b.parc??"–"}</td></tr>`).join("")||`<tr><td colspan="5" class="note">Nenhum.</td></tr>`}</tbody></table></div></div>`;
+}
+
+function secAN(D){
+  if (P.an) return detAN(D, AN.find(a=>a.id===P.an));
+  const idx=idxPer(D);
+  const grupos=[...new Set(AN.map(a=>a.gr))];
+  return grupos.map(g=>`<div class="card"><h3 class="pnt">${esc(g)} · ${esc(perNome(D))}</h3><div class="ang">${AN.filter(a=>a.gr===g).map(a=>{ const {v,s}=resumoAN(D,a,idx); return `<button class="anc" data-an="${a.id}" type="button"><span>${esc(a.t)}</span><b>${esc(v)}</b><em>${esc(s)}</em>${s2(D,a)}</button>`; }).join("")}</div></div>`).join("")
+    + `<p class="note">Cada cartão abre o detalhe mês a mês, com gráfico, previsão e a quebra por categoria, cliente ou centro de custo.</p>`;
+}
+function serieAN(D,a){ if (a.tipo==="res") return {r:serie(D,f=>a.rec(D,f)), d:serie(D,f=>a.desp(D,f)&&f[7]<0)}; if (a.p) { const s=serie(D,f=>a.p(D,f)); return {s: a.tipo==="desp"?s.map(v=>-v):s}; } return {}; }
+function resumoAN(D,a,idx){
+  if (a.tipo==="geral"){ const {L}=calcDRE(D); return {v:fR(soma(L.rlq,idx)), s:"resultado líquido"}; }
+  if (a.tipo==="emp"){ const s=serie(D,f=>g_(D,f)==="X_EMPPAG"); return {v:fR(-soma(s,idx)), s:"pagos no período"}; }
+  if (a.tipo==="parc"){ const p=D.parc.filter(x=>P.ver==="c"||x.emp===(P.ver==="h"?1:0)); return {v:fR(p.reduce((s,x)=>s+x.saldo,0)), s:p.length+" compromissos a vencer"}; }
+  const S2=serieAN(D,a); if (a.tipo==="res"){ const r=soma(S2.r,idx), d=soma(S2.d,idx); return {v:fR(r+d), s:"receita "+fR(r)+" · despesa "+fR(-d)}; }
+  const t=soma(S2.s,idx); return {v:fR(t), s:"média "+fR(t/idx.length)+"/mês"};
+}
+function s2(D,a){ const S2=serieAN(D,a); const arr=S2.s||(S2.r&&S2.r.map((v,i)=>v+S2.d[i])); if(!arr) return ""; const idx=idxPer(D), v=idx.map(i=>arr[i]); const mx=Math.max(...v.map(Math.abs),1);
+  return `<svg class="spk" viewBox="0 0 120 28" aria-hidden="true">${v.map((x,i)=>`<rect x="${i*(120/v.length)+1}" y="${x>=0?14-x/mx*13:14}" width="${120/v.length-2}" height="${Math.max(1,Math.abs(x)/mx*13)}" rx="1.5" style="fill:${a.tipo==="desp"?COR.desp:x>=0?COR.rec:COR.desp}"/>`).join("")}</svg>`; }
+function quebra(D,a,idx){
+  const dim=a.dim||"cat", nome=f=>dim==="cc"?D.ccs[f[3]]:dim==="cp"?(f[4]>=0?D.cps[f[4]]:"Demais clientes"):dim==="emp"?D.emp[f[1]]:D.cats[f[2]].n, m={};
+  const set=new Set(idx);
+  for (const f of D.fatos){ if(!passa(f)||!set.has(f[0])) continue; let ok=false, v=f[7];
+    if (a.tipo==="res") ok=a.rec(D,f)||(a.desp(D,f)&&v<0); else ok=a.p(D,f); if(!ok) continue; if(a.tipo==="desp") v=-v; m[nome(f)]=(m[nome(f)]||0)+v; }
+  const l=Object.entries(m).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])), tot=l.reduce((s,x)=>s+x[1],0);
+  const tit={cat:"Categoria",cc:"Centro de custo",cp:"Cliente / pagador",emp:"Empresa"}[dim];
+  return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th><th>Valor no período</th><th>%</th></tr></thead><tbody>${l.map(([n,v])=>`<tr><td>${esc(n)}</td><td class="${v<0?"neg":""}">${fN(v)}</td><td>${fP(v/tot)}</td></tr>`).join("")}<tr class="dt"><td>Total</td><td>${fN(tot)}</td><td></td></tr></tbody></table></div>`;
+}
+function detAN(D,a){
+  const idx=idxPer(D), pv=P.prev, cols=cab(D,idx,pv), prv=cols.map((c,i)=>i>=idx.length), lin=arr=>[...idx.map(i=>arr[i]),...(pv?prevDe(arr):[])];
+  let h=`<div class="row" style="gap:8px"><button class="btn sm ghost" data-anv="1" type="button">← Todas as análises</button></div><div class="card"><h3 class="pnt">${esc(a.t)} · ${esc(verNome())}</h3>${a.nota?`<p class="note">${esc(a.nota)}</p>`:""}`;
+  const tab=(rows)=>`<div class="tw"><table class="dre"><thead><tr><th></th>${cols.map((c,i)=>`<th class="${prv[i]?"tp2":""}">${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>${rows.map(([n,arr,c])=>{ const v=lin(arr); return `<tr class="${c||""}"><td>${esc(n)}</td>${v.map((x,i)=>`<td class="${prv[i]?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}<td><b>${fN(soma(arr,idx))}</b></td></tr>`; }).join("")}</tbody></table></div>`;
+  if (a.tipo==="geral"){
+    const {L}=calcDRE(D), rec=L.rb, vari=L.rb.map((_,i)=>-(L.cv[i]+L.ded[i])), fixo=L.rb.map((_,i)=>-(L.pes[i]+L.adm[i])), outros=L.rb.map((_,i)=>-(L.fin[i]+L.nr[i]+L.ir[i]));
+    h+=grafico(cols,[{nome:"Receita",v:lin(rec),cor:COR.rec},{nome:"Despesas variáveis + fixas",v:lin(vari.map((v,i)=>-(v+fixo[i]))),cor:COR.desp},{nome:"Resultado líquido",v:lin(L.rlq),cor:COR.res,linha:1}],{prev:prv});
+    h+=tab([["Receita bruta",rec],["Despesas variáveis",vari.map(v=>-v)],["Despesas fixas",fixo.map(v=>-v)],["Financeiro, judicial e IR",outros.map(v=>-v)],["Resultado líquido",L.rlq,"dt"]]);
+    h+=`<div class="kpis">${kpi("Variáveis", fP(soma(vari,idx)/soma(rec,idx)), "da receita")}${kpi("Fixas", fP(soma(fixo,idx)/soma(rec,idx)), "da receita")}${kpi("Resultado", fP(soma(L.rlq,idx)/soma(rec,idx)), "da receita")}</div>`;
+  } else if (a.tipo==="res"){
+    const S2=serieAN(D,a), res=S2.r.map((v,i)=>v+S2.d[i]);
+    h+=grafico(cols,[{nome:"Receita",v:lin(S2.r),cor:COR.rec},{nome:"Despesa",v:lin(S2.d),cor:COR.desp},{nome:"Resultado",v:lin(res),cor:COR.res,linha:1}],{prev:prv});
+    h+=tab([["Receita",S2.r],["Despesa",S2.d],["Resultado",res,"dt"]])+`<div class="bpg"><div><h4>De quem veio a receita</h4>${quebra(D,{tipo:"rec",p:a.rec,dim:"cp"},idx)}</div><div><h4>Onde foi a despesa</h4>${quebra(D,{tipo:"desp",p:(D,f)=>a.desp(D,f)&&f[7]<0,dim:a.dim==="cc"?"cc":"cat"},idx)}</div></div>`;
+  } else if (a.tipo==="emp"){
+    const pag=serie(D,f=>g_(D,f)==="X_EMPPAG").map(v=>-v), rec=serie(D,f=>g_(D,f)==="X_EMPREC"), jur=serie(D,f=>D.cats[f[2]].n==="Conta Garantida").map(v=>-v);
+    h+=grafico(cols,[{nome:"Empréstimos recebidos",v:lin(rec),cor:COR.rec},{nome:"Parcelas pagas (empréstimos e consórcios)",v:lin(pag),cor:COR.desp}],{prev:prv});
+    h+=tab([["Recebidos",rec],["Parcelas pagas",pag],["Juros da conta garantida",jur]]);
+    const fin=D.bens.filter(b=>b.fin);
+    h+=`<h4 style="margin:14px 0 6px">Viaturas financiadas</h4><div class="tw"><table class="dre"><thead><tr><th>Bem</th><th>Valor</th><th>Financiamento</th><th>Parcelas</th></tr></thead><tbody>${fin.map(b=>`<tr><td>${esc(b.n)}</td><td>${fN(b.v)}</td><td>${esc(b.fin)}</td><td>${b.parc??"–"}</td></tr>`).join("")}</tbody></table></div>
+      <p class="note">O sistema registra as parcelas pagas, mas não o saldo devedor de cada contrato. Para fechar a "situação atual", peça aos bancos (Bradesco, BB e CEF) o extrato de cada empréstimo; o valor entra no balanço.</p>`;
+  } else if (a.tipo==="parc"){
+    const p=D.parc.filter(x=>P.ver==="c"||x.emp===(P.ver==="h"?1:0)), tipos=[...new Set(p.map(x=>x.tipo))];
+    const fut=mesesPrev(D).concat(["2027-03","2027-04","2027-05","2027-06","2027-07","2027-08"]);
+    const porTipo=tipos.map(t=>({nome:t, v:fut.map(m=>p.filter(x=>x.tipo===t&&m<=x.fim&&m>=x.prox.slice(0,7)).reduce((s,x)=>s+x.parcela,0))}));
+    h+=`<p class="note">Compromissos parcelados que ainda vão vencer, lidos das contas a pagar do sistema. Previsão das parcelas por mês:</p>`;
+    h+=grafico(fut.map(mesC), porTipo.map((s,i)=>({...s, cor:i%2?COR.desp:COR.rec})).slice(0,2).concat(porTipo.length>2?[{nome:"Demais",v:fut.map((_,i)=>porTipo.slice(2).reduce((s,x)=>s+x.v[i],0)),cor:"var(--muted)"}]:[]),{});
+    h+=`<div class="tw"><table class="dre"><thead><tr><th>Compromisso</th><th>Tipo</th><th>Empresa</th><th>Parcela</th><th>Faltam</th><th>Saldo a pagar</th><th>Próxima</th><th>Termina</th></tr></thead><tbody>
+      ${p.map(x=>`<tr><td>${esc(x.item)}${x.quem?`<div class="note">${esc(x.quem)}</div>`:""}</td><td>${esc(x.tipo)}</td><td>${x.emp?"Health":"Life"}</td><td>${fN(x.parcela)}</td><td>${x.rest}</td><td><b>${fN(x.saldo)}</b></td><td>${fmtDia(x.prox)}</td><td>${mesC(x.fim)}</td></tr>`).join("")}</tbody></table></div>`;
+  } else {
+    const S2=serieAN(D,a);
+    h+=grafico(cols,[{nome:a.tipo==="rec"?"Receita":"Gasto",v:lin(S2.s),cor:a.tipo==="rec"?COR.rec:COR.desp}],{prev:prv});
+    h+=tab([[a.tipo==="rec"?"Receita":"Gasto",S2.s,"dt"]]);
+    if (P.ver==="c" && a.dim!=="emp") { const l=serie(D,f=>f[1]===0&&a.p(D,f)), hh=serie(D,f=>f[1]===1&&a.p(D,f)); const sg=a.tipo==="desp"?-1:1; h+=tab([["Arcanjos Life",l.map(v=>v*sg)],["Arcanjos Health",hh.map(v=>v*sg)]]); }
+    h+=`<h4 style="margin:14px 0 6px">Composição no período</h4>`+quebra(D,a,idx);
+  }
+  return h+`</div>`;
+}
+
+function secPend(D){
+  const idx=idxPer(D), X=D.dfcx||{}, nm=D.meses.length, mov=new Array(nm).fill(0);
+  for (const f of D.fatos) mov[f[0]]+=f[7];
+  const dif=idx.map(i=>{ const x=X[D.meses[i]]; return x?[D.meses[i], mov[i]-(x[1]+x[2])]:null; }).filter(x=>x&&Math.abs(x[1])>=1);
+  return `<div class="card"><h3 class="pnt">O que precisa ser acertado na base</h3><p class="note">Os painéis usam só os lançamentos Confirmados. Esta lista mostra o que ficou de fora ou está incompleto (últimos 22 meses).</p>
+    <div class="tw"><table class="dre"><thead><tr><th>Pendência</th><th>Lançamentos</th><th>Valor</th><th>O que fazer</th></tr></thead><tbody>
+    ${D.pend.map(p=>`<tr><td>${esc(p.t)}</td><td>${nfmt.format(p.q)}</td><td>${fN(p.v)}</td><td>${esc(p.dica)}</td></tr>`).join("")}
+    ${dif.map(([m,v])=>`<tr><td>Conciliação de ${mesC(m)} (consolidado)</td><td>–</td><td>${fN(v)}</td><td>Diferença entre o sistema e o extrato conciliado; conferir na aba DFC.</td></tr>`).join("")}</tbody></table></div></div>`;
+}
+function ligar(D){
+  const b=$("#pnBody"); if(!b) return;
+  b.querySelectorAll("[data-ab]").forEach(tr=>tr.onclick=()=>{ const k=tr.dataset.ab; P.ab[k]=!P.ab[k]; corpo(); });
+  const ab=$("#dreAbre"); if (ab) ab.onclick=()=>{ const abrir=!Object.values(P.ab).some(Boolean); P.ab={}; if(abrir){ DRE.forEach(l=>{ if(l.p){ P.ab["L:"+l.k]=1; Object.keys(D.grupos).filter(g=>l.p(g)).forEach(g=>P.ab["G:"+g]=1); } }); } corpo(); };
+  const cs=$("#dreCsv"); if (cs) cs.onclick=()=>baixarDRE(D);
+  b.querySelectorAll("[data-banco]").forEach(tr=>tr.onclick=()=>{ $("#concDet").innerHTML=detBanco(D,+tr.dataset.banco); $("#concDet").scrollIntoView({behavior:"smooth",block:"nearest"}); });
+  const bm=$("#bpMes"); if (bm) bm.onchange=e=>{ P.mesBP=e.target.value; corpo(); };
+  b.querySelectorAll("[data-an]").forEach(x=>x.onclick=()=>{ P.an=x.dataset.an; corpo(); window.scrollTo({top:0}); });
+  b.querySelectorAll("[data-anv]").forEach(x=>x.onclick=()=>{ P.an=null; corpo(); });
+}
+function baixarDRE(D){
+  const idx=idxPer(D), {L,grupos,cats}=calcDRE(D), linhas=[["Conta",...idx.map(i=>D.meses[i]),"Total"]];
+  const add=(n,a)=>linhas.push([n,...idx.map(i=>(a[i]||0).toFixed(2).replace(".",",")),soma(a,idx).toFixed(2).replace(".",",")]);
+  DRE.forEach(l=>{ add(l.t,L[l.k]); if(l.p) Object.keys(grupos).filter(g=>l.p(g)).forEach(g=>{ add("   "+(D.grupos[g]||g),grupos[g]); D.cats.filter(c=>c.g===g&&cats[c.n]).forEach(c=>add("      "+c.n,cats[c.n])); }); });
+  const csv="﻿"+linhas.map(r=>r.map(c=>`"${String(c).replace(/vitalagroenegocios/"/g,'""')}"`).join(";")).join("\r\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`DRE ${P.emp} ${verNome()} ${perNome(D)}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  reg("baixar_dre", P.emp).catch(()=>{});
+}
+
+/* ===== painéis "matriz": DRE, DFC e BP extraídos das planilhas de gestão de cada cliente ===== */
+const MZ = { per:"12", sec:"resumo", ab:{} };
+const mzEhMes = c => /^\d{4}-\d{2}$/.test(c);
+function mzIdx(t){ const n=t.cols.length, a=[...Array(n).keys()]; if (!t.meses) return a;
+  if (MZ.per==="12") return a.slice(Math.max(0,n-12)); if (MZ.per==="tudo") return a; return a.filter(i=>t.cols[i].startsWith(MZ.per)); }
+const mzCol = (t,i) => t.meses ? mesC(t.cols[i]) : t.cols[i];
+function mzTot(t,l,idx){ if (l.t==="cab"||l.t==="rot") return null; if (l.t==="pct") return null; if (!t.meses && t.tot===false) return null;
+  const v=idx.map(i=>l.v[i]).filter(x=>x!=null&&x!==""); if (!v.length) return null;
+  if (l.t==="saldo") return /inici/i.test(l.n) ? v[0] : v[v.length-1];
+  return v.reduce((a,b)=>a+(+b||0),0); }
+function mzAnos(D){ const s=new Set(); D.tabs.forEach(t=>t.meses&&t.cols.forEach(c=>s.add(c.slice(0,4)))); return [...s].sort().reverse(); }
+function mzUlt(D){ let u=""; D.tabs.forEach(t=>{ if(t.meses){ const c=t.cols[t.cols.length-1]; if(c>u) u=c; } }); return u; }
+function mzLinha(D,k){ for (const t of D.tabs) if (t.meses) { const l=t.linhas.find(x=>x.k===k); if (l) return {t,l}; } return null; }
+function mzSerie(D,k){ const x=mzLinha(D,k); if(!x) return null; const idx=mzIdx(x.t); return {lab:idx.map(i=>mesC(x.t.cols[i])), v:idx.map(i=>+x.l.v[i]||0), idx, t:x.t, l:x.l}; }
+const mzPerNome = () => MZ.per==="12" ? "últimos 12 meses" : MZ.per==="tudo" ? "todo o período" : MZ.per;
+
+function renderMatriz(el, D, emps){
+  const secs=[["resumo","Resumo"],...["dre","dfc","bp"].filter(s=>D.tabs.some(t=>t.sec===s)).map(s=>[s,{dre:"DRE",dfc:"DFC",bp:"Balanço (BP)"}[s]])];
+  if (!secs.some(s=>s[0]===MZ.sec)) MZ.sec="resumo";
+  const anos=mzAnos(D), ult=mzUlt(D);
+  el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
+      ${D.rascunho?`<p class="note" style="margin:2px 0 0;color:var(--c-desp)"><b>Em revisão</b> · visível só para a equipe Vital até ser liberado ao cliente.</p>`:""}<p class="note" style="margin:2px 0 0">${ult?"Dados até "+mesC(ult)+" · ":""}atualizado em ${esc(String(D.gerado||"").split(" ")[0].split("-").reverse().join("/vitalagroenegocios/"))} · fonte: ${esc(D.fonte||"planilha de gestão")}</p></div>
+    <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
+      ${anos.length?`<label>Período<select id="mzPer"><option value="12">Últimos 12 meses</option>${anos.map(a=>`<option value="${a}">${a}</option>`).join("")}<option value="tudo">Tudo</option></select></label>`:""}</div></div>
+    <nav class="pns" role="tablist">${secs.map(([k,l])=>`<button class="tab" role="tab" data-mzs="${k}" aria-selected="${MZ.sec===k}">${l}</button>`).join("")}</nav>
+    <div id="pnBody" class="stack"></div>`;
+  if ($("#mzPer")) { $("#mzPer").value=MZ.per; $("#mzPer").onchange=e=>{MZ.per=e.target.value; mzCorpo();}; }
+  if ($("#pnEmp")) $("#pnEmp").onchange=e=>{P.emp=e.target.value; MZ.ab={}; renderPainel();};
+  el.querySelectorAll("[data-mzs]").forEach(b=>b.onclick=()=>{ MZ.sec=b.dataset.mzs; el.querySelectorAll("[data-mzs]").forEach(x=>x.setAttribute("aria-selected", x===b)); mzCorpo(); });
+  mzCorpo();
+}
+function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return;
+  b.innerHTML = MZ.sec==="resumo" ? mzResumo(D) : D.tabs.map((t,ti)=>t.sec===MZ.sec?mzTabela(D,t,ti):"").join("") + (D.obs&&D.obs[MZ.sec]?`<div class="card"><p class="note" style="margin:0">${esc(D.obs[MZ.sec])}</p></div>`:"");
+  mzLigar(D); }
+
+function mzResumo(D){
+  const rec=mzSerie(D,"rec"), res=mzSerie(D,"res"), desp=mzSerie(D,"desp"), ent=mzSerie(D,"ent"), sai=mzSerie(D,"sai"), cx=mzSerie(D,"cx");
+  const sm=s=>s?s.v.reduce((a,b)=>a+b,0):null, R=sm(rec), Rs=sm(res);
+  let k="";
+  if (rec) k+=kpi("Receita", fR(R), mzPerNome());
+  if (res) k+=kpi("Resultado", fR(Rs), R?"margem "+fP(Rs/R):"");
+  if (ent) k+=kpi("Entradas de caixa", fR(sm(ent)), mzPerNome());
+  if (sai) k+=kpi("Saídas de caixa", fR(-Math.abs(sm(sai))), mzPerNome());
+  if (cx) k+=kpi("Saldo de caixa", fR(cx.v[cx.v.length-1]), "fim de "+cx.lab[cx.lab.length-1]);
+  (D.kpis||[]).forEach(x=>k+=kpi(x.t,x.v,x.s));
+  let h=k?`<div class="kpis">${k}</div>`:"";
+  if (rec && (res||desp)) { const d = desp ? desp.v.map(v=>-Math.abs(v)) : rec.v.map((v,i)=>-(v-(res.v[i]||0)));
+    h+=`<div class="card"><h3 class="pnt">Receita, despesas e resultado por mês</h3>${grafico(rec.lab,[{nome:"Receita",v:rec.v,cor:COR.rec},{nome:"Despesas",v:d,cor:COR.desp},...(res?[{nome:"Resultado",v:res.v,cor:COR.res,linha:1}]:[])],{})}<p class="note">Fonte: DRE da planilha de gestão.</p></div>`; }
+  if (ent && sai) h+=`<div class="card"><h3 class="pnt">Entradas e saídas de caixa por mês</h3>${grafico(ent.lab,[{nome:"Entradas",v:ent.v,cor:COR.rec},{nome:"Saídas",v:sai.v.map(v=>-Math.abs(v)),cor:COR.desp},...(cx?[{nome:"Saldo final",v:cx.v,cor:COR.res,linha:1}]:[])],{})}<p class="note">Fonte: DFC da planilha de gestão.</p></div>`;
+  if (!h) h=`<div class="card"><p class="note">Abra as abas acima para ver os demonstrativos.</p></div>`;
+  return h;
+}
+function mzTabela(D,t,ti){
+  const idx=mzIdx(t); if (!idx.length) return `<div class="card"><h3 class="pnt">${esc(t.titulo)}</h3><p class="note">Sem dados no período escolhido.</p></div>`;
+  // grupos: cada linha "grp" abre/fecha as linhas "item" logo abaixo dela
+  let grp=-1; const pai=t.linhas.map((l,i)=>{ if (l.t==="grp") { grp=i; return -1; } if (l.t==="item") return grp; grp=-1; return -1; });
+  const temGrp=pai.some(x=>x>=0);
+  const showTot = t.meses || t.tot!==false;
+  let h=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">${esc(t.titulo)}${t.meses?" · "+esc(mzPerNome()):""}</h3>
+    <div class="row" style="gap:6px">${temGrp?`<button class="btn sm ghost" data-mzab="${ti}">Abrir tudo</button>`:""}<button class="btn sm ghost" data-mzcsv="${ti}">Baixar planilha (CSV)</button></div></div>
+    ${t.nota?`<p class="note">${esc(t.nota)}</p>`:""}${temGrp?`<p class="note">Toque numa linha com ▸ para abrir o grupo.${mzTemLc(D,t)?" Toque no nome de uma conta sublinhada para ver os lançamentos, ou num valor para ver os lançamentos daquele mês.":""}</p>`:""}
+    <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${idx.map(i=>`<th>${esc(mzCol(t,i))}</th>`).join("")}${showTot&&t.meses?"<th>Total</th>":""}</tr></thead><tbody>`;
+  t.linhas.forEach((l,i)=>{
+    if (l.oculto) return; if (pai[i]>=0 && !MZ.ab[ti+":"+pai[i]]) return;
+    const cls = l.t==="tot"?"dt dtf": l.t==="saldo"?"dt": l.t==="grp"?"dg": l.t==="cab"?"dsub": l.t==="rot"?"di": l.t==="pct"?"di":"dcat";
+    const nv = l.t==="item" ? (pai[i]>=0?2:1) : l.t==="rot" ? 1 : 0;
+    const tg = l.t==="grp" && t.linhas.some((x,j)=>pai[j]===i) ? `<span class="tg">${MZ.ab[ti+":"+i]?"▾":"▸"}</span>` : "";
+    const cel = x => { if (x==null||x==="") return `<td></td>`; if (typeof x==="string") return `<td>${esc(x)}</td>`; if (l.t==="pct") return `<td>${fP(x)}</td>`; return `<td class="${x<0?"neg":""}">${fN(x)}</td>`; };
+    const tot = showTot&&t.meses ? mzTot(t,l,idx) : undefined;
+    const lc = mzLcDe(D,t,l);
+    h+=`<tr class="${cls}${lc?" lc":""}" ${tg?`data-mzg="${ti}:${i}"`:""}${lc?` data-mzl="${ti}:${i}"`:""}><td style="padding-left:${8+nv*16}px">${tg}${lc?`<button type="button" class="lcb" data-mzl="${ti}:${i}">${esc(l.n)}</button>`:esc(l.n)}</td>${l.t==="cab"?idx.map(()=>"<td></td>").join(""):idx.map(j=>lc?cel(l.v[j]).replace("<td",`<td data-mzm="${j}"`):cel(l.v[j])).join("")}${tot===undefined?"":tot==null?"<td></td>":`<td class="${tot<0?"neg":""}"><b>${l.t==="pct"?"":fN(tot)}</b></td>`}</tr>`;
+  });
+  return h+`</tbody></table></div></div>`;
+}
+function mzLigar(D){ const b=$("#pnBody"); if(!b) return;
+  b.querySelectorAll("[data-mzg]").forEach(tr=>tr.onclick=()=>{ const k=tr.dataset.mzg; MZ.ab[k]=!MZ.ab[k]; mzCorpo(); });
+  b.querySelectorAll("tr[data-mzl]").forEach(tr=>tr.onclick=e=>{ const [ti,i]=tr.dataset.mzl.split(":").map(Number), td=e.target.closest("td[data-mzm]"); mzLanc(D,ti,i,td?+td.dataset.mzm:null); });
+  b.querySelectorAll("[data-mzab]").forEach(x=>x.onclick=()=>{ const ti=+x.dataset.mzab, t=D.tabs[ti]; const ks=t.linhas.map((l,i)=>l.t==="grp"?ti+":"+i:null).filter(Boolean); const abrir=!ks.some(k=>MZ.ab[k]); ks.forEach(k=>MZ.ab[k]=abrir); mzCorpo(); });
+  b.querySelectorAll("[data-mzcsv]").forEach(x=>x.onclick=()=>mzCsv(D,D.tabs[+x.dataset.mzcsv]));
+}
+function mzCsv(D,t){ const idx=mzIdx(t), f=v=>v==null||v===""?"":typeof v==="number"?v.toFixed(2).replace(".",","):String(v);
+  const L=[["Conta",...idx.map(i=>t.cols[i]),...(t.meses?["Total"]:[])]];
+  t.linhas.forEach(l=>L.push([(l.t==="item"?"   ":"")+l.n,...idx.map(i=>f(l.v[i])),...(t.meses?[f(mzTot(t,l,idx))]:[])]));
+  const csv="﻿"+L.map(r=>r.map(c=>`"${String(c).replace(/vitalagroenegocios/"/g,'""')}"`).join(";")).join("\r\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${t.titulo} ${P.emp} ${mzPerNome()}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  reg("baixar_painel", P.emp).catch(()=>{});
+}
+
+/* ===== detalhe dos lançamentos de uma conta (quando o painel traz a base de lançamentos) ===== */
+const mzLcDe = (D,t,l) => (D.lanc && t.lcc && l.lk && D.lanc.l[t.lcc+"|"+l.lk]) || null;
+const mzTemLc = (D,t) => !!(D.lanc && t.lcc && t.linhas.some(l=>mzLcDe(D,t,l)));
+const fRc = v => (v<0?"−":"")+"R$ "+Math.abs(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+function mzLanc(D,ti,i,mi){
+  const t=D.tabs[ti], l=t.linhas[i], L=mzLcDe(D,t,l); if(!L) return;
+  const meses = mi!=null ? [t.cols[mi]] : mzIdx(t).map(j=>t.cols[j]);
+  const sel = L.filter(x=>meses.includes(x[0]));
+  const porMes = {}; sel.forEach(x=>(porMes[x[0]]=porMes[x[0]]||[]).push(x));
+  const ordem = Object.keys(porMes).sort().reverse();
+  const tot = sel.reduce((a,x)=>a+x[4],0);
+  const dem = (mi!=null ? [mi] : mzIdx(t)).reduce((a,j)=>a+(+l.v[j]||0),0);
+  const per = mi!=null ? mesC(t.cols[mi]) : mzPerNome();
+  let h = `<div class="lch"><div><div class="eyebrow">${esc(t.titulo)}</div><h3 style="margin:2px 0 0">${esc(l.n)}</h3><p class="note" style="margin:2px 0 0">${esc(per)} · ${sel.length} lançamento${sel.length===1?"":"s"} · total <b>${fRc(tot)}</b></p></div>
+    <button type="button" class="btn sm ghost" data-lcx aria-label="Fechar">Fechar</button></div>`;
+  if (!sel.length) h += `<p class="note">Nenhum lançamento desta conta no período.</p>`;
+  if (Math.abs(tot-dem)>=1) h += `<p class="note lcw">A soma dos lançamentos (${fRc(tot)}) é diferente do valor do demonstrativo (${fRc(dem)}). A diferença vem de ajustes feitos direto na planilha de gestão.</p>`;
+  h += ordem.map(m=>{ const xs=porMes[m].slice().sort((a,b)=>(b[1].slice(6)+b[1].slice(3,5)+b[1].slice(0,2)).localeCompare(a[1].slice(6)+a[1].slice(3,5)+a[1].slice(0,2)));
+    const st=xs.reduce((a,x)=>a+x[4],0);
+    return `<div class="lcm"><div class="lcmh"><b>${esc(mesC(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(x[1]||"sem data")}</b><span class="${x[4]<0?"neg":""}">${fRc(x[4])}</span></div><div class="lcd">${esc(x[2]||"Sem fornecedor")}${x[3]?" · "+esc(x[3]):""}</div><div class="lcd note">${x[5]?"Conta: "+esc(x[5]):""}${x[6]?" · Nota "+esc(x[6]):""}</div></div>`).join("")}</div>`; }).join("");
+  h += `<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px"><span class="note" style="margin:0">Fonte: ${esc(D.lanc.fonte||"planilha de gestão")}</span>${sel.length?`<button type="button" class="btn sm ghost" data-lccsv>Baixar (CSV)</button>`:""}</div>`;
+  let d=document.getElementById("mzLc"); if(!d){ d=document.createElement("dialog"); d.id="mzLc"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
+  d.innerHTML=h; d.querySelector("[data-lcx]").onclick=()=>d.close();
+  const c=d.querySelector("[data-lccsv]"); if(c) c.onclick=()=>{ const f=v=>v.toFixed(2).replace(".",","); const linhas=[["Mês","Data","Fornecedor","Descrição","Valor","Conta","Nota"],...sel.map(x=>[x[0],x[1],x[2],x[3],f(x[4]),x[5],x[6]])];
+    const csv="\ufeff"+linhas.map(r=>r.map(v=>`"${String(v).replace(/vitalagroenegocios/"/g,'""')}"`).join(";")).join("\r\n"); const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${l.n} ${P.emp} ${per}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
+  d.showModal(); reg("ver_lancamentos", P.emp+" · "+l.n).catch(()=>{});
+}
+
+boot();
+})();
+</script>
+</body>
+</html>

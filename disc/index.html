@@ -462,7 +462,7 @@ function pontuar(respostas){
   const total = validas || 1;
   const ord = ORDEM.slice().sort((a,b)=>c[b]-c[a] || ORDEM.indexOf(a)-ORDEM.indexOf(b));
   const top = ord.filter(f => c[f] === c[ord[0]]);
-  return {contagem:c, pct:Object.fromEntries(ORDEM.map(f=>[f, c[f]/total])), perfil:top.join("/vitalagroenegocios/"), principal:ord[0], secundario:ord[1]};
+  return {contagem:c, pct:Object.fromEntries(ORDEM.map(f=>[f, c[f]/total])), perfil:top.join("/"), principal:ord[0], secundario:ord[1]};
 }
 function aderencia(p, areaKey){
   const ref = AREAS[areaKey].ref;
@@ -842,7 +842,7 @@ function discBars(p, ref){
     <div class="v">${p.contagem[f]} · ${(p.pct[f]*100).toFixed(0)}%</div></div>`).join("")}</div>`;
 }
 function perfilBloco(p){
-  const f = p.principal, s = p.secundario, emp = p.perfil.includes("/vitalagroenegocios/");
+  const f = p.principal, s = p.secundario, emp = p.perfil.includes("/");
   return `<div class="profile"><div class="bigletter" style="background:${cor(f)}">${f}</div>
     <div class="stack" style="gap:8px"><div><div class="eyebrow">Perfil predominante${emp?" (empate)":""}</div>
     <h3 style="font-size:1.3rem">${PERFIS[f].nome}${emp?"":` com traços de ${PERFIS[s].nome}`}</h3><div class="note">“${PERFIS[f].frase}”</div></div>
@@ -1187,7 +1187,7 @@ async function salvarFuncao(k, f){
 $("#btnCsv").addEventListener("click", async () => {
   const base = baseRel(); if (!base.length) { toast("Ainda não há avaliações para exportar."); return; }
   const cab = ["id","tipo","origem","nome","email","empresa","area","cargo","area_pretendida","data","perfil",...ORDEM.flatMap(f=>[f+"_qtd",f+"_pct"]),"respostas","situacao"];
-  const q = v => `"${String(v??"").replace(/vitalagroenegocios/"/g,'""')}"`;
+  const q = v => `"${String(v??"").replace(/"/g,'""')}"`;
   const linhas = base.map(r=>{ const p=pontuar(r.respostas), a = S.papel==="gestor" ? r.area : areaDe(r);
     const ap = pretDe(r);
     return [r.id,TIPOS[tipoDe(r)],r.origem||"app",r.nome,S.papel==="gestor"?"":(r.email||""),r.empresa,a?AREAS[a]?.nome||a:"",S.papel==="gestor"?r.cargo:cargoDe(r),ap?AREAS[ap]?.nome||ap:"",r.criadoEm,p.perfil,...ORDEM.flatMap(f=>[p.contagem[f],(p.pct[f]*100).toFixed(2).replace(".",",")]),r.respostas,r.pendente?"aguardando":"enviado"].map(q).join(";"); });
@@ -1733,7 +1733,7 @@ async function exportarPDF(D){
     if (D.reav) par(`Próxima reavaliação recomendada: ${fmtDia(D.reav.data.toISOString())} (${D.reav.sit.txt.toLowerCase()})`, {c:HEX[D.reav.sit.cls], s:9.5, b:true});
     // perfil
     titulo("Perfil predominante");
-    const f = D.p.principal, P = PERFIS[f], empate = D.p.perfil.includes("/vitalagroenegocios/");
+    const f = D.p.principal, P = PERFIS[f], empate = D.p.perfil.includes("/");
     quebra(24); doc.setFillColor(...rgb(HEX[f])); doc.roundedRect(M, y-5, 16, 16, 3, 3, "F"); txt(f, M+8, y+5.6, {b:true, s:18, c:"#FFFFFF", a:"center"});
     const y0 = y; txt(`${P.nome}${empate?" (empate)":` com traços de ${PERFIS[D.p.secundario].nome}`}`, M+21, y, {b:true, s:12}); y += 5;
     par(`“${P.frase}”`, {x:M+21, w:CW-21, c:HEX.muted, s:9.5}); par(P.forte, {x:M+21, w:CW-21}); par(P.atencao, {x:M+21, w:CW-21, c:HEX.muted});

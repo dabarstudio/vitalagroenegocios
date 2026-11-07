@@ -88,7 +88,7 @@
   document.getElementById("gPerfil").innerHTML = G.barras([{r:"Produtor PF",v:853},{r:"Produtor PJ",v:753},{r:"Empresas da cadeia",v:384}], {titulo:"Pedidos por perfil em 2025", destaque:0});
   document.getElementById("gUf").innerHTML = G.barras([{r:"MT",v:332},{r:"GO",v:296},{r:"PR",v:248}], {titulo:"Pedidos por estado em 2025", destaque:1});
   var M=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-  function dt(s){ var p=String(s).slice(0,10).split("-"); return (p[2]&&p[2]!=="01"?+p[2]+"/vitalagroenegocios/":"")+M[+p[1]-1]+"/vitalagroenegocios/"+p[0].slice(2); }
+  function dt(s){ var p=String(s).slice(0,10).split("-"); return (p[2]&&p[2]!=="01"?+p[2]+"/":"")+M[+p[1]-1]+"/"+p[0].slice(2); }
   Radar.dados().then(function(j){
     var I={}; (j.indicadores||[]).forEach(function(i){ I[i.id]=i; });
     var ano=new Date().getFullYear(), f=j.focus, k=[];

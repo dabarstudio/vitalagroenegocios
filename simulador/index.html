@@ -1812,7 +1812,7 @@ document.addEventListener("vital-sb",async function(){ SBX=window.__VSB; if(wind
     var ajusta=function(id,k){ var el=$(id), cur=parseFloat(String(el.value).replace(",","."))||0; if(P[k]&&(!cur||cur===11.3||cur===17.7)){ el.value=num.format(+P[k].valor); el.dispatchEvent(new Event("input",{bubbles:true})) } };
     ajusta("acbs","cbs_ref"); ajusta("aibs","ibs_ref");
     var ult=(pr.data||[]).map(function(x){return x.aprovado_em}).sort().pop();
-    if(ult){ window.__BASE_LEGAL=ult.slice(0,10); var hb=document.querySelector("#tab-trans details.box .hint"); if(hb) hb.insertAdjacentHTML("afterend",'<p class="hint ok">Base legal do simulador atualizada em '+ult.slice(8,10)+"/vitalagroenegocios/"+ult.slice(5,7)+"/vitalagroenegocios/"+ult.slice(0,4)+' (parâmetros aprovados pelos sócios).</p>') } }catch(_){}
+    if(ult){ window.__BASE_LEGAL=ult.slice(0,10); var hb=document.querySelector("#tab-trans details.box .hint"); if(hb) hb.insertAdjacentHTML("afterend",'<p class="hint ok">Base legal do simulador atualizada em '+ult.slice(8,10)+"/"+ult.slice(5,7)+"/"+ult.slice(0,4)+' (parâmetros aprovados pelos sócios).</p>') } }catch(_){}
 });
 var RX_COMPRA=/compra|revenda|mercadoria|cmv|custo do produto|custo da mercadoria|peças|insumo|matéria|materia-prima|óleo|oleo/i;
 var RX_DESP=/aluguel|energia|luz|frete|terceir|consultoria|contab|software|sistema|licen|internet|telefon|manuten|combust|gasolina|material|água|agua|limpeza|marketing|propaganda|anúncio|anuncio|transporte|correio|informática|informatica|seguro|uniforme/i;

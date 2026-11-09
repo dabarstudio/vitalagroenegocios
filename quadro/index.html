@@ -134,6 +134,11 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
 .coms{display:grid;gap:8px;max-height:260px;overflow:auto}
 .com{background:var(--surface-2);border-radius:10px;padding:8px 10px;font-size:.92rem}
 .com small{color:var(--muted);display:block;font-size:.76rem}
+.com .men{color:var(--primary,#1f6b3a);font-weight:700;background:rgba(31,107,58,.1);border-radius:6px;padding:0 3px}
+.menw{position:relative}
+.menl{position:absolute;left:0;right:0;top:100%;z-index:20;background:var(--surface,#fff);border:1px solid var(--line,#d9e2d9);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:4px;margin-top:2px;max-height:220px;overflow:auto}
+.menl button{display:flex;gap:8px;align-items:center;justify-content:flex-start;width:100%;text-align:left;border:0;background:none;padding:7px 9px;border-radius:8px;font:inherit;cursor:pointer;color:inherit}
+.menl button.on,.menl button:hover{background:var(--surface-2,#eef3ee)}
 .hist{font-size:.8rem;color:var(--muted);display:grid;gap:3px;max-height:160px;overflow:auto}
 .side{display:grid;gap:12px;align-content:start}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -387,7 +392,7 @@ async function abrir(id) {
       <div class="field"><label>Checklist</label><div class="prog" id="kP"><i></i></div><div class="ck" id="kC"></div>
         <div class="row" style="flex-wrap:nowrap"><input type="text" id="kCi" placeholder="Novo item" aria-label="Novo item do checklist"><button class="btn sm" type="button" id="kCa">Incluir</button></div></div>
       <div class="field"><label for="kCo">Comentários</label><div class="coms" id="kCos"><span class="note">Carregando…</span></div>
-        <textarea id="kCo" placeholder="Escreva um comentário" style="min-height:60px"></textarea><div><button class="btn sm" type="button" id="kCoB">Comentar</button></div></div>
+        <div class="menw"><textarea id="kCo" placeholder="Escreva um comentário · digite @ para marcar alguém" style="min-height:60px;width:100%"></textarea><div class="menl" id="kMn" hidden role="listbox" aria-label="Pessoas para marcar"></div></div><div><button class="btn sm" type="button" id="kCoB">Comentar</button></div></div>
     </div>
     <div class="side">
       <div class="field"><label for="kCol">Coluna</label><select id="kCol">${S.colsAll.filter(c => c.quadro === k.quadro).map(c => `<option value="${c.id}"${c.id === k.coluna ? " selected" : ""}>${esc(c.nome)}</option>`).join("")}</select></div>
@@ -413,11 +418,43 @@ async function abrir(id) {
   $("#kCa").onclick = addCk; $("#kCi").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); addCk(); } };
   d.showModal();
   carregarComs(k.id); carregarHist(k.id);
+  const ta = $("#kCo"), ml = $("#kMn"); let mOpc = [], mSel = 0, mIni = -1;
+  const semAc = (x) => (x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const fechaM = () => { ml.hidden = true; mOpc = []; mIni = -1; };
+  const pintaM = () => { ml.innerHTML = mOpc.map((m, i) => `<button type="button" role="option" class="${i === mSel ? "on" : ""}" data-mi="${i}"><span class="av">${esc(ini(m.nome))}</span>${esc(m.nome)}</button>`).join(""); ml.hidden = !mOpc.length; $$("[data-mi]", ml).forEach(b => b.onmousedown = (e) => { e.preventDefault(); escolheM(mOpc[+b.dataset.mi]); }); };
+  const escolheM = (m) => { if (!m || mIni < 0) return; const pos = ta.selectionStart; ta.value = ta.value.slice(0, mIni) + "@" + m.nome + " " + ta.value.slice(pos); const c = mIni + m.nome.length + 2; ta.setSelectionRange(c, c); fechaM(); ta.focus(); };
+  ta.oninput = () => {
+    const antes = ta.value.slice(0, ta.selectionStart); const mt = antes.match(/(^|\s)@([^\s@]*)$/);
+    if (!mt) return fechaM();
+    mIni = antes.length - mt[2].length - 1; const q = semAc(mt[2]);
+    mOpc = S.pessoas.filter(m => m.user_id !== S.user.id && semAc(m.nome).split(/\s+/).some(w => w.startsWith(q)) || (q && semAc(m.nome).includes(q) && m.user_id !== S.user.id)).slice(0, 6);
+    mOpc = [...new Map(mOpc.map(m => [m.user_id, m])).values()]; mSel = 0; pintaM();
+  };
+  ta.onkeydown = (e) => {
+    if (ml.hidden) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); mSel = (mSel + 1) % mOpc.length; pintaM(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); mSel = (mSel - 1 + mOpc.length) % mOpc.length; pintaM(); }
+    else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); escolheM(mOpc[mSel]); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fechaM(); }
+  };
+  ta.onblur = () => setTimeout(fechaM, 150);
   $("#kCoB").onclick = async () => {
-    const t = $("#kCo").value.trim(); if (!t) { $("#kCo").focus(); return; }
+    const t = ta.value.trim(); if (!t) { ta.focus(); return; }
     const { error } = await sb.from("cq_comentarios").insert({ cartao: k.id, user_id: S.user.id, nome: meuNome(), texto: t });
     if (error) return toast("Não foi possível comentar: " + error.message);
-    $("#kCo").value = ""; S.coms[k.id] = (S.coms[k.id] || 0) + 1; carregarComs(k.id);
+    ta.value = ""; fechaM(); S.coms[k.id] = (S.coms[k.id] || 0) + 1; carregarComs(k.id);
+    const cit = S.pessoas.filter(m => t.includes("@" + m.nome));
+    const novos = cit.filter(m => !(k.participantes || []).includes(m.user_id) && m.user_id !== k.responsavel);
+    if (cit.length) await evento("mencionou", cit.map(m => m.nome).join(", "), k.id, k.quadro);
+    if (novos.length) {
+      const part = [...new Set([...(k.participantes || []), ...novos.map(m => m.user_id)])];
+      const r = await sb.from("cq_cartoes").update({ participantes: part, atualizado_em: new Date().toISOString() }).eq("id", k.id);
+      if (r.error) return toast("Comentário salvo, mas não consegui marcar: " + r.error.message);
+      k.participantes = part; k._pa0 = part.slice();
+      for (const m of novos) { const cb = $(`#kPa input[value="${m.user_id}"]`); if (cb) cb.checked = true; }
+      toast("Marcado(a) na tarefa: " + novos.map(m => m.nome).join(", ")); render();
+    }
+    carregarHist(k.id);
   };
   $("#kS").onclick = async () => {
     const titulo = $("#kT").value.trim(); if (!titulo) { $("#kT").focus(); return toast("A tarefa precisa de um título."); }
@@ -453,7 +490,8 @@ async function abrir(id) {
 async function carregarComs(id) {
   const { data } = await sb.from("cq_comentarios").select("*").eq("cartao", id).order("em");
   const el = $("#kCos"); if (!el) return;
-  el.innerHTML = (data || []).map(c => `<div class="com"><small>${esc(c.nome)} · ${dataHora(c.em)}</small>${esc(c.texto).replace(/\n/g, "<br>")}</div>`).join("") || `<span class="note">Nenhum comentário ainda.</span>`;
+  const marca = (h) => { for (const m of [...S.pessoas].sort((a, b) => b.nome.length - a.nome.length)) h = h.split("@" + esc(m.nome)).join(`<span class="men">@${esc(m.nome)}</span>`); return h; };
+  el.innerHTML = (data || []).map(c => `<div class="com"><small>${esc(c.nome)} · ${dataHora(c.em)}</small>${marca(esc(c.texto)).replace(/\n/g, "<br>")}</div>`).join("") || `<span class="note">Nenhum comentário ainda.</span>`;
   el.scrollTop = el.scrollHeight;
 }
 async function carregarHist(id) {

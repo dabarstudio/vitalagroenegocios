@@ -226,6 +226,7 @@ async function iniciar() {
     sel.onchange = () => { S.marc = sel.value === MARC; S.q = S.marc ? null : S.proprios.find(q => q.id === sel.value); try { localStorage.setItem("cq.q", sel.value); } catch {} S.filtro = "todas"; carregar(); };
   }
   await carregar();
+  ligarTempoReal();
   setInterval(() => { if (document.visibilityState === "visible" && !$("#dlg").open && !document.querySelector(".addf")) carregar(true); }, 30000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("#dlg").open) carregar(true); });
 }
@@ -404,7 +405,7 @@ async function abrir(id) {
   const podeApagar = S.time || k.criado_por === S.user.id;
   k._pa0 = (k.participantes || []).slice();
   d.innerHTML = `<form method="dialog" class="dlg" id="fK">
-    <div class="full row" style="align-items:flex-start;flex-wrap:nowrap"><input type="text" class="ttl" id="kT" value="${esc(k.titulo)}" aria-label="Título"><button class="btn ghost sm" value="x" aria-label="Fechar">✕</button></div>
+    <div class="full row" style="align-items:flex-start;flex-wrap:nowrap"><input type="text" class="ttl" id="kT" value="${esc(k.titulo)}" aria-label="Título"><span class="note" id="kSt" aria-live="polite" style="white-space:nowrap;align-self:center;margin:0 4px">Salva automaticamente</span><button class="btn ghost sm" value="x" aria-label="Fechar">✕</button></div>
     <div class="stack">
       <div class="field"><label for="kD">Descrição</label><textarea id="kD" placeholder="Detalhes, links, o que precisa para concluir…">${esc(k.descricao || "")}</textarea></div>
       <div class="field"><label>Checklist</label><div class="prog" id="kP"><i></i></div><div class="ck" id="kC"></div>
@@ -425,7 +426,8 @@ async function abrir(id) {
       <p class="note">Criada em ${dataHora(k.criado_em)}${k.concluido_em ? ` · concluída em ${dataHora(k.concluido_em)}` : ""}</p>
     </div>
   </form>`;
-  const pintaCk = () => {
+  const pintaCk = (semSalvar) => {
+    if (!semSalvar && typeof agendar === "function") agendar();
     const f = ck.filter(i => i.ok).length;
     $("#kP i").style.width = ck.length ? (100 * f / ck.length) + "%" : "0";
     $("#kP").hidden = !ck.length;
@@ -433,7 +435,7 @@ async function abrir(id) {
     $$("#kC input").forEach(b => b.onchange = () => { ck[+b.dataset.i].ok = b.checked; pintaCk(); });
     $$("#kC [data-rm]").forEach(b => b.onclick = () => { ck.splice(+b.dataset.rm, 1); pintaCk(); });
   };
-  pintaCk();
+  pintaCk(true);
   const addCk = () => { const v = $("#kCi").value.trim(); if (!v) return; ck.push({ t: v, ok: false }); $("#kCi").value = ""; pintaCk(); $("#kCi").focus(); };
   $("#kCa").onclick = addCk; $("#kCi").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); addCk(); } };
   d.showModal();
@@ -488,35 +490,56 @@ async function abrir(id) {
     }
     carregarHist(k.id);
   };
-  $("#kS").onclick = async () => {
-    const titulo = $("#kT").value.trim(); if (!titulo) { $("#kT").focus(); return toast("A tarefa precisa de um título."); }
-    const participantes = $$("#kPa input:checked").map(i => i.value);
-    const novo = { titulo, participantes, descricao: $("#kD").value.trim() || null, responsavel: $("#kR").value || null, prazo: $("#kPz").value || null, prioridade: $("#kPr").value || null, checklist: ck, atualizado_em: new Date().toISOString() };
+  let fim = false, tAuto = null, gravando = null, ultimo = "";
+  const coletar = () => ({ titulo: $("#kT").value.trim(), participantes: $$("#kPa input:checked").map(i => i.value), descricao: $("#kD").value.trim() || null, responsavel: $("#kR").value || null, prazo: $("#kPz").value || null, prioridade: $("#kPr").value || null, checklist: ck.map(i => ({ ...i })), coluna: $("#kCol").value });
+  const st = (t) => { const e = $("#kSt"); if (e) e.textContent = t; };
+  ultimo = JSON.stringify(coletar());
+  var agendar = () => { if (fim) return; st("Alterações não salvas…"); clearTimeout(tAuto); tAuto = setTimeout(() => gravar(false), 1200); };
+  async function gravar(fechando) {
+    clearTimeout(tAuto);
+    if (gravando) await gravando;
+    const atual = coletar(), js = JSON.stringify(atual);
+    if (js === ultimo) { st("Salvo ✓"); return true; }
+    if (!atual.titulo) { if (!fechando) st("Falta o título"); else toast("A tarefa precisa de um título: as alterações não foram salvas."); return false; }
+    st("Salvando…");
+    gravando = (async () => { try { return await gravarAgora(atual, js); } finally { gravando = null; } })();
+    return gravando;
+  }
+  async function gravarAgora(atual, js) {
+    const { titulo, participantes } = atual;
+    const novo = { titulo, participantes, descricao: atual.descricao, responsavel: atual.responsavel, prazo: atual.prazo, prioridade: atual.prioridade, checklist: atual.checklist, atualizado_em: new Date().toISOString() };
     const mud = [];
     if (novo.responsavel !== (k.responsavel || null)) mud.push("responsável: " + (nomeDe(novo.responsavel) || "ninguém"));
     if (novo.prazo !== (k.prazo || null)) mud.push("prazo: " + (dBR(novo.prazo) || "sem prazo"));
-    const colNova = $("#kCol").value;
+    const colNova = atual.coluna;
     const { error } = await sb.from("cq_cartoes").update(novo).eq("id", k.id);
-    if (error) return toast("Não foi possível salvar: " + error.message);
+    if (error) { st("Erro ao salvar"); toast("Não foi possível salvar: " + error.message); return false; }
+    ultimo = js;
     Object.assign(k, novo);
     const marcNovos = participantes.filter(u => !(k._pa0 || []).includes(u)).map(nomeDe).filter(Boolean);
     if (marcNovos.length) mud.push("marcou: " + marcNovos.join(", "));
+    k._pa0 = participantes.slice();
     if (mud.length) await evento("editou", mud.join(" · "), k.id, k.quadro);
     if (colNova !== k.coluna) { const irm = S.cards.filter(x => x.coluna === colNova); await mover(k, colNova, irm.length ? Math.max(...irm.map(x => x.ordem)) + 1 : 1); }
-    d.close(); render(); toast("Tarefa salva."); if (S.q && S.q.dono) carregar(true);
-  };
+    st("Salvo ✓"); render(); return true;
+  }
+  $("#kS").onclick = async () => { if (await gravar(true)) { fim = true; d.close(); toast("Tarefa salva."); } };
+  $("#kT").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); gravar(false); } };
+  $("#fK").addEventListener("input", (e) => { if (e.target.id !== "kCo" && e.target.id !== "kCi" && e.target.id !== "kAxI") agendar(); });
+  $("#fK").addEventListener("change", (e) => { if (e.target.id !== "kCo" && e.target.id !== "kCi" && e.target.id !== "kAxI") agendar(); });
+  d.onclose = async () => { if (fim) return; fim = true; await gravar(true); carregar(true); };
   $("#kA").onclick = async () => {
     const { error } = await sb.from("cq_cartoes").update({ arquivado: true }).eq("id", k.id);
     if (error) return toast("Não foi possível arquivar: " + error.message);
     await evento("arquivou", k.titulo, k.id, k.quadro);
-    S.cards = S.cards.filter(x => x.id !== k.id); d.close(); render(); toast("Tarefa arquivada.");
+    fim = true; clearTimeout(tAuto); S.cards = S.cards.filter(x => x.id !== k.id); d.close(); render(); toast("Tarefa arquivada.");
   };
   if ($("#kX")) $("#kX").onclick = async () => {
     if ($("#kX").dataset.conf !== "1") { $("#kX").dataset.conf = "1"; $("#kX").textContent = "Confirmar exclusão"; return; }
     await evento("excluiu", k.titulo, null, k.quadro);
     const { error } = await sb.from("cq_cartoes").delete().eq("id", k.id);
     if (error) return toast("Não foi possível excluir: " + error.message);
-    S.cards = S.cards.filter(x => x.id !== k.id); d.close(); render(); toast("Tarefa excluída.");
+    fim = true; clearTimeout(tAuto); S.cards = S.cards.filter(x => x.id !== k.id); d.close(); render(); toast("Tarefa excluída.");
   };
 }
 async function carregarComs(id) {
@@ -525,6 +548,23 @@ async function carregarComs(id) {
   const marca = (h) => { for (const m of [...S.pessoas].sort((a, b) => b.nome.length - a.nome.length)) h = h.split("@" + esc(m.nome)).join(`<span class="men">@${esc(m.nome)}</span>`); return h; };
   el.innerHTML = (data || []).map(c => `<div class="com"><small>${esc(c.nome)} · ${dataHora(c.em)}</small>${marca(esc(c.texto)).replace(/\n/g, "<br>")}</div>`).join("") || `<span class="note">Nenhum comentário ainda.</span>`;
   el.scrollTop = el.scrollHeight;
+}
+function ligarTempoReal() {
+  if (S.rt || !sb.channel) return;
+  const ev = (t) => (p) => {
+    const cid = t === "k" ? ((p.new || {}).id || (p.old || {}).id) : ((p.new || {}).cartao || (p.old || {}).cartao);
+    if (S.abertoId && cid === S.abertoId) {
+      if (t === "c") carregarComs(cid);
+      if (t === "a") { const k = S.cards.find(x => x.id === cid); if (k) carregarAnx(k); }
+    }
+    clearTimeout(S.rtT);
+    S.rtT = setTimeout(() => { if (!document.querySelector(".addf") && !S.arrastando) carregar(true); }, 350);
+  };
+  S.rt = sb.channel("cq-quadros-" + S.user.id)
+    .on("postgres_changes", { event: "*", schema: "public", table: "cq_cartoes" }, ev("k"))
+    .on("postgres_changes", { event: "*", schema: "public", table: "cq_comentarios" }, ev("c"))
+    .on("postgres_changes", { event: "*", schema: "public", table: "cq_anexos" }, ev("a"))
+    .subscribe();
 }
 const BUCKET = "cq-anexos";
 const tamH = (b) => b == null ? "" : b < 1024 ? b + " B" : b < 1048576 ? Math.round(b / 1024) + " KB" : (b / 1048576).toFixed(1).replace(".", ",") + " MB";

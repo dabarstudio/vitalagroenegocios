@@ -1200,7 +1200,7 @@ function renderMatriz(el, D, emps){
   mzCorpo();
 }
 function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return;
-  b.innerHTML = MZ.sec==="resumo" ? mzResumo(D) : D.tabs.map((t,ti)=>t.sec===MZ.sec?mzTabela(D,t,ti):"").join("") + (D.obs&&D.obs[MZ.sec]?`<div class="card"><p class="note" style="margin:0">${esc(D.obs[MZ.sec])}</p></div>`:"");
+  b.innerHTML = (D.verif&&D.verif[MZ.sec]?`<div class="card" role="status" style="border-left:4px solid #D69E2E;padding:10px 14px"><p class="note" style="margin:0;color:#B7791F"><b>⚠ Em verificação</b> · ${esc(String(D.verif[MZ.sec]).replace(/^Em verificação:\s*/,""))}</p></div>`:"") + (MZ.sec==="resumo" ? mzResumo(D) : D.tabs.map((t,ti)=>t.sec===MZ.sec?mzTabela(D,t,ti):"").join("") + (D.obs&&D.obs[MZ.sec]?`<div class="card"><p class="note" style="margin:0">${esc(D.obs[MZ.sec])}</p></div>`:""));
   mzLigar(D); }
 
 function mzResumo(D){

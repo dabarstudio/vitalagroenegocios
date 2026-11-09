@@ -364,7 +364,7 @@ function placarHTML() {
     const itensOk = cards.reduce((n, k) => n + (Array.isArray(k.checklist) ? k.checklist.filter(i => i.resp === u && i.ok).length : 0), 0);
     const pct = comPrazo.length ? Math.round(100 * noPrazo.length / comPrazo.length) : null;
     return { m, ent: ent.length, pct, abertas: abertas.length, atr: atr.length, rotAtr: rotAtr.length, itensOk, tot: ent.length + abertas.length };
-  }).filter(x => x.tot || x.itensOk);
+  });
   const maxEnt = Math.max(0, ...L.map(x => x.ent));
   const totEnt = L.reduce((n, x) => n + x.ent, 0), totAtr = L.reduce((n, x) => n + x.atr, 0);
   const cp = cards.filter(k => fimDe(k) && k.concluido_em && dataLocal(k.concluido_em) >= dIni && k.prazo);

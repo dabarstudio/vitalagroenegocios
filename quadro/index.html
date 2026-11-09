@@ -158,6 +158,12 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
 .chipb{font-weight:600;font-size:.85rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;color:var(--fg)}
 .chipb[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
 .ck input[type=checkbox]{width:18px;height:18px;flex:none;margin-top:3px;padding:0}
+.cki{display:grid;grid-template-columns:18px minmax(0,1fr) 130px 128px 22px;gap:6px;align-items:center;font-size:.93rem;padding:3px 0;border-bottom:1px solid var(--line)}
+.cki input[type=checkbox]{margin-top:0}
+.cki.feito .ckt{text-decoration:line-through;color:var(--muted)}
+.cki select,.cki input[type=date]{font-size:.8rem;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:0;width:100%}
+.cki .atr{border-color:#d9534f;color:#b02a37}
+@media (max-width:640px){#kSt{font-size:.72rem;max-width:30%;overflow:hidden;text-overflow:ellipsis}.cki{grid-template-columns:18px minmax(0,1fr) 22px}.cki select,.cki input[type=date]{grid-column:2/3}}
 .ck label{font-weight:400!important}
 .vazio{color:var(--muted);font-size:.85rem;padding:6px 4px}
 </style>
@@ -291,7 +297,7 @@ async function evento(acao, detalhe, cartao, quadro) { await sb.from("cq_eventos
 function passa(k) {
   if (S.busca) { const b = S.busca.toLowerCase(); if (!((k.titulo || "") + " " + (k.descricao || "") + " " + nomeDe(k.responsavel)).toLowerCase().includes(b)) return false; }
   const fim = colDe(k.coluna).concluida;
-  if (S.filtro === "minhas") return k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id);
+  if (S.filtro === "minhas") return k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === S.user.id && !i.ok));
   if (S.filtro === "atrasadas") return !fim && k.prazo && dias(k.prazo) < 0;
   if (S.filtro === "semdono") return !k.responsavel;
   return true;
@@ -309,9 +315,11 @@ function cardHTML(k) {
   const ck = Array.isArray(k.checklist) ? k.checklist : [];
   const feitos = ck.filter(i => i.ok).length;
   const resp = nomeDe(k.responsavel);
+  const ckAtr = fim ? 0 : ck.filter(i => !i.ok && i.prazo && dias(i.prazo) < 0).length;
+  const ckMeu = ck.filter(i => !i.ok && i.resp === S.user.id).length;
   return `<button class="k" draggable="true" data-id="${k.id}" type="button" aria-label="${esc(k.titulo)}">
     <span class="t">${esc(k.titulo)}</span>
-    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${k.recorrencia ? `<span title="Rotina automática (recorrente)">🔁</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${(S.anx || {})[k.id] ? `<span title="Anexos">📎 ${S.anx[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
+    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${k.recorrencia ? `<span title="Rotina automática (recorrente)">🔁</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${ckAtr ? `<span class="pill atr" title="Itens do checklist com prazo vencido">☑ ${ckAtr} atrasado${ckAtr > 1 ? "s" : ""}</span>` : ""}${ckMeu && k.responsavel !== S.user.id ? `<span class="pill" title="Itens do checklist para você">☑ ${ckMeu} seu${ckMeu > 1 ? "s" : ""}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${(S.anx || {})[k.id] ? `<span title="Anexos">📎 ${S.anx[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
   </button>`;
 }
 function render() {
@@ -431,8 +439,14 @@ async function abrir(id) {
     const f = ck.filter(i => i.ok).length;
     $("#kP i").style.width = ck.length ? (100 * f / ck.length) + "%" : "0";
     $("#kP").hidden = !ck.length;
-    $("#kC").innerHTML = ck.map((it, i) => `<label class="${it.ok ? "feito" : ""}"><input type="checkbox" data-i="${i}"${it.ok ? " checked" : ""}><span>${esc(it.t)}</span><button class="x" type="button" data-rm="${i}" aria-label="Remover item">✕</button></label>`).join("");
-    $$("#kC input").forEach(b => b.onchange = () => { ck[+b.dataset.i].ok = b.checked; pintaCk(); });
+    $("#kC").innerHTML = ck.map((it, i) => `<div class="cki${it.ok ? " feito" : ""}"><input type="checkbox" data-i="${i}"${it.ok ? " checked" : ""} aria-label="Concluir: ${esc(it.t)}"><span class="ckt">${esc(it.t)}</span><select data-r="${i}" aria-label="Responsável do item"><option value="">Responsável…</option>${S.pessoas.map(m => `<option value="${m.user_id}"${it.resp === m.user_id ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select><input type="date" data-pz="${i}" value="${it.prazo || ""}" aria-label="Prazo do item" class="${!it.ok && it.prazo && dias(it.prazo) < 0 ? "atr" : ""}"><button class="x" type="button" data-rm="${i}" aria-label="Remover item">✕</button></div>`).join("");
+    $$("#kC [data-r]").forEach(sl => sl.onchange = () => {
+      const i = +sl.dataset.r; if (sl.value) ck[i].resp = sl.value; else delete ck[i].resp;
+      if (sl.value && sl.value !== ($("#kR").value || "")) { const cb = $(`#kPa input[value="${sl.value}"]`); if (cb) cb.checked = true; }
+      agendar();
+    });
+    $$("#kC [data-pz]").forEach(dt => dt.onchange = () => { const i = +dt.dataset.pz; if (dt.value) ck[i].prazo = dt.value; else delete ck[i].prazo; pintaCk(); });
+    $$("#kC input[type=checkbox]").forEach(b => b.onchange = () => { ck[+b.dataset.i].ok = b.checked; pintaCk(); });
     $$("#kC [data-rm]").forEach(b => b.onclick = () => { ck.splice(+b.dataset.rm, 1); pintaCk(); });
   };
   pintaCk(true);

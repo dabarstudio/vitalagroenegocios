@@ -377,7 +377,7 @@ function abrirPorUrl(u) {
   try { const x = new URL(u, location.href); const c = x.searchParams.get("card"); if (c) irParaNotif({ cartao: c, id: Number(x.searchParams.get("n")) || 0, lida: !x.searchParams.get("n") }); } catch {}
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.abrir) abrirPorUrl(e.data.abrir); });
-const VERSAO = "20261109143950";
+const VERSAO = "20261109144122";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -422,14 +422,14 @@ async function iniciar() {
   const sel = $("#selQ");
   const opts = S.proprios.map(q => [q.id, (S.time ? q.empresa + " · " : "") + q.nome]);
   if (S.outros.length) opts.push([MARC, `📌 Marcadas para mim`]);
-  if (opts.length > 1) {
+  if (opts.length > 1 || S.time) {
     sel.hidden = false;
     const opt = (v, t) => `<option value="${v}"${(S.marc ? v === MARC : S.q && v === S.q.id) ? " selected" : ""}>${esc(t)}</option>`;
     if (S.time) {
       const emps = [...new Set(S.proprios.map(q => q.empresa))].sort((a, b) => a.localeCompare(b));
-      sel.innerHTML = emps.map(e => `<optgroup label="${esc(e)}">${S.proprios.filter(q => q.empresa === e).sort((a, b) => (b.geral - a.geral) || a.nome.localeCompare(b.nome)).map(q => opt(q.id, q.nome.replace(" · " + e, ""))).join("")}</optgroup>`).join("") + (S.outros.length ? opt(MARC, "📌 Marcadas para mim") : "");
+      sel.innerHTML = emps.map(e => `<optgroup label="${esc(e)}">${S.proprios.filter(q => q.empresa === e).sort((a, b) => (b.geral - a.geral) || a.nome.localeCompare(b.nome)).map(q => opt(q.id, q.nome.replace(" · " + e, ""))).join("")}</optgroup>`).join("") + (S.outros.length ? opt(MARC, "📌 Marcadas para mim") : "") + `<option value="__liberar">＋ Liberar Kanban para um cliente…</option>`;
     } else sel.innerHTML = opts.map(([v, t]) => opt(v, t)).join("");
-    sel.onchange = () => { S.marc = sel.value === MARC; S.q = S.marc ? null : S.proprios.find(q => q.id === sel.value); try { localStorage.setItem("cq.q", sel.value); } catch {} S.filtro = "todas"; S.fCriado = ""; S.fAtrib = ""; carregar(); };
+    sel.onchange = () => { if (sel.value === "__liberar") { sel.value = S.marc ? MARC : (S.q ? S.q.id : ""); liberarKanban(); return; } S.marc = sel.value === MARC; S.q = S.marc ? null : S.proprios.find(q => q.id === sel.value); try { localStorage.setItem("cq.q", sel.value); } catch {} S.filtro = "todas"; S.fCriado = ""; S.fAtrib = ""; carregar(); };
   }
   await carregar();
   ligarTempoReal();
@@ -440,6 +440,32 @@ async function iniciar() {
   if (new URLSearchParams(location.search).get("card")) { abrirPorUrl(location.href); history.replaceState(null, "", location.pathname); }
   setInterval(() => { if (document.visibilityState === "visible" && !$("#dlg").open && !document.querySelector(".addf")) carregar(true); }, 30000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("#dlg").open) carregar(true); });
+}
+async function liberarKanban() {
+  const { data } = await sb.rpc("cq_clientes_sem_kanban");
+  const L = data || [];
+  const d = $("#dlgM");
+  d.innerHTML = `<form method="dialog" class="dlg" style="grid-template-columns:minmax(0,1fr);max-width:480px;gap:12px">
+    <div class="row" style="justify-content:space-between"><h2 style="font-size:1.1rem;margin:0">＋ Liberar Kanban</h2><button class="btn ghost sm" value="x" aria-label="Fechar">✕</button></div>
+    <p class="note" style="margin:0">Cria o quadro geral do cliente (Atribuições, A fazer, Fazendo, Aguardando alguém, Concluído) com você e a equipe Vital. Quem tiver acesso ao portal desse cliente entra sozinho e ganha o quadro com o próprio nome.</p>
+    <div class="field"><label for="lbC">Cliente</label><select id="lbC"><option value="">Escolha…</option>${L.map(x => `<option value="${esc(x.empresa)}">${esc(x.empresa)}${x.origem === "portal" ? " · tem acesso ao portal" : ""}</option>`).join("")}<option value="__outro">Outro nome…</option></select></div>
+    <div class="field" id="lbOF" hidden><label for="lbO">Nome do cliente</label><input id="lbO" type="text" placeholder="Igual ao nome usado no acesso do portal"></div>
+    <div class="field"><label for="lbS">Letreiro (setor do cliente)</label><select id="lbS">${Object.entries(SEG_NOME).map(([k, v]) => `<option value="${k}"${k === "geral" ? " selected" : ""}>${esc(v)}</option>`).join("")}</select></div>
+    <p class="err" id="lbE" hidden></p>
+    <div class="row"><button class="btn primary" type="button" id="lbOk">Liberar</button><button class="btn ghost" value="x">Cancelar</button></div>
+  </form>`;
+  d.showModal();
+  $("#lbC", d).onchange = (e) => { $("#lbOF", d).hidden = e.target.value !== "__outro"; };
+  $("#lbOk", d).onclick = async () => {
+    let emp = $("#lbC", d).value; if (emp === "__outro") emp = $("#lbO", d).value.trim();
+    if (!emp) { const e = $("#lbE", d); e.textContent = "Escolha o cliente."; e.hidden = false; return; }
+    $("#lbOk", d).disabled = true;
+    const { data: qid, error } = await sb.rpc("cq_liberar_kanban", { p_empresa: emp, p_segmento: $("#lbS", d).value });
+    if (error) { $("#lbOk", d).disabled = false; const e = $("#lbE", d); e.textContent = error.message; e.hidden = false; return; }
+    try { localStorage.setItem("cq.q", qid); } catch {}
+    toast("Kanban liberado para " + emp + ".");
+    setTimeout(() => location.reload(), 600);
+  };
 }
 function falha(msg) { $("#app").innerHTML = `<div class="card stack"><h2 style="font-size:1.2rem">Quadro de tarefas</h2><p>${esc(msg)}</p><div><a class="btn" href="/vitalagroenegocios/cliente/">Voltar para a Área do cliente</a></div></div>`; }
 

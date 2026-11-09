@@ -175,7 +175,8 @@ let toastT; function toast(m) { const t = $("#toast"); t.textContent = m; t.hidd
 
 const CFG = window.VITAL_CONFIG || {};
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
-const S = { user: null, perfil: null, time: false, quadros: [], q: null, cols: [], cards: [], mem: [], coms: {}, filtro: "todas", busca: "", abertoId: null };
+const S = { user: null, perfil: null, time: false, quadros: [], proprios: [], outros: [], marc: false, q: null, cols: [], colsAll: [], cards: [], mem: [], pessoas: [], coms: {}, filtro: "todas", busca: "", abertoId: null };
+const MARC = "__marcadas";
 const PRI = { alta: "Alta", media: "Média", baixa: "Baixa" };
 
 async function iniciar() {
@@ -188,14 +189,21 @@ async function iniciar() {
   const { data: qs, error } = await sb.from("cq_quadros").select("*").order("empresa").order("nome");
   if (error) return falha("Não foi possível abrir o quadro: " + error.message);
   S.quadros = qs || [];
-  if (!S.quadros.length) return falha("Você ainda não participa de nenhum quadro. Fale com a Vital.");
+  const { data: mm } = await sb.from("cq_membros").select("quadro").eq("user_id", S.user.id);
+  const meus = new Set((mm || []).map(x => x.quadro));
+  S.proprios = S.time ? S.quadros : S.quadros.filter(q => meus.has(q.id));
+  S.outros = S.quadros.filter(q => !S.proprios.includes(q));
+  if (!S.proprios.length && !S.outros.length) return falha("Você ainda não participa de nenhum quadro. Fale com a Vital.");
   let salvo = new URLSearchParams(location.search).get("q"); if (!salvo) try { salvo = localStorage.getItem("cq.q"); } catch {}
-  S.q = S.quadros.find(q => q.id === salvo) || S.quadros[0];
+  S.marc = salvo === MARC && S.outros.length > 0 || !S.proprios.length;
+  S.q = S.marc ? null : (S.proprios.find(q => q.id === salvo) || S.proprios[0]);
   const sel = $("#selQ");
-  if (S.quadros.length > 1) {
+  const opts = S.proprios.map(q => [q.id, (S.time ? q.empresa + " · " : "") + q.nome]);
+  if (S.outros.length) opts.push([MARC, `📌 Marcadas para mim`]);
+  if (opts.length > 1) {
     sel.hidden = false;
-    sel.innerHTML = S.quadros.map(q => `<option value="${q.id}"${q.id === S.q.id ? " selected" : ""}>${esc(q.empresa + " · " + q.nome)}</option>`).join("");
-    sel.onchange = () => { S.q = S.quadros.find(q => q.id === sel.value); try { localStorage.setItem("cq.q", S.q.id); } catch {} carregar(); };
+    sel.innerHTML = opts.map(([v, t]) => `<option value="${v}"${(S.marc ? v === MARC : S.q && v === S.q.id) ? " selected" : ""}>${esc(t)}</option>`).join("");
+    sel.onchange = () => { S.marc = sel.value === MARC; S.q = S.marc ? null : S.proprios.find(q => q.id === sel.value); try { localStorage.setItem("cq.q", sel.value); } catch {} S.filtro = "todas"; carregar(); };
   }
   await carregar();
   setInterval(() => { if (document.visibilityState === "visible" && !$("#dlg").open && !document.querySelector(".addf")) carregar(true); }, 30000);
@@ -204,29 +212,46 @@ async function iniciar() {
 function falha(msg) { $("#app").innerHTML = `<div class="card stack"><h2 style="font-size:1.2rem">Quadro de tarefas</h2><p>${esc(msg)}</p><div><a class="btn" href="/vitalagroenegocios/cliente/">Voltar para a Área do cliente</a></div></div>`; }
 
 async function carregar(silencioso) {
-  $("#tQ").textContent = S.q.nome; $("#tE").textContent = S.q.empresa + " · Quadro de tarefas"; document.title = S.q.nome + " · Vital";
-  const Q = S.q.id;
-  const [c, k, m] = await Promise.all([
-    sb.from("cq_colunas").select("*").eq("quadro", Q).order("ordem"),
-    sb.from("cq_cartoes").select("*").eq("quadro", Q).eq("arquivado", false).order("ordem"),
-    sb.from("cq_membros").select("*").eq("quadro", Q).order("nome"),
-  ]);
+  let c, k, m;
+  if (S.marc) {
+    const ids = S.outros.map(q => q.id);
+    $("#tQ").textContent = "Marcadas para mim"; $("#tE").textContent = "Tarefas de outros quadros em que você foi marcado(a)"; document.title = "Marcadas para mim · Vital";
+    [c, k] = await Promise.all([sb.from("cq_colunas").select("*").in("quadro", ids).order("ordem"), sb.from("cq_cartoes").select("*").in("quadro", ids).eq("arquivado", false).order("ordem")]);
+    m = { data: [] };
+  } else {
+    $("#tQ").textContent = S.q.nome; $("#tE").textContent = S.q.empresa + " · Quadro de tarefas"; document.title = S.q.nome + " · Vital";
+    const Q = S.q.id;
+    [c, k, m] = await Promise.all([
+      sb.from("cq_colunas").select("*").eq("quadro", Q).order("ordem"),
+      sb.from("cq_cartoes").select("*").eq("quadro", Q).eq("arquivado", false).order("ordem"),
+      sb.from("cq_membros").select("*").eq("quadro", Q).order("nome"),
+    ]);
+  }
   if (c.error || k.error) { if (!silencioso) falha("Erro ao carregar: " + (c.error || k.error).message); return; }
-  S.cols = c.data || []; S.cards = k.data || []; S.mem = m.data || [];
+  S.colsAll = c.data || []; S.cards = k.data || []; S.mem = m.data || [];
+  if (S.marc) {
+    const vist = new Map();
+    for (const col of S.colsAll) if (!vist.has(col.nome)) vist.set(col.nome, { id: "v:" + col.nome, nome: col.nome, ordem: col.ordem, concluida: col.concluida });
+    S.cols = [...vist.values()].sort((a, b) => a.ordem - b.ordem);
+    for (const x of S.cards) x._v = "v:" + ((S.colsAll.find(col => col.id === x.coluna) || {}).nome || "");
+  } else { S.cols = S.colsAll; for (const x of S.cards) x._v = x.coluna; }
+  const emp = S.marc ? (S.outros[0] || {}).empresa : S.q.empresa;
+  if (emp && S.empP !== emp) { const { data } = await sb.rpc("cq_pessoas", { p_empresa: emp }); S.pessoas = (data || []).sort((a, b) => a.nome.localeCompare(b.nome)); S.empP = emp; }
   const ids = S.cards.map(x => x.id);
   S.coms = {};
   if (ids.length) { const { data } = await sb.from("cq_comentarios").select("cartao").in("cartao", ids); for (const r of data || []) S.coms[r.cartao] = (S.coms[r.cartao] || 0) + 1; }
   render();
 }
-const nomeDe = (uid) => (S.mem.find(m => m.user_id === uid) || {}).nome || "";
-const colDe = (id) => S.cols.find(c => c.id === id) || {};
+const nomeDe = (uid) => (S.pessoas.find(m => m.user_id === uid) || S.mem.find(m => m.user_id === uid) || {}).nome || "";
+const colDe = (id) => S.colsAll.find(c => c.id === id) || S.cols.find(c => c.id === id) || {};
+const quadroNome = (id) => (S.quadros.find(q => q.id === id) || {}).nome || "";
 const meuNome = () => nomeDe(S.user.id) || S.perfil.nome || "Usuário";
-async function evento(acao, detalhe, cartao) { await sb.from("cq_eventos").insert({ quadro: S.q.id, cartao: cartao || null, user_id: S.user.id, nome: meuNome(), acao, detalhe: detalhe || null }); }
+async function evento(acao, detalhe, cartao, quadro) { await sb.from("cq_eventos").insert({ quadro: quadro || (S.q && S.q.id), cartao: cartao || null, user_id: S.user.id, nome: meuNome(), acao, detalhe: detalhe || null }); }
 
 function passa(k) {
   if (S.busca) { const b = S.busca.toLowerCase(); if (!((k.titulo || "") + " " + (k.descricao || "") + " " + nomeDe(k.responsavel)).toLowerCase().includes(b)) return false; }
   const fim = colDe(k.coluna).concluida;
-  if (S.filtro === "minhas") return k.responsavel === S.user.id;
+  if (S.filtro === "minhas") return k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id);
   if (S.filtro === "atrasadas") return !fim && k.prazo && dias(k.prazo) < 0;
   if (S.filtro === "semdono") return !k.responsavel;
   return true;
@@ -246,14 +271,14 @@ function cardHTML(k) {
   const resp = nomeDe(k.responsavel);
   return `<button class="k" draggable="true" data-id="${k.id}" type="button" aria-label="${esc(k.titulo)}">
     <span class="t">${esc(k.titulo)}</span>
-    <span class="m">${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
+    <span class="m">${S.marc ? `<span class="pill">${esc(quadroNome(k.quadro))}</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
   </button>`;
 }
 function render() {
   const abertas = S.cards.filter(k => !colDe(k.coluna).concluida);
   const atr = abertas.filter(k => k.prazo && dias(k.prazo) < 0).length;
   const semana = abertas.filter(k => k.prazo && dias(k.prazo) >= 0 && dias(k.prazo) <= 7).length;
-  const minhas = abertas.filter(k => k.responsavel === S.user.id).length;
+  const minhas = abertas.filter(k => k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id)).length;
   const F = [["todas", "Todas"], ["minhas", `Minhas (${minhas})`], ["atrasadas", `Atrasadas (${atr})`], ["semdono", "Sem responsável"]];
   $("#app").innerHTML = `
   <div class="bar">
@@ -261,15 +286,15 @@ function render() {
     <div class="spacer"></div>
     <input type="search" id="busca" placeholder="Buscar tarefa ou pessoa" value="${esc(S.busca)}" aria-label="Buscar">
     <div class="chips">${F.map(([v, t]) => `<button class="chipb" type="button" data-f="${v}" aria-pressed="${S.filtro === v}">${t}</button>`).join("")}</div>
-    ${S.time ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}
+    ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}
   </div>
   <div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
-    const ks = S.cards.filter(k => k.coluna === c.id).sort((a, b) => a.ordem - b.ordem);
+    const ks = S.cards.filter(k => k._v === c.id).sort((a, b) => a.ordem - b.ordem);
     const vis = ks.filter(passa);
     return `<section class="col" data-col="${c.id}" aria-label="${esc(c.nome)}">
       <div class="colh"><h2>${esc(c.nome)}</h2><span class="n">${ks.length}</span></div>
       ${vis.map(cardHTML).join("") || `<div class="vazio">${ks.length ? "Nada neste filtro." : "Nenhuma tarefa."}</div>`}
-      ${c.concluida ? "" : `<button class="add" type="button" data-add="${c.id}">+ Adicionar tarefa</button>`}
+      ${c.concluida || S.marc ? "" : `<button class="add" type="button" data-add="${c.id}">+ Adicionar tarefa</button>`}
     </section>`;
   }).join("")}</div>`;
   $("#busca").oninput = (e) => { S.busca = e.target.value; const p = e.target.selectionStart; render(); const b = $("#busca"); b.focus(); b.setSelectionRange(p, p); };
@@ -287,7 +312,7 @@ function render() {
       e.preventDefault(); col.classList.remove("drop");
       const id = e.dataTransfer.getData("text/plain"); const k = S.cards.find(x => x.id === id); if (!k) return;
       const alvo = [...col.querySelectorAll(".k")].find(el => el.getBoundingClientRect().top + el.offsetHeight / 2 > e.clientY);
-      const irmaos = S.cards.filter(x => x.coluna === col.dataset.col && x.id !== id).sort((a, b) => a.ordem - b.ordem);
+      const irmaos = S.cards.filter(x => x._v === col.dataset.col && x.id !== id).sort((a, b) => a.ordem - b.ordem);
       let ordem;
       if (alvo && alvo.dataset.id !== id) { const i = irmaos.findIndex(x => x.id === alvo.dataset.id); const ant = irmaos[i - 1]; ordem = ant ? (ant.ordem + irmaos[i].ordem) / 2 : irmaos[i].ordem - 1; }
       else ordem = irmaos.length ? irmaos[irmaos.length - 1].ordem + 1 : 1;
@@ -297,14 +322,15 @@ function render() {
   $$("[data-add]").forEach(b => b.onclick = () => novoForm(b));
 }
 async function mover(k, colId, ordem) {
+  if (String(colId).startsWith("v:")) { const real = S.colsAll.find(c => c.quadro === k.quadro && c.nome === colId.slice(2)); if (!real) return toast("Coluna não encontrada neste quadro."); colId = real.id; }
   const de = colDe(k.coluna), para = colDe(colId);
   const mudou = k.coluna !== colId;
   const patch = { coluna: colId, ordem, atualizado_em: new Date().toISOString() };
   if (mudou) patch.concluido_em = para.concluida ? new Date().toISOString() : null;
-  Object.assign(k, patch); render();
+  Object.assign(k, patch); k._v = S.marc ? "v:" + para.nome : colId; render();
   const { error } = await sb.from("cq_cartoes").update(patch).eq("id", k.id);
   if (error) { toast("Não foi possível mover: " + error.message); return carregar(true); }
-  if (mudou) await evento(para.concluida ? "concluiu" : "moveu", `${de.nome} → ${para.nome}`, k.id);
+  if (mudou) await evento(para.concluida ? "concluiu" : "moveu", `${de.nome} → ${para.nome}`, k.id, k.quadro);
 }
 function novoForm(btn) {
   const colId = btn.dataset.add;
@@ -316,12 +342,12 @@ function novoForm(btn) {
   const salvar = async () => {
     const t = ta.value.trim(); if (!t) { ta.focus(); return; }
     ok.disabled = true;
-    const irmaos = S.cards.filter(x => x.coluna === colId);
+    const irmaos = S.cards.filter(x => x._v === colId);
     const ordem = irmaos.length ? Math.max(...irmaos.map(x => x.ordem)) + 1 : 1;
     const { data, error } = await sb.from("cq_cartoes").insert({ quadro: S.q.id, coluna: colId, titulo: t, ordem, criado_por: S.user.id }).select().single();
     if (error) { ok.disabled = false; toast("Não foi possível criar: " + error.message); return; }
-    await evento("criou", t, data.id);
-    S.cards.push(data); render(); toast("Tarefa criada.");
+    await evento("criou", t, data.id, S.q.id);
+    data._v = data.coluna; S.cards.push(data); render(); toast("Tarefa criada.");
     const nb = document.querySelector(`[data-add="${colId}"]`); if (nb) novoForm(nb);
   };
   ok.onclick = salvar; cancel.onclick = () => render();
@@ -335,6 +361,7 @@ async function abrir(id) {
   const d = $("#dlg");
   const ck = Array.isArray(k.checklist) ? k.checklist.slice() : [];
   const podeApagar = S.time || k.criado_por === S.user.id;
+  k._pa0 = (k.participantes || []).slice();
   d.innerHTML = `<form method="dialog" class="dlg" id="fK">
     <div class="full row" style="align-items:flex-start;flex-wrap:nowrap"><input type="text" class="ttl" id="kT" value="${esc(k.titulo)}" aria-label="Título"><button class="btn ghost sm" value="x" aria-label="Fechar">✕</button></div>
     <div class="stack">
@@ -345,8 +372,9 @@ async function abrir(id) {
         <textarea id="kCo" placeholder="Escreva um comentário" style="min-height:60px"></textarea><div><button class="btn sm" type="button" id="kCoB">Comentar</button></div></div>
     </div>
     <div class="side">
-      <div class="field"><label for="kCol">Coluna</label><select id="kCol">${S.cols.map(c => `<option value="${c.id}"${c.id === k.coluna ? " selected" : ""}>${esc(c.nome)}</option>`).join("")}</select></div>
-      <div class="field"><label for="kR">Responsável</label><select id="kR"><option value="">Ninguém</option>${S.mem.map(m => `<option value="${m.user_id}"${m.user_id === k.responsavel ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></div>
+      <div class="field"><label for="kCol">Coluna</label><select id="kCol">${S.colsAll.filter(c => c.quadro === k.quadro).map(c => `<option value="${c.id}"${c.id === k.coluna ? " selected" : ""}>${esc(c.nome)}</option>`).join("")}</select></div>
+      <div class="field"><label for="kR">Responsável</label><select id="kR"><option value="">Ninguém</option>${S.pessoas.map(m => `<option value="${m.user_id}"${m.user_id === k.responsavel ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></div>
+      <div class="field"><label>Pessoas marcadas</label><div class="ck" id="kPa">${S.pessoas.map(m => `<label><input type="checkbox" value="${m.user_id}"${(k.participantes || []).includes(m.user_id) ? " checked" : ""}><span>${esc(m.nome)}</span></label>`).join("")}</div><p class="note">Quem for marcado vê esta tarefa em "Marcadas para mim", mesmo sem acesso a este quadro.</p></div>
       <div class="field"><label for="kPz">Prazo</label><input type="date" id="kPz" value="${k.prazo || ""}"></div>
       <div class="field"><label for="kPr">Prioridade</label><select id="kPr"><option value="">Normal</option>${Object.entries(PRI).map(([v, t]) => `<option value="${v}"${k.prioridade === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="row"><button class="btn primary" type="button" id="kS">Salvar</button>${podeApagar ? `<button class="btn danger sm" type="button" id="kX">Excluir</button>` : ""}<button class="btn ghost sm" type="button" id="kA">Arquivar</button></div>
@@ -375,7 +403,8 @@ async function abrir(id) {
   };
   $("#kS").onclick = async () => {
     const titulo = $("#kT").value.trim(); if (!titulo) { $("#kT").focus(); return toast("A tarefa precisa de um título."); }
-    const novo = { titulo, descricao: $("#kD").value.trim() || null, responsavel: $("#kR").value || null, prazo: $("#kPz").value || null, prioridade: $("#kPr").value || null, checklist: ck, atualizado_em: new Date().toISOString() };
+    const participantes = $$("#kPa input:checked").map(i => i.value);
+    const novo = { titulo, participantes, descricao: $("#kD").value.trim() || null, responsavel: $("#kR").value || null, prazo: $("#kPz").value || null, prioridade: $("#kPr").value || null, checklist: ck, atualizado_em: new Date().toISOString() };
     const mud = [];
     if (novo.responsavel !== (k.responsavel || null)) mud.push("responsável: " + (nomeDe(novo.responsavel) || "ninguém"));
     if (novo.prazo !== (k.prazo || null)) mud.push("prazo: " + (dBR(novo.prazo) || "sem prazo"));
@@ -383,19 +412,21 @@ async function abrir(id) {
     const { error } = await sb.from("cq_cartoes").update(novo).eq("id", k.id);
     if (error) return toast("Não foi possível salvar: " + error.message);
     Object.assign(k, novo);
-    if (mud.length) await evento("editou", mud.join(" · "), k.id);
+    const marcNovos = participantes.filter(u => !(k._pa0 || []).includes(u)).map(nomeDe).filter(Boolean);
+    if (marcNovos.length) mud.push("marcou: " + marcNovos.join(", "));
+    if (mud.length) await evento("editou", mud.join(" · "), k.id, k.quadro);
     if (colNova !== k.coluna) { const irm = S.cards.filter(x => x.coluna === colNova); await mover(k, colNova, irm.length ? Math.max(...irm.map(x => x.ordem)) + 1 : 1); }
     d.close(); render(); toast("Tarefa salva.");
   };
   $("#kA").onclick = async () => {
     const { error } = await sb.from("cq_cartoes").update({ arquivado: true }).eq("id", k.id);
     if (error) return toast("Não foi possível arquivar: " + error.message);
-    await evento("arquivou", k.titulo, k.id);
+    await evento("arquivou", k.titulo, k.id, k.quadro);
     S.cards = S.cards.filter(x => x.id !== k.id); d.close(); render(); toast("Tarefa arquivada.");
   };
   if ($("#kX")) $("#kX").onclick = async () => {
     if ($("#kX").dataset.conf !== "1") { $("#kX").dataset.conf = "1"; $("#kX").textContent = "Confirmar exclusão"; return; }
-    await evento("excluiu", k.titulo, null);
+    await evento("excluiu", k.titulo, null, k.quadro);
     const { error } = await sb.from("cq_cartoes").delete().eq("id", k.id);
     if (error) return toast("Não foi possível excluir: " + error.message);
     S.cards = S.cards.filter(x => x.id !== k.id); d.close(); render(); toast("Tarefa excluída.");

@@ -43,6 +43,16 @@ button,input,select,textarea{font:inherit;color:inherit}
 .logo{width:44px;height:44px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none;border:1px solid var(--line);text-decoration:none}
 .logo img{width:36px}
 .brandtxt{min-width:0}
+.clilogo{height:44px;width:auto;border-radius:8px;border:1px solid var(--line);background:#fff;padding:2px;flex:none}
+.anx{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.anx .a{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);overflow:hidden;min-height:84px;display:flex;flex-direction:column}
+.anx .a a{color:inherit;text-decoration:none;display:flex;flex-direction:column;flex:1}
+.anx .a img{width:100%;height:76px;object-fit:cover;display:block;background:#fff}
+.anx .a .ic{height:76px;display:grid;place-items:center;font-size:1.8rem}
+.anx .a small{display:block;padding:4px 6px;font-size:.72rem;line-height:1.2;word-break:break-all;color:var(--muted)}
+.anx .a .x{position:absolute;top:3px;right:3px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:7px;font-size:.72rem;padding:1px 6px;cursor:pointer}
+.anxbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.anxdrop{outline:2px dashed var(--brand);outline-offset:4px;border-radius:10px}
 .brandtxt b{font-family:var(--display);display:block;color:var(--brand)}
 .brandtxt span{font-size:.8rem;color:var(--muted)}
 .spacer{flex:1}
@@ -155,6 +165,7 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
 <header class="top">
   <div class="wrap">
     <a class="logo" href="/vitalagroenegocios/" title="Página inicial da Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
+    <img class="clilogo" id="cliLogo" alt="" hidden>
     <div class="brandtxt"><b id="tQ">Quadro de tarefas</b><span id="tE">Área do cliente</span></div>
     <div class="spacer"></div>
     <select id="selQ" aria-label="Quadro" hidden style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface)"></select>
@@ -182,6 +193,7 @@ const CFG = window.VITAL_CONFIG || {};
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
 const S = { user: null, perfil: null, time: false, quadros: [], proprios: [], outros: [], marc: false, q: null, cols: [], colsAll: [], cards: [], mem: [], pessoas: [], coms: {}, filtro: "todas", busca: "", abertoId: null };
 const MARC = "__marcadas";
+const LOGOS = { "Agro TNZ": "../clientes/agro-tnz.png" };
 const PRI = { alta: "Alta", media: "Média", baixa: "Baixa" };
 
 async function iniciar() {
@@ -257,10 +269,13 @@ async function carregar(silencioso) {
     }
   }
   const emp = S.marc ? (S.outros[0] || {}).empresa : S.q.empresa;
+  { const lg = $("#cliLogo"), src = LOGOS[emp]; if (src) { lg.src = src; lg.alt = emp; lg.hidden = false; } else lg.hidden = true; }
   if (emp && S.empP !== emp) { const { data } = await sb.rpc("cq_pessoas", { p_empresa: emp }); S.pessoas = (data || []).sort((a, b) => a.nome.localeCompare(b.nome)); S.empP = emp; }
   const ids = S.cards.map(x => x.id);
   S.coms = {};
   if (ids.length) { const { data } = await sb.from("cq_comentarios").select("cartao").in("cartao", ids); for (const r of data || []) S.coms[r.cartao] = (S.coms[r.cartao] || 0) + 1; }
+  S.anx = {};
+  if (ids.length) { const { data } = await sb.from("cq_anexos").select("cartao").in("cartao", ids); for (const r of data || []) S.anx[r.cartao] = (S.anx[r.cartao] || 0) + 1; }
   render();
 }
 const nomeDe = (uid) => (S.pessoas.find(m => m.user_id === uid) || S.mem.find(m => m.user_id === uid) || {}).nome || "";
@@ -292,7 +307,7 @@ function cardHTML(k) {
   const resp = nomeDe(k.responsavel);
   return `<button class="k" draggable="true" data-id="${k.id}" type="button" aria-label="${esc(k.titulo)}">
     <span class="t">${esc(k.titulo)}</span>
-    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
+    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${(S.anx || {})[k.id] ? `<span title="Anexos">📎 ${S.anx[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
   </button>`;
 }
 function render() {
@@ -393,6 +408,8 @@ async function abrir(id) {
         <div class="row" style="flex-wrap:nowrap"><input type="text" id="kCi" placeholder="Novo item" aria-label="Novo item do checklist"><button class="btn sm" type="button" id="kCa">Incluir</button></div></div>
       <div class="field"><label for="kCo">Comentários</label><div class="coms" id="kCos"><span class="note">Carregando…</span></div>
         <div class="menw"><textarea id="kCo" placeholder="Escreva um comentário · digite @ para marcar alguém" style="min-height:60px;width:100%"></textarea><div class="menl" id="kMn" hidden role="listbox" aria-label="Pessoas para marcar"></div></div><div><button class="btn sm" type="button" id="kCoB">Comentar</button></div></div>
+      <div class="field" id="kAxF"><label>Anexos e prints</label><div class="anx" id="kAx"><span class="note">Carregando…</span></div>
+        <div class="anxbar"><input type="file" id="kAxI" multiple hidden><button class="btn sm" type="button" id="kAxB">📎 Anexar arquivo</button><span class="note" style="margin:0">ou cole um print aqui (Ctrl + V) · até 10 MB</span></div></div>
     </div>
     <div class="side">
       <div class="field"><label for="kCol">Coluna</label><select id="kCol">${S.colsAll.filter(c => c.quadro === k.quadro).map(c => `<option value="${c.id}"${c.id === k.coluna ? " selected" : ""}>${esc(c.nome)}</option>`).join("")}</select></div>
@@ -417,7 +434,19 @@ async function abrir(id) {
   const addCk = () => { const v = $("#kCi").value.trim(); if (!v) return; ck.push({ t: v, ok: false }); $("#kCi").value = ""; pintaCk(); $("#kCi").focus(); };
   $("#kCa").onclick = addCk; $("#kCi").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); addCk(); } };
   d.showModal();
-  carregarComs(k.id); carregarHist(k.id);
+  carregarComs(k.id); carregarHist(k.id); carregarAnx(k);
+  $("#kAxB").onclick = () => $("#kAxI").click();
+  $("#kAxI").onchange = async (e) => { const fs = [...e.target.files]; e.target.value = ""; for (const f of fs) await enviarAnx(k, f); };
+  d.onpaste = async (e) => {
+    const fs = [...(e.clipboardData ? e.clipboardData.files : [])];
+    if (!fs.length) return;
+    e.preventDefault();
+    for (const f of fs) await enviarAnx(k, f, true);
+  };
+  const fx = $("#kAxF");
+  fx.ondragover = (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes("Files")) { e.preventDefault(); fx.classList.add("anxdrop"); } };
+  fx.ondragleave = () => fx.classList.remove("anxdrop");
+  fx.ondrop = async (e) => { e.preventDefault(); fx.classList.remove("anxdrop"); for (const f of [...e.dataTransfer.files]) await enviarAnx(k, f); };
   const ta = $("#kCo"), ml = $("#kMn"); let mOpc = [], mSel = 0, mIni = -1;
   const semAc = (x) => (x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const fechaM = () => { ml.hidden = true; mOpc = []; mIni = -1; };
@@ -493,6 +522,49 @@ async function carregarComs(id) {
   const marca = (h) => { for (const m of [...S.pessoas].sort((a, b) => b.nome.length - a.nome.length)) h = h.split("@" + esc(m.nome)).join(`<span class="men">@${esc(m.nome)}</span>`); return h; };
   el.innerHTML = (data || []).map(c => `<div class="com"><small>${esc(c.nome)} · ${dataHora(c.em)}</small>${marca(esc(c.texto)).replace(/\n/g, "<br>")}</div>`).join("") || `<span class="note">Nenhum comentário ainda.</span>`;
   el.scrollTop = el.scrollHeight;
+}
+const BUCKET = "cq-anexos";
+const tamH = (b) => b == null ? "" : b < 1024 ? b + " B" : b < 1048576 ? Math.round(b / 1024) + " KB" : (b / 1048576).toFixed(1).replace(".", ",") + " MB";
+const iconeDe = (n, t) => /pdf/i.test(t || n) ? "📕" : /sheet|excel|csv|xls/i.test(t || n) ? "📊" : /word|docx?$/i.test(t || n) ? "📝" : /zip|rar/i.test(t || n) ? "🗜️" : "📄";
+async function carregarAnx(k) {
+  const el = $("#kAx"); if (!el) return;
+  const { data, error } = await sb.from("cq_anexos").select("*").eq("cartao", k.id).order("em");
+  if (error) { el.innerHTML = `<span class="note">Não foi possível carregar os anexos.</span>`; return; }
+  const lst = data || [];
+  S.anx = S.anx || {}; S.anx[k.id] = lst.length;
+  if (!lst.length) { el.innerHTML = `<span class="note">Nenhum anexo ainda.</span>`; return; }
+  const { data: urls } = await sb.storage.from(BUCKET).createSignedUrls(lst.map(a => a.caminho), 3600);
+  const mapa = {}; for (const u of urls || []) mapa[u.path] = u.signedUrl;
+  el.innerHTML = lst.map(a => {
+    const url = mapa[a.caminho] || "#", img = /^image\//.test(a.tipo || "");
+    const pode = S.time || a.user_id === S.user.id;
+    return `<div class="a">${pode ? `<button class="x" type="button" data-ax="${a.id}" aria-label="Apagar ${esc(a.nome)}">✕</button>` : ""}<a href="${esc(url)}" target="_blank" rel="noopener" title="${esc(a.nome)} · ${esc(a.autor || "")} · ${dataHora(a.em)}">${img ? `<img src="${esc(url)}" alt="${esc(a.nome)}" loading="lazy">` : `<span class="ic">${iconeDe(a.nome, a.tipo)}</span>`}<small>${esc(a.nome)}<br>${tamH(a.tamanho)}</small></a></div>`;
+  }).join("");
+  $$("[data-ax]", el).forEach(b => b.onclick = async () => {
+    const a = lst.find(x => x.id === b.dataset.ax); if (!a) return;
+    if (!confirmaApagar(a.nome)) return;
+    const r1 = await sb.storage.from(BUCKET).remove([a.caminho]);
+    if (r1.error) return toast("Não foi possível apagar: " + r1.error.message);
+    const r2 = await sb.from("cq_anexos").delete().eq("id", a.id);
+    if (r2.error) return toast("Não foi possível apagar: " + r2.error.message);
+    await evento("apagou anexo", a.nome, k.id, k.quadro); await carregarAnx(k); carregarHist(k.id); render();
+  });
+}
+function confirmaApagar(nome) { return window.__semConfirm ? true : confirm(`Apagar o anexo "${nome}"?`); }
+async function enviarAnx(k, f, print) {
+  if (f.size > 10485760) return toast(`"${f.name}" passa de 10 MB.`);
+  const agora = new Date(), z = (n) => String(n).padStart(2, "0");
+  let nome = f.name || "arquivo";
+  if (print || /^image\.(png|jpe?g)$/i.test(nome)) { const ext = (nome.split(".").pop() || "png").toLowerCase(); nome = `print-${agora.getFullYear()}-${z(agora.getMonth() + 1)}-${z(agora.getDate())}-${z(agora.getHours())}${z(agora.getMinutes())}${z(agora.getSeconds())}.${ext}`; }
+  const seguro = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w.\-]+/g, "_").slice(-90);
+  const caminho = `${k.id}/${agora.getTime()}-${seguro}`;
+  toast("Enviando " + nome + "…");
+  const up = await sb.storage.from(BUCKET).upload(caminho, f, { contentType: f.type || "application/octet-stream", upsert: false });
+  if (up.error) return toast("Não foi possível enviar: " + up.error.message);
+  const { error } = await sb.from("cq_anexos").insert({ cartao: k.id, caminho, nome, tipo: f.type || null, tamanho: f.size, user_id: S.user.id, autor: meuNome() });
+  if (error) { await sb.storage.from(BUCKET).remove([caminho]); return toast("Não foi possível registrar o anexo: " + error.message); }
+  await evento("anexou", nome, k.id, k.quadro);
+  toast("Anexo incluído: " + nome); await carregarAnx(k); carregarHist(k.id); render();
 }
 async function carregarHist(id) {
   const { data } = await sb.from("cq_eventos").select("*").eq("cartao", id).order("em", { ascending: false }).limit(30);

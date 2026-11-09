@@ -87,6 +87,29 @@ main{padding-block:20px 48px;display:grid;gap:16px}
 .painelN .it b{font-weight:700}
 .painelN .it small{display:block;color:var(--muted);font-size:.76rem;margin-top:2px}
 .painelN .it q{display:block;color:var(--muted);font-size:.85rem;quotes:none;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.placar{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin:0 0 14px;padding:0}
+.placar>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;font-family:var(--display);font-weight:700;color:var(--brand)}
+.placar>summary::-webkit-details-marker{display:none}
+.placar>summary .ab{margin-left:auto;font-family:inherit;font-weight:400;font-size:.82rem;color:var(--muted)}
+.placar[open]>summary .ab::after{content:" ▲"} .placar:not([open])>summary .ab::after{content:" ▼"}
+.plc{padding:0 14px 14px;display:grid;gap:12px}
+.plt{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.termo{flex:1;min-width:240px;background:var(--surface-2);border-radius:12px;padding:10px 12px}
+.termo b{font-size:1.05rem}
+.termo .barra{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px}
+.termo .barra i{display:block;height:100%;background:var(--ok);border-radius:99px}
+.pls{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px}
+.pp{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:6px;background:var(--surface)}
+.pp .hd{display:flex;align-items:center;gap:8px;justify-content:flex-start}
+.pp .hd b{font-size:.98rem}
+.pp .hd .av{margin-left:0}
+.pp .nums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;font-size:.78rem;color:var(--muted)}
+.pp .nums strong{font-size:1.25rem;color:var(--fg);display:block;line-height:1.1}
+.pp .bdgs{display:flex;gap:6px;flex-wrap:wrap}
+.pp .bdgs span{font-size:.76rem;background:var(--ok-bg);color:var(--ok);border-radius:99px;padding:2px 8px;font-weight:600}
+.pp .bdgs span.al{background:var(--warn-bg);color:var(--warn)}
+.pp .mini{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.pp .mini i{display:block;height:100%;background:var(--brand-2)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
@@ -305,7 +328,7 @@ async function carregar(silencioso) {
   }
   const emp = S.marc ? (S.outros[0] || {}).empresa : S.q.empresa;
   { const lg = $("#cliLogo"), src = LOGOS[emp]; if (src) { lg.src = src; lg.alt = emp; lg.hidden = false; } else lg.hidden = true; }
-  if (emp && S.empP !== emp) { const { data } = await sb.rpc("cq_pessoas", { p_empresa: emp }); S.pessoas = (data || []).sort((a, b) => a.nome.localeCompare(b.nome)); S.empP = emp; }
+  if (emp && S.empP !== emp) { const { data } = await sb.rpc("cq_pessoas", { p_empresa: emp }); S.pessoas = (data || []).sort((a, b) => a.nome.localeCompare(b.nome)); S.empP = emp; try { const r = await sb.rpc("cq_pessoas_vital", { p_empresa: emp }); S.vital = new Set((r.data || []).map(x => typeof x === "string" ? x : Object.values(x)[0])); } catch { S.vital = new Set(); } }
   const ids = S.cards.map(x => x.id);
   S.coms = {};
   if (ids.length) { const { data } = await sb.from("cq_comentarios").select("cartao").in("cartao", ids); for (const r of data || []) S.coms[r.cartao] = (S.coms[r.cartao] || 0) + 1; }
@@ -321,6 +344,58 @@ async function evento(acao, detalhe, cartao, quadro) { await sb.from("cq_eventos
 
 function venc(k) { if (k.prazo) return k.prazo; const it = (Array.isArray(k.checklist) ? k.checklist : []).filter(i => !i.ok && i.prazo).map(i => i.prazo).sort()[0]; return it || ""; }
 function porPrazo(a, b) { const x = venc(a), y = venc(b); if (x && y) return x < y ? -1 : x > y ? 1 : a.ordem - b.ordem; if (x) return -1; if (y) return 1; return a.ordem - b.ordem; }
+function dataLocal(iso) { const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }
+function placarHTML() {
+  let aberto = true, per = S.per; try { aberto = localStorage.getItem("cq.placar") !== "0"; per = per || localStorage.getItem("cq.per") || "semana"; } catch { per = per || "semana"; }
+  S.per = per;
+  const hoje = hojeISO(), d0 = new Date(hoje + "T12:00");
+  const dIni = per === "mes" ? hoje.slice(0, 8) + "01" : dataLocal(new Date(d0.getTime() - ((d0.getDay() + 6) % 7) * 864e5).toISOString());
+  const vit = S.vital || new Set();
+  const cards = S.cards.filter(k => !colDe(k.coluna).referencia);
+  const fimDe = (k) => !!colDe(k.coluna).concluida;
+  const pessoas = S.pessoas.filter(m => !vit.has(m.user_id));
+  const L = pessoas.map(m => {
+    const u = m.user_id, meus = cards.filter(k => k.responsavel === u);
+    const ent = meus.filter(k => fimDe(k) && k.concluido_em && dataLocal(k.concluido_em) >= dIni);
+    const comPrazo = ent.filter(k => k.prazo), noPrazo = comPrazo.filter(k => dataLocal(k.concluido_em) <= k.prazo);
+    const abertas = meus.filter(k => !fimDe(k));
+    const atr = abertas.filter(k => k.prazo && dias(k.prazo) < 0);
+    const rotAtr = atr.filter(k => k.recorrencia);
+    const itensOk = cards.reduce((n, k) => n + (Array.isArray(k.checklist) ? k.checklist.filter(i => i.resp === u && i.ok).length : 0), 0);
+    const pct = comPrazo.length ? Math.round(100 * noPrazo.length / comPrazo.length) : null;
+    return { m, ent: ent.length, pct, abertas: abertas.length, atr: atr.length, rotAtr: rotAtr.length, itensOk, tot: ent.length + abertas.length };
+  }).filter(x => x.tot || x.itensOk);
+  const maxEnt = Math.max(0, ...L.map(x => x.ent));
+  const totEnt = L.reduce((n, x) => n + x.ent, 0), totAtr = L.reduce((n, x) => n + x.atr, 0);
+  const cp = cards.filter(k => fimDe(k) && k.concluido_em && dataLocal(k.concluido_em) >= dIni && k.prazo);
+  const pctTime = cp.length ? Math.round(100 * cp.filter(k => dataLocal(k.concluido_em) <= k.prazo).length / cp.length) : null;
+  const termo = totAtr === 0 && totEnt > 0 ? ["🔥", "Time on fire! Nenhuma tarefa atrasada."] : pctTime == null ? ["🌱", "Período começando: bora pra cima!"] : pctTime >= 85 && totAtr <= 2 ? ["😎", "No ritmo certo."] : pctTime >= 60 ? ["⚡", "Dá pra acelerar um pouquinho."] : ["🐢", "Hora do mutirão: vamos zerar os atrasos?"];
+  const selos = (x) => {
+    const b = [];
+    if (x.ent && x.ent === maxEnt) b.push("🏆 Mais entregas");
+    if (x.pct === 100 && x.ent >= 2) b.push("⏱️ Relógio suíço");
+    if (!x.atr && x.tot) b.push("🧹 Mesa limpa");
+    if (!x.rotAtr && cards.some(k => k.recorrencia && k.responsavel === x.m.user_id)) b.push("🔁 Rotina em dia");
+    if (x.itensOk >= 5) b.push("☑️ Rainha do checklist");
+    return b;
+  };
+  const rot = per === "mes" ? "neste mês" : "nesta semana";
+  return `<details class="placar" id="placar"${aberto ? " open" : ""}>
+    <summary>🏁 Placar do time <span class="chips" style="font-family:var(--body,inherit)"><button class="chipb" type="button" data-per="semana" aria-pressed="${per === "semana"}">Semana</button><button class="chipb" type="button" data-per="mes" aria-pressed="${per === "mes"}">Mês</button></span><span class="ab">${aberto ? "recolher" : "mostrar"}</span></summary>
+    <div class="plc">
+      <div class="plt">
+        <div class="termo"><b>${termo[0]} ${termo[1]}</b><div class="note" style="margin:2px 0 0">${totEnt} entrega${totEnt === 1 ? "" : "s"} ${rot}${pctTime != null ? ` · ${pctTime}% no prazo` : ""} · ${totAtr} atrasada${totAtr === 1 ? "" : "s"} agora</div>${pctTime != null ? `<div class="barra" role="img" aria-label="${pctTime}% das entregas no prazo"><i style="width:${pctTime}%"></i></div>` : ""}</div>
+      </div>
+      <div class="pls">${L.map(x => `<div class="pp">
+        <div class="hd"><span class="av">${esc(ini(x.m.nome))}</span><b>${esc(x.m.nome.split(" ")[0])}</b></div>
+        <div class="nums"><span><strong>${x.ent}</strong>entregas</span><span><strong>${x.pct == null ? "–" : x.pct + "%"}</strong>no prazo</span><span><strong>${x.abertas}</strong>em aberto</span><span><strong style="${x.atr ? "color:var(--bad)" : ""}">${x.atr}</strong>atrasada${x.atr === 1 ? "" : "s"}</span></div>
+        <div class="mini" role="img" aria-label="${x.ent} entregas"><i style="width:${maxEnt ? Math.round(100 * x.ent / maxEnt) : 0}%"></i></div>
+        <div class="bdgs">${selos(x).map(t => `<span>${t}</span>`).join("")}${x.atr ? `<span class="al">⚠️ ${x.atr} pra colocar em dia</span>` : ""}</div>
+      </div>`).join("") || `<p class="note">Ainda não há entregas ${rot}.</p>`}</div>
+      <p class="note" style="margin:0">Entregas = tarefas em que a pessoa é responsável e que foram para "Concluído" ${rot}. "No prazo" compara a data de conclusão com o prazo do card.</p>
+    </div>
+  </details>`;
+}
 function passa(k) {
   if (S.busca) { const b = S.busca.toLowerCase(); if (!((k.titulo || "") + " " + (k.descricao || "") + " " + nomeDe(k.responsavel)).toLowerCase().includes(b)) return false; }
   if (S.fCriado && (S.fCriado === "auto" ? k.criado_por : k.criado_por !== S.fCriado)) return false;
@@ -368,6 +443,7 @@ function render() {
     <div class="chips">${F.map(([v, t]) => `<button class="chipb" type="button" data-f="${v}" aria-pressed="${S.filtro === v}">${t}</button>`).join("")}</div>
     ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}
   </div>
+  ${S.q && S.q.geral && !S.marc ? placarHTML() : ""}
   <div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
     const ks = S.cards.filter(k => k._v === c.id).sort(S.ordem === "prazo" ? porPrazo : (a, b) => a.ordem - b.ordem);
     const vis = ks.filter(passa);
@@ -380,6 +456,10 @@ function render() {
   $("#busca").oninput = (e) => { S.busca = e.target.value; const p = e.target.selectionStart; render(); const b = $("#busca"); b.focus(); b.setSelectionRange(p, p); };
   $$("[data-f]").forEach(b => b.onclick = () => { S.filtro = b.dataset.f; render(); });
   $("#fCri").onchange = (e) => { S.fCriado = e.target.value; render(); };
+  if ($("#placar")) {
+    $("#placar").ontoggle = (e) => { try { localStorage.setItem("cq.placar", e.target.open ? "1" : "0"); } catch {} };
+    $$("[data-per]").forEach(b => b.onclick = (e) => { e.preventDefault(); S.per = b.dataset.per; try { localStorage.setItem("cq.per", S.per); } catch {} render(); });
+  }
   $("#fOrd").onchange = (e) => { S.ordem = e.target.value; try { localStorage.setItem("cq.ordem", S.ordem); } catch {} render(); };
   $("#fAtr").onchange = (e) => { S.fAtrib = e.target.value; render(); };
   if ($("#bMem")) $("#bMem").onclick = abrirMembros;

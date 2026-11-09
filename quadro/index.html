@@ -253,6 +253,20 @@ const CFG = window.VITAL_CONFIG || {};
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
 const S = { user: null, perfil: null, time: false, quadros: [], proprios: [], outros: [], marc: false, q: null, cols: [], colsAll: [], cards: [], mem: [], pessoas: [], coms: {}, filtro: "todas", busca: "", abertoId: null };
 const MARC = "__marcadas";
+const VERSAO = "20261109135310";
+async function checarVersao() {
+  try {
+    const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
+    const m = t.match(/const VERSAO = "([^"]+)"/);
+    if (!m || m[1] === VERSAO || m[1] === "__VERSAO__") return;
+    const ocupado = () => $("#dlg").open || document.querySelector(".addf") || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
+    if (!ocupado()) { location.reload(); return; }
+    toast("🔄 Nova versão do quadro: a página vai atualizar quando você fechar o card.");
+    const t2 = setInterval(() => { if (!ocupado()) { clearInterval(t2); location.reload(); } }, 3000);
+  } catch {}
+}
+setInterval(checarVersao, 120000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checarVersao(); });
 try { S.ordem = localStorage.getItem("cq.ordem") || ""; } catch { S.ordem = ""; }
 const LOGOS = { "Agro TNZ": "../clientes/agro-tnz.png" };
 const PRI = { alta: "Alta", media: "Média", baixa: "Baixa" };
@@ -372,15 +386,17 @@ function placarHTML() {
   const fimDe = (k) => !!colDe(k.coluna).concluida;
   const pessoas = S.pessoas.filter(m => !vit.has(m.user_id));
   const L = pessoas.map(m => {
-    const u = m.user_id, meus = cards.filter(k => k.responsavel === u);
-    const ent = meus.filter(k => fimDe(k) && k.concluido_em && dataLocal(k.concluido_em) >= dIni);
+    const u = m.user_id;
+    const meus = cards.filter(k => k.responsavel === u || (k.participantes || []).includes(u) || k.para_todos);
+    const ent = meus.filter(k => fimDe(k) && k.concluido_em && dataLocal(k.concluido_em) >= dIni && (k.responsavel === u || (!k.responsavel && ((k.participantes || []).includes(u) || k.para_todos))));
     const comPrazo = ent.filter(k => k.prazo), noPrazo = comPrazo.filter(k => dataLocal(k.concluido_em) <= k.prazo);
     const abertas = meus.filter(k => !fimDe(k));
+    const itensAtr = cards.filter(k => !fimDe(k)).reduce((n, k) => n + (Array.isArray(k.checklist) ? k.checklist.filter(i => i.resp === u && !i.ok && i.prazo && dias(i.prazo) < 0).length : 0), 0);
     const atr = abertas.filter(k => k.prazo && dias(k.prazo) < 0);
     const rotAtr = atr.filter(k => k.recorrencia);
     const itensOk = cards.reduce((n, k) => n + (Array.isArray(k.checklist) ? k.checklist.filter(i => i.resp === u && i.ok).length : 0), 0);
     const pct = comPrazo.length ? Math.round(100 * noPrazo.length / comPrazo.length) : null;
-    return { m, ent: ent.length, pct, abertas: abertas.length, atr: atr.length, rotAtr: rotAtr.length, itensOk, tot: ent.length + abertas.length };
+    return { m, ent: ent.length, pct, abertas: abertas.length, atr: atr.length + itensAtr, rotAtr: rotAtr.length, itensOk, tot: ent.length + abertas.length };
   });
   const maxEnt = Math.max(0, ...L.map(x => x.ent));
   const totEnt = L.reduce((n, x) => n + x.ent, 0), totAtr = L.reduce((n, x) => n + x.atr, 0);
@@ -409,7 +425,7 @@ function placarHTML() {
         <div class="mini" role="img" aria-label="${x.ent} entregas"><i style="width:${maxEnt ? Math.round(100 * x.ent / maxEnt) : 0}%"></i></div>
         <div class="bdgs">${selos(x).map(t => `<span>${t}</span>`).join("")}${x.atr ? `<span class="al">⚠️ ${x.atr} pra colocar em dia</span>` : ""}</div>
       </div>`).join("") || `<p class="note">Ainda não há entregas ${rot}.</p>`}</div>
-      <p class="note" style="margin:0">Entregas = tarefas em que a pessoa é responsável e que foram para "Concluído" ${rot}. "No prazo" compara a data de conclusão com o prazo do card.</p>
+      <p class="note" style="margin:0">Conta as tarefas em que a pessoa é responsável, está marcada ou que são para "Todos". Atrasadas incluem itens de checklist da pessoa com prazo vencido. Entregas = tarefas que foram para "Concluído" ${rot}.</p>
     </div>
   </details>`;
 }
@@ -654,13 +670,20 @@ async function abrir(id) {
   }
   async function gravarAgora(atual, js) {
     const { titulo, participantes } = atual;
-    const novo = { titulo, participantes, descricao: atual.descricao, responsavel: atual.responsavel, para_todos: atual.para_todos, prazo: atual.prazo, prioridade: atual.prioridade, checklist: atual.checklist, atualizado_em: new Date().toISOString() };
+    const prev = JSON.parse(ultimo || "{}");
+    const CAMPOS = ["titulo", "participantes", "descricao", "responsavel", "para_todos", "prazo", "prioridade", "checklist"];
+    const mudou = (c) => JSON.stringify(atual[c] ?? null) !== JSON.stringify(prev[c] ?? null);
+    const novo = { atualizado_em: new Date().toISOString() };
+    for (const c of CAMPOS) if (mudou(c)) novo[c] = atual[c];
+    if (mudou("responsavel") || mudou("para_todos")) { novo.responsavel = atual.responsavel; novo.para_todos = atual.para_todos; }
     const mud = [];
-    if (novo.para_todos && !k.para_todos) mud.push("responsável: Todos");
-    else if (novo.responsavel !== (k.responsavel || null) || (!novo.para_todos && k.para_todos)) mud.push("responsável: " + (nomeDe(novo.responsavel) || "ninguém"));
-    if (novo.prazo !== (k.prazo || null)) mud.push("prazo: " + (dBR(novo.prazo) || "sem prazo"));
+    if ("para_todos" in novo || "responsavel" in novo) {
+      if (novo.para_todos && !k.para_todos) mud.push("responsável: Todos");
+      else if (novo.responsavel !== (k.responsavel || null) || (!novo.para_todos && k.para_todos)) mud.push("responsável: " + (nomeDe(novo.responsavel) || "ninguém"));
+    }
+    if ("prazo" in novo && novo.prazo !== (k.prazo || null)) mud.push("prazo: " + (dBR(novo.prazo) || "sem prazo"));
     const colNova = atual.coluna;
-    { const ant = Array.isArray(k.checklist) ? k.checklist : [], usados = new Set();
+    if ("checklist" in novo) { const ant = Array.isArray(k.checklist) ? k.checklist : [], usados = new Set();
       for (const it of novo.checklist) {
         const j = ant.findIndex((a, x) => !usados.has(x) && a.t === it.t);
         if (j < 0) { mud.push("checklist: incluiu \"" + it.t + "\""); continue; }
@@ -671,13 +694,13 @@ async function abrir(id) {
         if ((it.prazo || "") !== (a.prazo || "") && it.prazo) mud.push("checklist: \"" + it.t + "\" até " + dBR(it.prazo));
       }
       ant.forEach((a, x) => { if (!usados.has(x)) mud.push("checklist: removeu \"" + a.t + "\""); });
-      if ((novo.titulo || "") !== (k.titulo || "")) mud.push("título: " + novo.titulo);
     }
-    const { error } = await sb.from("cq_cartoes").update(novo).eq("id", k.id);
+    if ("titulo" in novo && (novo.titulo || "") !== (k.titulo || "")) mud.push("título: " + novo.titulo);
+    const { error } = Object.keys(novo).length > 1 ? await sb.from("cq_cartoes").update(novo).eq("id", k.id) : { error: null };
     if (error) { st("Erro ao salvar"); toast("Não foi possível salvar: " + error.message); return false; }
     ultimo = js;
     Object.assign(k, novo);
-    const marcNovos = participantes.filter(u => !(k._pa0 || []).includes(u)).map(nomeDe).filter(Boolean);
+    const marcNovos = !("participantes" in novo) ? [] : participantes.filter(u => !(k._pa0 || []).includes(u)).map(nomeDe).filter(Boolean);
     if (marcNovos.length) mud.push("marcou: " + marcNovos.join(", "));
     k._pa0 = participantes.slice();
     if (mud.length) await evento("editou", mud.join(" · "), k.id, k.quadro);

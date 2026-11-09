@@ -7,6 +7,13 @@
 <meta name="robots" content="noindex">
 <title>Quadro de tarefas · Vital Agro & Negócios</title>
 <link rel="icon" href="/vitalagroenegocios/logo.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#00582F">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Quadro Vital">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
@@ -125,6 +132,24 @@ main{padding-block:20px 48px;display:grid;gap:16px}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){.ticker .tr{animation:none}.ticker .vp{overflow-x:auto}}
 @media (max-width:640px){.ticker .lb span{display:none}}
+@media (max-width:640px){
+  .top .wrap{flex-wrap:wrap;gap:8px;padding-block:8px}
+  .top .logo{width:36px;height:36px}.top .logo img{width:28px}
+  .clilogo{height:36px}
+  .brandtxt{flex:1 1 0;min-width:0}
+  .brandtxt b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.98rem}
+  .brandtxt span{display:none}
+  .top .spacer{display:none}
+  #selQ{order:9;flex:1 1 100%;width:100%}
+  .top .tab{font-size:.82rem;padding:6px 8px}
+  .sino{padding:6px 8px}
+  .bar{gap:8px}
+  .bar .kpis{width:100%;display:flex;gap:6px;flex-wrap:nowrap}
+  .bar .kpi{flex:1;padding:6px 8px;font-size:.8rem}
+  #busca{flex:1 1 100%;width:100%}
+  .fsel{flex:1 1 calc(50% - 4px);max-width:none;font-size:.8rem}
+  #fAtr{flex-basis:100%}
+}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
@@ -227,6 +252,7 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
     <div class="brandtxt"><b id="tQ">Quadro de tarefas</b><span id="tE">Área do cliente</span></div>
     <div class="spacer"></div>
     <select id="selQ" aria-label="Quadro" hidden style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface)"></select>
+    <button class="sino" id="instalar" type="button" title="Instalar na tela de início" aria-label="Instalar na tela de início" hidden>📲</button>
     <button class="sino" id="sino" type="button" aria-label="Notificações" aria-expanded="false" hidden>🔔<span class="bdg" id="sinoN" hidden>0</span></button>
     <a class="tab" href="/vitalagroenegocios/cliente/">Área do cliente</a>
   </div>
@@ -253,7 +279,29 @@ const CFG = window.VITAL_CONFIG || {};
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
 const S = { user: null, perfil: null, time: false, quadros: [], proprios: [], outros: [], marc: false, q: null, cols: [], colsAll: [], cards: [], mem: [], pessoas: [], coms: {}, filtro: "todas", busca: "", abertoId: null };
 const MARC = "__marcadas";
-const VERSAO = "20261109135310";
+let pedidoInstalar = null;
+const ehApp = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const ehIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const ehCel = () => /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || ehIOS();
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); pedidoInstalar = e; const b = document.getElementById("instalar"); if (b && !ehApp()) b.hidden = false; });
+window.addEventListener("appinstalled", () => { const b = document.getElementById("instalar"); if (b) b.hidden = true; pedidoInstalar = null; toast("📲 Quadro instalado na tela de início."); });
+function iniciarInstalar() {
+  try { if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {}); } catch {}
+  const b = document.getElementById("instalar"); if (!b) return;
+  if (!ehApp() && ehCel()) b.hidden = false;
+  b.onclick = async () => {
+    if (pedidoInstalar) { pedidoInstalar.prompt(); try { await pedidoInstalar.userChoice; } catch {} pedidoInstalar = null; return; }
+    const d = $("#dlgM");
+    d.innerHTML = `<form method="dialog" class="dlg" style="grid-template-columns:minmax(0,1fr);max-width:440px">
+      <div class="row" style="justify-content:space-between"><h2 style="font-size:1.1rem">📲 Salvar na tela de início</h2><button class="btn ghost sm" value="x" aria-label="Fechar">✕</button></div>
+      ${ehIOS() ? `<ol style="margin:0;padding-left:1.2em;line-height:1.7"><li>Abra este quadro no <b>Safari</b>.</li><li>Toque em <b>Compartilhar</b> (o quadrado com a seta para cima ⬆️).</li><li>Role e toque em <b>Adicionar à Tela de Início</b>.</li><li>Toque em <b>Adicionar</b>. Pronto: o ícone da Vital aparece na tela.</li></ol>`
+      : `<ol style="margin:0;padding-left:1.2em;line-height:1.7"><li>Abra este quadro no <b>Chrome</b>.</li><li>Toque nos <b>três pontinhos ⋮</b> no canto de cima.</li><li>Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</li><li>Confirme. Pronto: o ícone da Vital aparece na tela.</li></ol>`}
+      <p class="note" style="margin:0">O app abre direto no quadro, em tela cheia, e continua recebendo as atualizações sozinho.</p>
+    </form>`;
+    d.showModal();
+  };
+}
+const VERSAO = "20261109135554";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -301,6 +349,7 @@ async function iniciar() {
   ligarTempoReal();
   iniciarNotif();
   iniciarTicker();
+  iniciarInstalar();
   setInterval(() => { if (document.visibilityState === "visible" && !$("#dlg").open && !document.querySelector(".addf")) carregar(true); }, 30000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("#dlg").open) carregar(true); });
 }

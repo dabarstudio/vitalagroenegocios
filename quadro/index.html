@@ -214,6 +214,7 @@ const CFG = window.VITAL_CONFIG || {};
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
 const S = { user: null, perfil: null, time: false, quadros: [], proprios: [], outros: [], marc: false, q: null, cols: [], colsAll: [], cards: [], mem: [], pessoas: [], coms: {}, filtro: "todas", busca: "", abertoId: null };
 const MARC = "__marcadas";
+try { S.ordem = localStorage.getItem("cq.ordem") || ""; } catch { S.ordem = ""; }
 const LOGOS = { "Agro TNZ": "../clientes/agro-tnz.png" };
 const PRI = { alta: "Alta", media: "Média", baixa: "Baixa" };
 
@@ -318,6 +319,8 @@ const quadroNome = (id) => (S.quadros.find(q => q.id === id) || {}).nome || "";
 const meuNome = () => nomeDe(S.user.id) || S.perfil.nome || "Usuário";
 async function evento(acao, detalhe, cartao, quadro) { await sb.from("cq_eventos").insert({ quadro: quadro || (S.q && S.q.id), cartao: cartao || null, user_id: S.user.id, nome: meuNome(), acao, detalhe: detalhe || null }); }
 
+function venc(k) { if (k.prazo) return k.prazo; const it = (Array.isArray(k.checklist) ? k.checklist : []).filter(i => !i.ok && i.prazo).map(i => i.prazo).sort()[0]; return it || ""; }
+function porPrazo(a, b) { const x = venc(a), y = venc(b); if (x && y) return x < y ? -1 : x > y ? 1 : a.ordem - b.ordem; if (x) return -1; if (y) return 1; return a.ordem - b.ordem; }
 function passa(k) {
   if (S.busca) { const b = S.busca.toLowerCase(); if (!((k.titulo || "") + " " + (k.descricao || "") + " " + nomeDe(k.responsavel)).toLowerCase().includes(b)) return false; }
   if (S.fCriado && (S.fCriado === "auto" ? k.criado_por : k.criado_por !== S.fCriado)) return false;
@@ -358,14 +361,15 @@ function render() {
   <div class="bar">
     <div class="kpis"><span class="kpi"><b>${abertas.length}</b>em aberto</span><span class="kpi${atr ? " bad" : ""}"><b>${atr}</b>atrasadas</span><span class="kpi"><b>${semana}</b>vencem em 7 dias</span></div>
     <div class="spacer"></div>
-    <input type="search" id="busca" placeholder="Buscar tarefa ou pessoa" value="${esc(S.busca)}" aria-label="Buscar">
+    <input type="search" id="busca" placeholder="Buscar…" value="${esc(S.busca)}" aria-label="Buscar">
+    <select id="fOrd" class="fsel" aria-label="Organizar por"><option value="">Organizar: manual</option><option value="prazo"${S.ordem === "prazo" ? " selected" : ""}>Organizar: vencimento</option></select>
     <select id="fCri" class="fsel" aria-label="Criado por"><option value="">Criado por: todos</option><option value="auto"${S.fCriado === "auto" ? " selected" : ""}>Criado por: rotina automática</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fCriado === m.user_id ? " selected" : ""}>Criado por: ${esc(m.nome)}</option>`).join("")}</select>
     <select id="fAtr" class="fsel" aria-label="Atribuído a"><option value="">Atribuído a: todos</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fAtrib === m.user_id ? " selected" : ""}>Atribuído a: ${esc(m.nome)}</option>`).join("")}</select>
     <div class="chips">${F.map(([v, t]) => `<button class="chipb" type="button" data-f="${v}" aria-pressed="${S.filtro === v}">${t}</button>`).join("")}</div>
     ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}
   </div>
   <div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
-    const ks = S.cards.filter(k => k._v === c.id).sort((a, b) => a.ordem - b.ordem);
+    const ks = S.cards.filter(k => k._v === c.id).sort(S.ordem === "prazo" ? porPrazo : (a, b) => a.ordem - b.ordem);
     const vis = ks.filter(passa);
     return `<section class="col${c.referencia ? " ref" : ""}" data-col="${c.id}" aria-label="${esc(c.nome)}"${c.referencia ? ` title="Atribuições fixas e observações internas: não contam como tarefas em aberto"` : ""}>
       <div class="colh"><h2>${esc(c.nome)}</h2><span class="n">${ks.length}</span></div>
@@ -376,6 +380,7 @@ function render() {
   $("#busca").oninput = (e) => { S.busca = e.target.value; const p = e.target.selectionStart; render(); const b = $("#busca"); b.focus(); b.setSelectionRange(p, p); };
   $$("[data-f]").forEach(b => b.onclick = () => { S.filtro = b.dataset.f; render(); });
   $("#fCri").onchange = (e) => { S.fCriado = e.target.value; render(); };
+  $("#fOrd").onchange = (e) => { S.ordem = e.target.value; try { localStorage.setItem("cq.ordem", S.ordem); } catch {} render(); };
   $("#fAtr").onchange = (e) => { S.fAtrib = e.target.value; render(); };
   if ($("#bMem")) $("#bMem").onclick = abrirMembros;
   $$(".k").forEach(b => {

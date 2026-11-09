@@ -115,7 +115,10 @@ main{padding-block:20px 48px;display:grid;gap:16px}
 .pp .nums strong{font-size:1.25rem;color:var(--fg);display:block;line-height:1.1}
 .pp .bdgs{display:flex;gap:6px;flex-wrap:wrap}
 .pp .bdgs span{font-size:.76rem;background:var(--ok-bg);color:var(--ok);border-radius:99px;padding:2px 8px;font-weight:600}
-.pp .bdgs span.al{background:var(--warn-bg);color:var(--warn)}
+.pp .bdgs span.al,.pp .bdgs .al{background:var(--warn-bg);color:var(--warn)}
+.pp .pn{border:0;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer;border-radius:8px}
+.pp .pn:hover strong,.pp .pn:focus-visible strong{text-decoration:underline}
+.pp .bdgs .pn{font-size:.76rem;border-radius:99px;padding:2px 8px;font-weight:600}
 .pp .mini{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
 .pp .mini i{display:block;height:100%;background:var(--brand-2)}
 .ticker{display:flex;align-items:stretch;border-bottom:1px solid var(--line);background:var(--surface-2);font-size:.86rem;overflow:hidden}
@@ -377,7 +380,7 @@ function abrirPorUrl(u) {
   try { const x = new URL(u, location.href); const c = x.searchParams.get("card"); if (c) irParaNotif({ cartao: c, id: Number(x.searchParams.get("n")) || 0, lida: !x.searchParams.get("n") }); } catch {}
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.abrir) abrirPorUrl(e.data.abrir); });
-const VERSAO = "20261109144209";
+const VERSAO = "20261109144407";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -593,9 +596,9 @@ function placarHTML() {
       ${filtroP || S.fAtrib ? `<div class="note" style="margin:0">Mostrando só ${filtroP ? filtroP[1] : "a pessoa filtrada"} · <button type="button" class="chipb" id="plLimpa" style="padding:2px 10px">mostrar todos</button></div>` : ""}
       <div class="pls">${LV.map(x => `<div class="pp">
         <div class="hd"><span class="av">${esc(ini(x.m.nome))}</span><b>${esc(x.m.nome.split(" ")[0])}</b></div>
-        <div class="nums"><span><strong>${x.ent}</strong>entregas</span><span><strong>${x.pct == null ? "–" : x.pct + "%"}</strong>no prazo</span><span><strong>${x.abertas}</strong>em aberto</span><span><strong style="${x.atr ? "color:var(--bad)" : ""}">${x.atr}</strong>atrasada${x.atr === 1 ? "" : "s"}</span></div>
+        <div class="nums"><button type="button" class="pn" data-pu="${x.m.user_id}" data-pf="todas" title="Ver as tarefas de ${esc(x.m.nome)}"><strong>${x.ent}</strong>entregas</button><span><strong>${x.pct == null ? "–" : x.pct + "%"}</strong>no prazo</span><button type="button" class="pn" data-pu="${x.m.user_id}" data-pf="abertas" title="Ver as tarefas em aberto de ${esc(x.m.nome)}"><strong>${x.abertas}</strong>em aberto</button><button type="button" class="pn" data-pu="${x.m.user_id}" data-pf="atrasadas" title="Ver as atrasadas de ${esc(x.m.nome)}"><strong style="${x.atr ? "color:var(--bad)" : ""}">${x.atr}</strong>atrasada${x.atr === 1 ? "" : "s"}</button></div>
         <div class="mini" role="img" aria-label="${x.ent} entregas"><i style="width:${maxEnt ? Math.round(100 * x.ent / maxEnt) : 0}%"></i></div>
-        <div class="bdgs">${selos(x).map(t => `<span>${t}</span>`).join("")}${x.atr ? `<span class="al">⚠️ ${x.atr} pra colocar em dia</span>` : ""}</div>
+        <div class="bdgs">${selos(x).map(t => `<span>${t}</span>`).join("")}${x.atr ? `<button type="button" class="al pn" data-pu="${x.m.user_id}" data-pf="atrasadas" title="Ver as atrasadas de ${esc(x.m.nome)}">⚠️ ${x.atr} pra colocar em dia ›</button>` : ""}</div>
       </div>`).join("") || `<p class="note">${filtroP && filtroP[0] === "atr" ? "🎉 Ninguém com atraso!" : filtroP ? "Ninguém nesse filtro." : "Ainda não há entregas " + rot + "."}</p>`}</div>
       <p class="note" style="margin:0">Conta as tarefas em que a pessoa é responsável, está marcada ou que são para "Todos". Atrasadas incluem itens de checklist da pessoa com prazo vencido. Entregas = tarefas que foram para "Concluído" ${rot}.</p>
     </div>
@@ -666,6 +669,11 @@ function render() {
   $("#fCri").onchange = (e) => { S.fCriado = e.target.value; render(); };
   if ($("#placar")) {
     $("#placar").ontoggle = (e) => { try { localStorage.setItem("cq.placar", e.target.open ? "1" : "0"); } catch {} };
+    $$("[data-pu]").forEach(b => b.onclick = (e) => {
+      e.preventDefault();
+      S.fAtrib = b.dataset.pu; S.filtro = b.dataset.pf || "todas"; render();
+      const bd = document.querySelector(".board"); if (bd) bd.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     if ($("#plLimpa")) $("#plLimpa").onclick = (e) => { e.preventDefault(); S.filtro = "todas"; S.fAtrib = ""; render(); };
     $$("[data-per]").forEach(b => b.onclick = (e) => { e.preventDefault(); S.per = b.dataset.per; try { localStorage.setItem("cq.per", S.per); } catch {} render(); });
   }

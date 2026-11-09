@@ -1,0 +1,18 @@
+{
+  "name": "Agro TNZ · Tarefas",
+  "short_name": "Agro TNZ",
+  "description": "Tarefas, rotinas e placar do time da Agro TNZ. By Vital Agro&Negócios.",
+  "lang": "pt-BR",
+  "id": "./?app=agro-tnz",
+  "start_url": "./?app=agro-tnz",
+  "scope": "../",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1071B9",
+  "icons": [
+    { "src": "tnz-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "tnz-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "tnz-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

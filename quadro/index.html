@@ -7,12 +7,12 @@
 <meta name="robots" content="noindex">
 <title>Quadro de tarefas · Vital Agro & Negócios</title>
 <link rel="icon" href="/vitalagroenegocios/logo.png">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" id="lnkMan" href="manifest.webmanifest">
 <meta name="theme-color" content="#00582F">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" id="lnkApple" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Quadro Vital">
+<meta name="apple-mobile-web-app-title" id="mtApp" content="Quadro Vital">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -169,6 +169,11 @@ html,body{max-width:100%;overflow-x:hidden}
 }
 .convite{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .convite span{flex:1 1 100%;font-weight:600}
+.rodape{text-align:center;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));font-size:.8rem;color:var(--muted)}
+.rodape a{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.rodape a:hover{color:var(--brand)}
+.rodape img{width:22px;height:22px;border-radius:6px;background:#fff;border:1px solid var(--line)}
+.rodape b{color:var(--brand);font-weight:700}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
@@ -278,6 +283,7 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
 </header>
 <div class="ticker" id="ticker" hidden aria-label="Mercado e notícias"></div>
 <main class="wrap" id="app"><div class="card"><p class="muted" style="margin:0">Carregando o quadro…</p></div></main>
+<footer class="rodape"><a href="../" target="_blank" rel="noopener" title="Vital Agro&amp;Negócios"><img src="icon-192.png" alt="">By <b>Vital Agro&amp;Negócios</b></a></footer>
 <dialog id="dlg" aria-label="Tarefa"></dialog>
 <dialog id="dlgM" aria-label="Membros do quadro"></dialog>
 <div class="toast" id="toast" hidden></div>
@@ -313,8 +319,8 @@ function iniciarInstalar() {
     const d = $("#dlgM");
     d.innerHTML = `<form method="dialog" class="dlg" style="grid-template-columns:minmax(0,1fr);max-width:440px">
       <div class="row" style="justify-content:space-between"><h2 style="font-size:1.1rem">📲 Salvar na tela de início</h2><button class="btn ghost sm" value="x" aria-label="Fechar">✕</button></div>
-      ${ehIOS() ? `<ol style="margin:0;padding-left:1.2em;line-height:1.7"><li>Abra este quadro no <b>Safari</b>.</li><li>Toque em <b>Compartilhar</b> (o quadrado com a seta para cima ⬆️).</li><li>Role e toque em <b>Adicionar à Tela de Início</b>.</li><li>Toque em <b>Adicionar</b>. Pronto: o ícone da Vital aparece na tela.</li></ol>`
-      : `<ol style="margin:0;padding-left:1.2em;line-height:1.7"><li>Abra este quadro no <b>Chrome</b>.</li><li>Toque nos <b>três pontinhos ⋮</b> no canto de cima.</li><li>Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</li><li>Confirme. Pronto: o ícone da Vital aparece na tela.</li></ol>`}
+      ${ehIOS() ? `<ol style="margin:0;padding-left:1.2em;line-height:1.7"><li>Abra este quadro no <b>Safari</b>.</li><li>Toque em <b>Compartilhar</b> (o quadrado com a seta para cima ⬆️).</li><li>Role e toque em <b>Adicionar à Tela de Início</b>.</li><li>Toque em <b>Adicionar</b>. Pronto: o ícone ${esc(S.marcaNome ? "da " + S.marcaNome : "do quadro")} aparece na tela.</li></ol>`
+      : `<ol style="margin:0;padding-left:1.2em;line-height:1.7"><li>Abra este quadro no <b>Chrome</b>.</li><li>Toque nos <b>três pontinhos ⋮</b> no canto de cima.</li><li>Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</li><li>Confirme. Pronto: o ícone ${esc(S.marcaNome ? "da " + S.marcaNome : "do quadro")} aparece na tela.</li></ol>`}
       <p class="note" style="margin:0">O app abre direto no quadro, em tela cheia, e continua recebendo as atualizações sozinho.</p>
     </form>`;
     d.showModal();
@@ -361,7 +367,7 @@ function abrirPorUrl(u) {
   try { const x = new URL(u, location.href); const c = x.searchParams.get("card"); if (c) irParaNotif({ cartao: c, id: Number(x.searchParams.get("n")) || 0, lida: !x.searchParams.get("n") }); } catch {}
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.abrir) abrirPorUrl(e.data.abrir); });
-const VERSAO = "20261109140208";
+const VERSAO = "20261109140556";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -377,6 +383,12 @@ setInterval(checarVersao, 120000);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checarVersao(); });
 try { S.ordem = localStorage.getItem("cq.ordem") || ""; } catch { S.ordem = ""; }
 const LOGOS = { "Agro TNZ": "../clientes/agro-tnz.png" };
+const MARCAS = { "Agro TNZ": { titulo: "Agro TNZ", manifest: "manifest-agro-tnz.webmanifest", apple: "tnz-180.png", cor: "#1071B9" } };
+function aplicarMarca(emp) {
+  const m = MARCAS[emp]; if (!m || S.marcaAtual === emp) return; S.marcaAtual = emp; S.marcaNome = m.titulo;
+  const set = (id, attr, v) => { const e = document.getElementById(id); if (e) e.setAttribute(attr, v); };
+  set("lnkMan", "href", m.manifest); set("lnkApple", "href", m.apple); set("mtApp", "content", m.titulo); document.querySelectorAll('meta[name="theme-color"]').forEach(e => e.setAttribute("content", m.cor));
+}
 const PRI = { alta: "Alta", media: "Média", baixa: "Baixa" };
 
 async function iniciar() {
@@ -469,6 +481,7 @@ async function carregar(silencioso) {
     }
   }
   const emp = S.marc ? (S.outros[0] || {}).empresa : S.q.empresa;
+  aplicarMarca(emp);
   { const lg = $("#cliLogo"), src = LOGOS[emp]; if (src) { lg.src = src; lg.alt = emp; lg.hidden = false; } else lg.hidden = true; }
   if (emp && S.empP !== emp) { const { data } = await sb.rpc("cq_pessoas", { p_empresa: emp }); S.pessoas = (data || []).sort((a, b) => a.nome.localeCompare(b.nome)); S.empP = emp; try { const r = await sb.rpc("cq_pessoas_vital", { p_empresa: emp }); S.vital = new Set((r.data || []).map(x => typeof x === "string" ? x : Object.values(x)[0])); } catch { S.vital = new Set(); } }
   const ids = S.cards.map(x => x.id);

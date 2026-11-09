@@ -377,7 +377,7 @@ function abrirPorUrl(u) {
   try { const x = new URL(u, location.href); const c = x.searchParams.get("card"); if (c) irParaNotif({ cartao: c, id: Number(x.searchParams.get("n")) || 0, lida: !x.searchParams.get("n") }); } catch {}
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.abrir) abrirPorUrl(e.data.abrir); });
-const VERSAO = "20261109144122";
+const VERSAO = "20261109144209";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -562,8 +562,13 @@ function placarHTML() {
     const rotAtr = atr.filter(k => k.recorrencia);
     const itensOk = cards.reduce((n, k) => n + (Array.isArray(k.checklist) ? k.checklist.filter(i => i.resp === u && i.ok).length : 0), 0);
     const pct = comPrazo.length ? Math.round(100 * noPrazo.length / comPrazo.length) : null;
-    return { m, ent: ent.length, pct, abertas: abertas.length, atr: atr.length + itensAtr, rotAtr: rotAtr.length, itensOk, tot: ent.length + abertas.length };
+    const sem = abertas.filter(k => k.prazo && dias(k.prazo) >= 0 && dias(k.prazo) <= 7).length;
+    return { m, ent: ent.length, pct, abertas: abertas.length, atr: atr.length + itensAtr, sem, rotAtr: rotAtr.length, itensOk, tot: ent.length + abertas.length };
   });
+  const LT = L;
+  const filtroP = S.filtro === "atrasadas" ? ["atr", "quem tem atraso"] : S.filtro === "semana" ? ["sem", "quem tem tarefa vencendo em 7 dias"] : S.filtro === "abertas" ? ["abertas", "quem tem tarefa em aberto"] : null;
+  let LV = filtroP ? LT.filter(x => x[filtroP[0]] > 0) : LT;
+  if (S.fAtrib) LV = LV.filter(x => x.m.user_id === S.fAtrib);
   const maxEnt = Math.max(0, ...L.map(x => x.ent));
   const totEnt = L.reduce((n, x) => n + x.ent, 0), totAtr = L.reduce((n, x) => n + x.atr, 0);
   const cp = cards.filter(k => fimDe(k) && k.concluido_em && dataLocal(k.concluido_em) >= dIni && k.prazo);
@@ -585,12 +590,13 @@ function placarHTML() {
       <div class="plt">
         <div class="termo"><b>${termo[0]} ${termo[1]}</b><div class="note" style="margin:2px 0 0">${totEnt} entrega${totEnt === 1 ? "" : "s"} ${rot}${pctTime != null ? ` · ${pctTime}% no prazo` : ""} · ${totAtr} atrasada${totAtr === 1 ? "" : "s"} agora</div>${pctTime != null ? `<div class="barra" role="img" aria-label="${pctTime}% das entregas no prazo"><i style="width:${pctTime}%"></i></div>` : ""}</div>
       </div>
-      <div class="pls">${L.map(x => `<div class="pp">
+      ${filtroP || S.fAtrib ? `<div class="note" style="margin:0">Mostrando só ${filtroP ? filtroP[1] : "a pessoa filtrada"} · <button type="button" class="chipb" id="plLimpa" style="padding:2px 10px">mostrar todos</button></div>` : ""}
+      <div class="pls">${LV.map(x => `<div class="pp">
         <div class="hd"><span class="av">${esc(ini(x.m.nome))}</span><b>${esc(x.m.nome.split(" ")[0])}</b></div>
         <div class="nums"><span><strong>${x.ent}</strong>entregas</span><span><strong>${x.pct == null ? "–" : x.pct + "%"}</strong>no prazo</span><span><strong>${x.abertas}</strong>em aberto</span><span><strong style="${x.atr ? "color:var(--bad)" : ""}">${x.atr}</strong>atrasada${x.atr === 1 ? "" : "s"}</span></div>
         <div class="mini" role="img" aria-label="${x.ent} entregas"><i style="width:${maxEnt ? Math.round(100 * x.ent / maxEnt) : 0}%"></i></div>
         <div class="bdgs">${selos(x).map(t => `<span>${t}</span>`).join("")}${x.atr ? `<span class="al">⚠️ ${x.atr} pra colocar em dia</span>` : ""}</div>
-      </div>`).join("") || `<p class="note">Ainda não há entregas ${rot}.</p>`}</div>
+      </div>`).join("") || `<p class="note">${filtroP && filtroP[0] === "atr" ? "🎉 Ninguém com atraso!" : filtroP ? "Ninguém nesse filtro." : "Ainda não há entregas " + rot + "."}</p>`}</div>
       <p class="note" style="margin:0">Conta as tarefas em que a pessoa é responsável, está marcada ou que são para "Todos". Atrasadas incluem itens de checklist da pessoa com prazo vencido. Entregas = tarefas que foram para "Concluído" ${rot}.</p>
     </div>
   </details>`;
@@ -660,6 +666,7 @@ function render() {
   $("#fCri").onchange = (e) => { S.fCriado = e.target.value; render(); };
   if ($("#placar")) {
     $("#placar").ontoggle = (e) => { try { localStorage.setItem("cq.placar", e.target.open ? "1" : "0"); } catch {} };
+    if ($("#plLimpa")) $("#plLimpa").onclick = (e) => { e.preventDefault(); S.filtro = "todas"; S.fAtrib = ""; render(); };
     $$("[data-per]").forEach(b => b.onclick = (e) => { e.preventDefault(); S.per = b.dataset.per; try { localStorage.setItem("cq.per", S.per); } catch {} render(); });
   }
   $("#fOrd").onchange = (e) => { S.ordem = e.target.value; try { localStorage.setItem("cq.ordem", S.ordem); } catch {} render(); };

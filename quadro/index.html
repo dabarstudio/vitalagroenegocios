@@ -374,7 +374,7 @@ function abrirPorUrl(u) {
   try { const x = new URL(u, location.href); const c = x.searchParams.get("card"); if (c) irParaNotif({ cartao: c, id: Number(x.searchParams.get("n")) || 0, lida: !x.searchParams.get("n") }); } catch {}
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.abrir) abrirPorUrl(e.data.abrir); });
-const VERSAO = "20261109141511";
+const VERSAO = "20261109142421";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -515,11 +515,12 @@ function placarHTML() {
   const vit = S.vital || new Set();
   const cards = S.cards.filter(k => !colDe(k.coluna).referencia);
   const fimDe = (k) => !!colDe(k.coluna).concluida;
-  const pessoas = S.pessoas.filter(m => !vit.has(m.user_id));
+  const temTarefa = (u) => cards.some(k => k.responsavel === u || (k.participantes || []).includes(u) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === u)));
+  const pessoas = S.pessoas.filter(m => !vit.has(m.user_id) || temTarefa(m.user_id));
   const L = pessoas.map(m => {
     const u = m.user_id;
-    const meus = cards.filter(k => k.responsavel === u || (k.participantes || []).includes(u) || k.para_todos);
-    const ent = meus.filter(k => fimDe(k) && k.concluido_em && dataLocal(k.concluido_em) >= dIni && (k.responsavel === u || (!k.responsavel && ((k.participantes || []).includes(u) || k.para_todos))));
+    const meus = cards.filter(k => k.responsavel === u || (k.participantes || []).includes(u) || (k.para_todos && !vit.has(u)));
+    const ent = meus.filter(k => fimDe(k) && k.concluido_em && dataLocal(k.concluido_em) >= dIni && (k.responsavel === u || (!k.responsavel && ((k.participantes || []).includes(u) || (k.para_todos && !vit.has(u))))));
     const comPrazo = ent.filter(k => k.prazo), noPrazo = comPrazo.filter(k => dataLocal(k.concluido_em) <= k.prazo);
     const abertas = meus.filter(k => !fimDe(k));
     const itensAtr = cards.filter(k => !fimDe(k)).reduce((n, k) => n + (Array.isArray(k.checklist) ? k.checklist.filter(i => i.resp === u && !i.ok && i.prazo && dias(i.prazo) < 0).length : 0), 0);

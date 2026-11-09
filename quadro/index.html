@@ -83,6 +83,7 @@ main{padding-block:20px 48px;display:grid;gap:16px}
 .painelN .hd{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
 .painelN .it{display:block;width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;padding:9px 8px;border-radius:10px;cursor:pointer}
 .painelN .it:hover{background:var(--surface-2)}
+.painelN a.it{text-decoration:none}
 .painelN .it.nova{background:rgba(31,107,58,.08)}
 .painelN .it b{font-weight:700}
 .painelN .it small{display:block;color:var(--muted);font-size:.76rem;margin-top:2px}
@@ -110,6 +111,20 @@ main{padding-block:20px 48px;display:grid;gap:16px}
 .pp .bdgs span.al{background:var(--warn-bg);color:var(--warn)}
 .pp .mini{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
 .pp .mini i{display:block;height:100%;background:var(--brand-2)}
+.ticker{display:flex;align-items:stretch;border-bottom:1px solid var(--line);background:var(--surface-2);font-size:.86rem;overflow:hidden}
+.ticker .lb{flex:none;display:flex;align-items:center;gap:6px;padding:6px 12px;font-weight:700;color:var(--brand);border-right:1px solid var(--line);background:var(--surface)}
+.ticker .vp{flex:1;overflow:hidden;position:relative;mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent)}
+.ticker .tr{display:inline-flex;gap:28px;white-space:nowrap;padding:6px 0;animation:tick var(--dur,120s) linear infinite;will-change:transform}
+.ticker:hover .tr,.ticker:focus-within .tr{animation-play-state:paused}
+.ticker a{color:inherit;text-decoration:none}
+.ticker a:hover,.ticker a:focus-visible{text-decoration:underline}
+.ticker .ct b{font-weight:700}
+.ticker .up{color:var(--ok);font-weight:700}.ticker .dn{color:var(--bad);font-weight:700}
+.ticker .fn{color:var(--muted)}
+.ticker .mais{flex:none;border:0;border-left:1px solid var(--line);background:var(--surface);color:var(--brand);font:inherit;font-weight:700;padding:0 12px;cursor:pointer}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker .tr{animation:none}.ticker .vp{overflow-x:auto}}
+@media (max-width:640px){.ticker .lb span{display:none}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
@@ -216,6 +231,7 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
     <a class="tab" href="/vitalagroenegocios/cliente/">Área do cliente</a>
   </div>
 </header>
+<div class="ticker" id="ticker" hidden aria-label="Mercado e notícias"></div>
 <main class="wrap" id="app"><div class="card"><p class="muted" style="margin:0">Carregando o quadro…</p></div></main>
 <dialog id="dlg" aria-label="Tarefa"></dialog>
 <dialog id="dlgM" aria-label="Membros do quadro"></dialog>
@@ -270,6 +286,7 @@ async function iniciar() {
   await carregar();
   ligarTempoReal();
   iniciarNotif();
+  iniciarTicker();
   setInterval(() => { if (document.visibilityState === "visible" && !$("#dlg").open && !document.querySelector(".addf")) carregar(true); }, 30000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("#dlg").open) carregar(true); });
 }
@@ -737,6 +754,43 @@ async function irParaNotif(n) {
     await carregar(true);
   }
   if (S.cards.some(x => x.id === n.cartao)) abrir(n.cartao); else toast("Essa tarefa não está mais disponível (pode ter sido arquivada ou excluída).");
+}
+const SEG_NOME = { agro: "Mercado agro" };
+const brl = (v) => v;
+async function iniciarTicker() {
+  const qSeg = (S.q && S.q.segmento) || ((S.quadros.find(q => q.segmento) || {}).segmento);
+  if (!qSeg || !sb.functions) return;
+  S.seg = qSeg;
+  await carregarTicker();
+  setInterval(carregarTicker, 30 * 60 * 1000);
+}
+async function carregarTicker() {
+  let j = null;
+  try { const r = await sb.functions.invoke("mercado-feed", { body: { segmento: S.seg } }); j = r.data; } catch {}
+  if (!j || (!(j.cotacoes || []).length && !(j.noticias || []).length)) return;
+  S.mercado = j;
+  const ico = (t) => /soja/i.test(t) ? "🌱" : /milho/i.test(t) ? "🌽" : /boi/i.test(t) ? "🐂" : /d[oó]lar/i.test(t) ? "💵" : /caf/i.test(t) ? "☕" : "📈";
+  const varH = (v) => v == null ? "" : v > 0 ? ` <span class="up">▲ ${String(v.toFixed(2)).replace(".", ",")}%</span>` : v < 0 ? ` <span class="dn">▼ ${String(Math.abs(v).toFixed(2)).replace(".", ",")}%</span>` : ` <span class="fn">= 0%</span>`;
+  const cot = (j.cotacoes || []).map(c => `<a class="ct" href="${esc(c.url)}" target="_blank" rel="noopener" title="${esc(c.fonte || "")} · abre em nova guia">${ico(c.titulo)} ${esc(c.titulo)}: <b>R$ ${esc(c.valor)}</b>${c.unidade && c.unidade !== "R$" ? esc(c.unidade.replace("R$", "")) : ""}${varH(c.variacao)}</a>`);
+  const nts = (j.noticias || []).slice(0, 15).map(n => `<a href="${esc(n.url)}" target="_blank" rel="noopener" title="Abre a notícia em nova guia">📰 <span class="fn">${esc(n.fonte || "")}:</span> ${esc(n.titulo)}</a>`);
+  const itens = [...cot, ...nts].join("");
+  const el = $("#ticker");
+  el.innerHTML = `<div class="lb">📈 <span>${esc(SEG_NOME[S.seg] || "Mercado")}</span></div><div class="vp"><div class="tr" style="--dur:${Math.max(60, (cot.length + nts.length) * 9)}s">${itens}<span aria-hidden="true" style="display:inline-flex;gap:28px">${itens.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div><button class="mais" type="button" id="tkMais" aria-label="Ver todas as notícias e cotações">📰 Todas</button>`;
+  el.hidden = false;
+  $("#tkMais").onclick = (e) => { e.stopPropagation(); abrirNoticias(); };
+}
+function abrirNoticias() {
+  const j = S.mercado || {}; let pn = $("#painelM");
+  if (!pn) { pn = document.createElement("div"); pn.id = "painelM"; pn.className = "painelN"; pn.setAttribute("role", "dialog"); pn.setAttribute("aria-label", "Mercado e notícias"); document.body.appendChild(pn); document.addEventListener("click", (e) => { if (!pn.hidden && !pn.contains(e.target) && e.target.id !== "tkMais") pn.hidden = true; }); document.addEventListener("keydown", (e) => { if (e.key === "Escape") pn.hidden = true; }); }
+  if (!pn.hidden && pn.dataset.on === "1") { pn.hidden = true; pn.dataset.on = "0"; return; }
+  const atual = (j.cotacoes || [])[0];
+  pn.innerHTML = `<div class="hd"><b>📈 ${esc(SEG_NOME[S.seg] || "Mercado")}</b><span class="note" style="margin:0">abre em nova guia ↗</span></div>` +
+    (j.cotacoes || []).map(c => `<a class="it" href="${esc(c.url)}" target="_blank" rel="noopener"><b>${esc(c.titulo)}: R$ ${esc(c.valor)}${c.unidade && c.unidade !== "R$" ? esc(c.unidade.replace("R$", "")) : ""}</b>${c.variacao != null ? ` <span style="color:${c.variacao >= 0 ? "var(--ok)" : "var(--bad)"}">${c.variacao >= 0 ? "▲" : "▼"} ${Math.abs(c.variacao).toFixed(2).replace(".", ",")}%</span>` : ""}<small>${esc(c.fonte || "")}</small></a>`).join("") +
+    `<div class="hd" style="margin-top:6px"><b>📰 Notícias</b></div>` +
+    (j.noticias || []).map(n => `<a class="it" href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.titulo)}<small>${esc(n.fonte || "")}${n.publicado_em ? " · " + quando(n.publicado_em) : ""}</small></a>`).join("") +
+    `<p class="note" style="padding:6px 8px;margin:0">Fontes: Cepea/Esalq (via Notícias Agrícolas), Banco Central (PTAX), Canal Rural e G1. Atualiza a cada 30 minutos.${atual ? " Última atualização: " + quando(atual.atualizado_em) + "." : ""}</p>`;
+  pn.style.top = ($("#ticker").getBoundingClientRect().bottom + 6) + "px";
+  pn.hidden = false; pn.dataset.on = "1";
 }
 function ligarTempoReal() {
   if (S.rt || !sb.channel) return;

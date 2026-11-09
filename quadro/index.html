@@ -132,13 +132,32 @@ main{padding-block:20px 48px;display:grid;gap:16px}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){.ticker .tr{animation:none}.ticker .vp{overflow-x:auto}}
 @media (max-width:640px){.ticker .lb span{display:none}}
+html,body{max-width:100%;overflow-x:hidden}
+#app>*{min-width:0;max-width:100%}
+.bar,.board,.placar{min-width:0;max-width:100%}
+.ctl{display:contents}
+.kpi .sh{display:none}
 @media (max-width:640px){
+  .kpi .lg{display:none}.kpi .sh{display:inline}
+  .top .brandtxt{display:none}
+  .top .tab{margin-left:auto}
+  .ctl{display:flex;gap:6px;overflow-x:auto;flex-wrap:nowrap;width:100%;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .ctl::-webkit-scrollbar{display:none}
+  .ctl>*{flex:0 0 auto}
+  .ctl .chips{display:flex;flex-wrap:nowrap;gap:6px}
+  .ctl .fsel{flex:0 0 auto!important;max-width:200px}
+  .board{grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:86%;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:10px;-webkit-overflow-scrolling:touch}
+  .board .col{scroll-snap-align:start;max-height:none}
+  html dialog{width:100vw!important;max-width:100vw!important;height:100dvh;max-height:100dvh!important;margin:0!important;border-radius:0!important;border:0!important;inset:0}
+  .bar .spacer{display:none}
+  #kSt{font-size:.7rem!important;max-width:24%!important}
+  .dlg{max-height:100dvh;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+  .placar>summary{padding:10px 12px}
+  .plc{padding:0 10px 10px}
+  .pls{grid-template-columns:minmax(0,1fr)}
   .top .wrap{flex-wrap:wrap;gap:8px;padding-block:8px}
   .top .logo{width:36px;height:36px}.top .logo img{width:28px}
   .clilogo{height:36px}
-  .brandtxt{flex:1 1 0;min-width:0}
-  .brandtxt b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.98rem}
-  .brandtxt span{display:none}
   .top .spacer{display:none}
   #selQ{order:9;flex:1 1 100%;width:100%}
   .top .tab{font-size:.82rem;padding:6px 8px}
@@ -147,9 +166,9 @@ main{padding-block:20px 48px;display:grid;gap:16px}
   .bar .kpis{width:100%;display:flex;gap:6px;flex-wrap:nowrap}
   .bar .kpi{flex:1;padding:6px 8px;font-size:.8rem}
   #busca{flex:1 1 100%;width:100%}
-  .fsel{flex:1 1 calc(50% - 4px);max-width:none;font-size:.8rem}
-  #fAtr{flex-basis:100%}
 }
+.convite{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.convite span{flex:1 1 100%;font-weight:600}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
@@ -237,7 +256,7 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
 .cki.feito .ckt{text-decoration:line-through;color:var(--muted)}
 .cki select,.cki input[type=date]{font-size:.8rem;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:0;width:100%}
 .cki .atr{border-color:#d9534f;color:#b02a37}
-@media (max-width:640px){#kSt{font-size:.72rem;max-width:30%;overflow:hidden;text-overflow:ellipsis}.cki{grid-template-columns:18px minmax(0,1fr) 22px}.cki select,.cki input[type=date]{grid-column:2/3}}
+@media (max-width:640px){#kSt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cki{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) 22px;grid-template-areas:"c t t x" ". r p .";row-gap:4px}.cki input[type=checkbox]{grid-area:c}.cki .ckt{grid-area:t}.cki select{grid-area:r}.cki input[type=date]{grid-area:p}.cki .x{grid-area:x}}
 .ck label{font-weight:400!important}
 .vazio{color:var(--muted);font-size:.85rem;padding:6px 4px}
 </style>
@@ -301,7 +320,48 @@ function iniciarInstalar() {
     d.showModal();
   };
 }
-const VERSAO = "20261109135554";
+const VAPID = "BDp7aYHipI_aIhW75Jk6cKNL-UOwoXD4m8-Z7kM9DQ3Ot-J_FAxSuy6MdkwFZg2_AXJ8HvFDueevfhmN3iR5Z70";
+const pushOk = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const b64u = (s) => { const p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from([...b].map(c => c.charCodeAt(0))); };
+async function inscricaoAtual() { try { if (!pushOk()) return null; const reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; } catch { return null; } }
+async function ativarPush() {
+  if (!pushOk()) { toast(ehIOS() && !ehApp() ? "No iPhone, primeiro salve o quadro na tela de início (botão 📲) e abra por lá." : "Este navegador não aceita avisos. Use o Chrome ou instale o app."); return false; }
+  try {
+    const reg = await navigator.serviceWorker.register("sw.js"); await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { toast("Os avisos foram bloqueados. Libere nas configurações do celular para este app."); return false; }
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID) });
+    const j = sub.toJSON();
+    const { error } = await sb.from("push_inscricoes").upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_id: S.user.id, aparelho: navigator.userAgent.slice(0, 160) }, { onConflict: "endpoint" });
+    if (error) { toast("Não consegui ativar os avisos: " + error.message); return false; }
+    toast("🔔 Avisos ativados neste aparelho."); try { localStorage.setItem("cq.push", "1"); } catch {} return true;
+  } catch (e) { toast("Não consegui ativar os avisos: " + (e.message || e)); return false; }
+}
+async function desativarPush() {
+  const sub = await inscricaoAtual(); if (!sub) return;
+  await sb.from("push_inscricoes").delete().eq("endpoint", sub.endpoint);
+  try { await sub.unsubscribe(); } catch {}
+  toast("Avisos desativados neste aparelho.");
+}
+async function convitePush() {
+  if (!pushOk() || !ehApp()) return;
+  if (Notification.permission === "denied") return;
+  const sub = await inscricaoAtual(); if (sub && Notification.permission === "granted") return;
+  try { if (localStorage.getItem("cq.pushNao") === "1") return; } catch {}
+  const bar = document.createElement("div");
+  bar.className = "convite";
+  bar.innerHTML = `<span>🔔 Receber avisos das tarefas neste celular?</span><button class="btn primary sm" type="button">Ativar</button><button class="btn ghost sm" type="button">Agora não</button>`;
+  document.body.appendChild(bar);
+  const [sim, nao] = bar.querySelectorAll("button");
+  sim.onclick = async () => { if (await ativarPush()) bar.remove(); };
+  nao.onclick = () => { try { localStorage.setItem("cq.pushNao", "1"); } catch {} bar.remove(); };
+}
+function abrirPorUrl(u) {
+  try { const x = new URL(u, location.href); const c = x.searchParams.get("card"); if (c) irParaNotif({ cartao: c, id: Number(x.searchParams.get("n")) || 0, lida: !x.searchParams.get("n") }); } catch {}
+}
+if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.abrir) abrirPorUrl(e.data.abrir); });
+const VERSAO = "20261109140208";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -350,6 +410,8 @@ async function iniciar() {
   iniciarNotif();
   iniciarTicker();
   iniciarInstalar();
+  convitePush();
+  if (new URLSearchParams(location.search).get("card")) { abrirPorUrl(location.href); history.replaceState(null, "", location.pathname); }
   setInterval(() => { if (document.visibilityState === "visible" && !$("#dlg").open && !document.querySelector(".addf")) carregar(true); }, 30000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("#dlg").open) carregar(true); });
 }
@@ -426,7 +488,7 @@ function venc(k) { if (k.prazo) return k.prazo; const it = (Array.isArray(k.chec
 function porPrazo(a, b) { const x = venc(a), y = venc(b); if (x && y) return x < y ? -1 : x > y ? 1 : a.ordem - b.ordem; if (x) return -1; if (y) return 1; return a.ordem - b.ordem; }
 function dataLocal(iso) { const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }
 function placarHTML() {
-  let aberto = true, per = S.per; try { aberto = localStorage.getItem("cq.placar") !== "0"; per = per || localStorage.getItem("cq.per") || "semana"; } catch { per = per || "semana"; }
+  let aberto = true, per = S.per; try { const sv = localStorage.getItem("cq.placar"); aberto = sv ? sv !== "0" : !matchMedia("(max-width:640px)").matches; per = per || localStorage.getItem("cq.per") || "semana"; } catch { per = per || "semana"; }
   S.per = per;
   const hoje = hojeISO(), d0 = new Date(hoje + "T12:00");
   const dIni = per === "mes" ? hoje.slice(0, 8) + "01" : dataLocal(new Date(d0.getTime() - ((d0.getDay() + 6) % 7) * 864e5).toISOString());
@@ -516,14 +578,14 @@ function render() {
   const F = [["todas", "Todas"], ["minhas", `Minhas (${minhas})`], ["atrasadas", `Atrasadas (${atr})`], ["semdono", "Sem responsável"]];
   $("#app").innerHTML = `
   <div class="bar">
-    <div class="kpis"><span class="kpi"><b>${abertas.length}</b>em aberto</span><span class="kpi${atr ? " bad" : ""}"><b>${atr}</b>atrasadas</span><span class="kpi"><b>${semana}</b>vencem em 7 dias</span></div>
+    <div class="kpis"><span class="kpi"><b>${abertas.length}</b>em aberto</span><span class="kpi${atr ? " bad" : ""}"><b>${atr}</b>atrasada${atr === 1 ? "" : "s"}</span><span class="kpi"><b>${semana}</b><span class="lg">vencem em 7 dias</span><span class="sh">em 7 dias</span></span></div>
     <div class="spacer"></div>
     <input type="search" id="busca" placeholder="Buscar…" value="${esc(S.busca)}" aria-label="Buscar">
-    <select id="fOrd" class="fsel" aria-label="Organizar por"><option value="">Organizar: manual</option><option value="prazo"${S.ordem === "prazo" ? " selected" : ""}>Organizar: vencimento</option></select>
+    <div class="ctl"><select id="fOrd" class="fsel" aria-label="Organizar por"><option value="">Organizar: manual</option><option value="prazo"${S.ordem === "prazo" ? " selected" : ""}>Organizar: vencimento</option></select>
     <select id="fCri" class="fsel" aria-label="Criado por"><option value="">Criado por: todos</option><option value="auto"${S.fCriado === "auto" ? " selected" : ""}>Criado por: rotina automática</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fCriado === m.user_id ? " selected" : ""}>Criado por: ${esc(m.nome)}</option>`).join("")}</select>
     <select id="fAtr" class="fsel" aria-label="Atribuído a"><option value="">Atribuído a: todos</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fAtrib === m.user_id ? " selected" : ""}>Atribuído a: ${esc(m.nome)}</option>`).join("")}</select>
     <div class="chips">${F.map(([v, t]) => `<button class="chipb" type="button" data-f="${v}" aria-pressed="${S.filtro === v}">${t}</button>`).join("")}</div>
-    ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}
+    ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}</div>
   </div>
   ${S.q && S.q.geral && !S.marc ? placarHTML() : ""}
   <div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
@@ -835,8 +897,12 @@ async function abrirNotif() {
   pn.hidden = false; $("#sino").setAttribute("aria-expanded", "true");
   const { data } = await sb.from("cq_notificacoes").select("*").eq("user_id", S.user.id).order("em", { ascending: false }).limit(40);
   const L = data || [];
-  pn.innerHTML = `<div class="hd"><b>Notificações</b><button class="btn ghost sm" type="button" id="nTodas"${L.some(n => !n.lida) ? "" : " disabled"}>Marcar todas como lidas</button></div>` +
+  const subAtual = await inscricaoAtual();
+  const pushLinha = pushOk() || ehIOS() ? `<div class="hd" style="gap:8px;flex-wrap:wrap"><span class="note" style="margin:0">${subAtual && Notification.permission === "granted" ? "📲 Avisos ativos neste aparelho" : "📲 Receba os avisos mesmo com o quadro fechado"}</span>${subAtual && Notification.permission === "granted" ? `<button class="btn ghost sm" type="button" id="nPushOff">Desativar</button>` : `<button class="btn primary sm" type="button" id="nPushOn">Ativar neste aparelho</button>`}</div>` : "";
+  pn.innerHTML = pushLinha + `<div class="hd"><b>Notificações</b><button class="btn ghost sm" type="button" id="nTodas"${L.some(n => !n.lida) ? "" : " disabled"}>Marcar todas como lidas</button></div>` +
     (L.map(n => `<button class="it${n.lida ? "" : " nova"}" type="button" data-n="${n.id}">${n.lida ? "" : "● "}${textoNotif(n)}${n.texto ? `<q>${esc(n.texto)}</q>` : ""}<small>${quando(n.em)}</small></button>`).join("") || `<p class="note" style="padding:10px">Nenhuma notificação ainda. Você recebe aviso quando for mencionado(a) ou quando um card seu ou em que foi marcado(a) mudar.</p>`);
+  if ($("#nPushOn")) $("#nPushOn").onclick = async (e) => { e.stopPropagation(); await ativarPush(); abrirNotif(); };
+  if ($("#nPushOff")) $("#nPushOff").onclick = async (e) => { e.stopPropagation(); await desativarPush(); abrirNotif(); };
   $("#nTodas").onclick = async (e) => { e.stopPropagation(); await sb.from("cq_notificacoes").update({ lida: true }).eq("user_id", S.user.id).eq("lida", false); contarNotif(); abrirNotif(); };
   $$("[data-n]", pn).forEach(b => b.onclick = async (e) => { e.stopPropagation(); const n = L.find(x => String(x.id) === b.dataset.n); fecharNotif(); if (n) irParaNotif(n); });
 }

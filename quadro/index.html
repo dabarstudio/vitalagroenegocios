@@ -560,6 +560,7 @@ async function abrir(id) {
       <div class="field"><label for="kR">Responsável</label><select id="kR"><option value="">Ninguém</option><option value="__todos"${k.para_todos ? " selected" : ""}>👥 Todos</option>${S.pessoas.map(m => `<option value="${m.user_id}"${!k.para_todos && m.user_id === k.responsavel ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></div>
       <div class="field"><label>Pessoas marcadas</label><div class="ck" id="kPa">${S.pessoas.map(m => `<label><input type="checkbox" value="${m.user_id}"${(k.participantes || []).includes(m.user_id) ? " checked" : ""}><span>${esc(m.nome)}</span></label>`).join("")}</div><p class="note">Quem for marcado vê esta tarefa em "Marcadas para mim", mesmo sem acesso a este quadro.</p></div>
       <div class="field"><label for="kPz">Prazo</label><input type="date" id="kPz" value="${k.prazo || ""}"></div>
+      <div class="field"><label for="kRec">🔁 Repetir</label><select id="kRec"><option value="nao">Não se repete</option><option value="diaria">Todo dia útil</option><option value="semanal">Toda semana</option><option value="mensal">Todo mês (mesmo dia)</option><option value="ultimo_util">Último dia útil do mês</option></select><p class="note" id="kRecN" style="margin:2px 0 0"></p></div>
       <div class="field"><label for="kPr">Prioridade</label><select id="kPr"><option value="">Normal</option>${Object.entries(PRI).map(([v, t]) => `<option value="${v}"${k.prioridade === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="row"><button class="btn primary" type="button" id="kS">Salvar</button>${podeApagar ? `<button class="btn danger sm" type="button" id="kX">Excluir</button>` : ""}<button class="btn ghost sm" type="button" id="kA">Arquivar</button></div>
       <div class="field"><label>Histórico</label><div class="hist" id="kH"><span>Carregando…</span></div></div>
@@ -685,8 +686,33 @@ async function abrir(id) {
   }
   $("#kS").onclick = async () => { if (await gravar(true)) { fim = true; d.close(); toast("Tarefa salva."); } };
   $("#kT").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); gravar(false); } };
-  $("#fK").addEventListener("input", (e) => { if (e.target.id !== "kCo" && e.target.id !== "kCi" && e.target.id !== "kAxI") agendar(); });
-  $("#fK").addEventListener("change", (e) => { if (e.target.id !== "kCo" && e.target.id !== "kCi" && e.target.id !== "kAxI") agendar(); });
+  const FORA = ["kCo", "kCi", "kAxI", "kRec"];
+  $("#fK").addEventListener("input", (e) => { if (!FORA.includes(e.target.id)) agendar(); });
+  $("#fK").addEventListener("change", (e) => { if (!FORA.includes(e.target.id)) agendar(); });
+  const DSEM = ["", "segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"];
+  const notaRec = (tipo) => {
+    const base = $("#kPz").value || hojeISO(), dt = new Date(base + "T12:00"), dw = ((dt.getDay() + 6) % 7) + 1;
+    const t = { nao: "", diaria: "Uma nova tarefa a cada dia útil (não acumula se a anterior estiver aberta).", semanal: `Uma nova tarefa toda ${DSEM[dw]}.`, mensal: `Uma nova tarefa todo dia ${dt.getDate()}.`, ultimo_util: "Uma nova tarefa no último dia útil de cada mês." }[tipo] || "";
+    $("#kRecN").textContent = t ? t + " Criadas sozinhas às 6h, com o mesmo responsável e checklist." : "";
+  };
+  (async () => {
+    if (!k.recorrencia) return;
+    const { data: r } = await sb.from("cq_recorrencias").select("regra, ativo").eq("id", k.recorrencia).maybeSingle();
+    if (!r || !r.ativo) return;
+    const v = { diaria_util: "diaria", semanal: "semanal", mensal_dia: "mensal", mensal_ultimo_util: "ultimo_util" }[r.regra];
+    if (v) { $("#kRec").value = v; notaRec(v); } else { const o = document.createElement("option"); o.value = "outro"; o.textContent = "Rotina da ata (personalizada)"; $("#kRec").appendChild(o); $("#kRec").value = "outro"; $("#kRecN").textContent = "Rotina definida pela Vital. Escolha outra opção para mudar ou \"Não se repete\" para parar."; }
+  })();
+  $("#kRec").onchange = async (e) => {
+    const tipo = e.target.value; if (tipo === "outro") return;
+    e.target.disabled = true;
+    await gravar(false);
+    const { data, error } = await sb.rpc("cq_definir_recorrencia", { p_cartao: k.id, p_tipo: tipo });
+    e.target.disabled = false;
+    if (error) { toast("Não foi possível definir a repetição: " + error.message); return; }
+    if (data && data.recorrencia) k.recorrencia = data.recorrencia;
+    notaRec(tipo); carregarHist(k.id); render();
+    toast(tipo === "nao" ? "Tarefa não vai mais se repetir." : "Repetição definida.");
+  };
   d.onclose = async () => { if (fim) return; fim = true; await gravar(true); carregar(true); };
   $("#kA").onclick = async () => {
     const { error } = await sb.from("cq_cartoes").update({ arquivado: true }).eq("id", k.id);
@@ -755,10 +781,10 @@ async function irParaNotif(n) {
   }
   if (S.cards.some(x => x.id === n.cartao)) abrir(n.cartao); else toast("Essa tarefa não está mais disponível (pode ter sido arquivada ou excluída).");
 }
-const SEG_NOME = { agro: "Mercado agro" };
+const SEG_NOME = { agro: "Mercado agro", geral: "Mercado" };
 const brl = (v) => v;
 async function iniciarTicker() {
-  const qSeg = (S.q && S.q.segmento) || ((S.quadros.find(q => q.segmento) || {}).segmento);
+  const qSeg = (S.q && S.q.segmento) || ((S.quadros.find(q => q.segmento) || {}).segmento) || "geral";
   if (!qSeg || !sb.functions) return;
   S.seg = qSeg;
   await carregarTicker();

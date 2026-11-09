@@ -111,6 +111,9 @@ td.num,th.num{text-align:right;white-space:nowrap}
 @media (max-width:900px){.board{grid-template-columns:minmax(0,1fr)}}
 .col{background:var(--surface-2);border-radius:var(--r);padding:10px;display:grid;gap:8px;align-content:start;min-height:120px}
 .col.drop{outline:2px dashed var(--brand-2);outline-offset:-2px}
+.col.ref{background:#fbf7ea;border:1px dashed #d9c98f}
+.col.ref .colh h2::after{content:" · fixas";font-weight:400;font-size:.78rem;color:var(--muted)}
+.col.ref .k{border-left:3px solid #c9a74a}
 .colh{display:flex;align-items:center;gap:8px;padding:2px 4px}
 .colh h2{font-size:.95rem;flex:1}
 .colh .n{font-size:.8rem;color:var(--muted);font-weight:700;background:var(--surface);border-radius:999px;padding:1px 8px}
@@ -257,7 +260,7 @@ async function carregar(silencioso) {
   S.colsAll = c.data || []; S.cards = k.data || []; S.mem = m.data || [];
   if (S.marc) {
     const vist = new Map();
-    for (const col of S.colsAll) if (!vist.has(col.nome)) vist.set(col.nome, { id: "v:" + col.nome, nome: col.nome, ordem: col.ordem, concluida: col.concluida });
+    for (const col of S.colsAll) if (!vist.has(col.nome)) vist.set(col.nome, { id: "v:" + col.nome, nome: col.nome, ordem: col.ordem, concluida: col.concluida, referencia: col.referencia });
     S.cols = [...vist.values()].sort((a, b) => a.ordem - b.ordem);
     for (const x of S.cards) x._v = "v:" + ((S.colsAll.find(col => col.id === x.coluna) || {}).nome || "");
   } else {
@@ -307,11 +310,11 @@ function cardHTML(k) {
   const resp = nomeDe(k.responsavel);
   return `<button class="k" draggable="true" data-id="${k.id}" type="button" aria-label="${esc(k.titulo)}">
     <span class="t">${esc(k.titulo)}</span>
-    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${(S.anx || {})[k.id] ? `<span title="Anexos">📎 ${S.anx[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
+    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${k.recorrencia ? `<span title="Rotina automática (recorrente)">🔁</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${(S.anx || {})[k.id] ? `<span title="Anexos">📎 ${S.anx[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
   </button>`;
 }
 function render() {
-  const abertas = S.cards.filter(k => !colDe(k.coluna).concluida);
+  const abertas = S.cards.filter(k => !colDe(k.coluna).concluida && !colDe(k.coluna).referencia);
   const atr = abertas.filter(k => k.prazo && dias(k.prazo) < 0).length;
   const semana = abertas.filter(k => k.prazo && dias(k.prazo) >= 0 && dias(k.prazo) <= 7).length;
   const minhas = abertas.filter(k => k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id)).length;
@@ -327,7 +330,7 @@ function render() {
   <div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
     const ks = S.cards.filter(k => k._v === c.id).sort((a, b) => a.ordem - b.ordem);
     const vis = ks.filter(passa);
-    return `<section class="col" data-col="${c.id}" aria-label="${esc(c.nome)}">
+    return `<section class="col${c.referencia ? " ref" : ""}" data-col="${c.id}" aria-label="${esc(c.nome)}"${c.referencia ? ` title="Atribuições fixas e observações internas: não contam como tarefas em aberto"` : ""}>
       <div class="colh"><h2>${esc(c.nome)}</h2><span class="n">${ks.length}</span></div>
       ${vis.map(cardHTML).join("") || `<div class="vazio">${ks.length ? "Nada neste filtro." : "Nenhuma tarefa."}</div>`}
       ${c.concluida || S.marc ? "" : `<button class="add" type="button" data-add="${c.id}">+ Adicionar tarefa</button>`}

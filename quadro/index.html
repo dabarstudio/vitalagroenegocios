@@ -236,6 +236,7 @@ button.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg
 .addf textarea{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);resize:vertical;min-height:52px}
 dialog{border:1px solid var(--line);border-radius:16px;padding:0;background:var(--surface);color:var(--fg);width:min(760px,calc(100vw - 24px));max-height:calc(100dvh - 24px)}
 dialog::backdrop{background:rgba(10,20,14,.45)}
+#dlgA{width:min(460px,calc(100vw - 24px))!important;height:auto!important}
 .dlg{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;padding:20px;overflow:auto;max-height:calc(100dvh - 26px)}
 @media (max-width:720px){.dlg{grid-template-columns:minmax(0,1fr)}}
 .dlg .full{grid-column:1/-1}
@@ -373,7 +374,7 @@ function abrirPorUrl(u) {
   try { const x = new URL(u, location.href); const c = x.searchParams.get("card"); if (c) irParaNotif({ cartao: c, id: Number(x.searchParams.get("n")) || 0, lida: !x.searchParams.get("n") }); } catch {}
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.abrir) abrirPorUrl(e.data.abrir); });
-const VERSAO = "20261109141106";
+const VERSAO = "20261109141511";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -588,7 +589,7 @@ function cardHTML(k) {
   const ckMeu = ck.filter(i => !i.ok && i.resp === S.user.id).length;
   return `<button class="k" draggable="true" data-id="${k.id}" type="button" aria-label="${esc(k.titulo)}">
     <span class="t">${esc(k.titulo)}</span>
-    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${k.recorrencia ? `<span title="Rotina automática (recorrente)">🔁</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${ckAtr ? `<span class="pill atr" title="Itens do checklist com prazo vencido">☑ ${ckAtr} atrasado${ckAtr > 1 ? "s" : ""}</span>` : ""}${ckMeu && k.responsavel !== S.user.id ? `<span class="pill" title="Itens do checklist para você">☑ ${ckMeu} seu${ckMeu > 1 ? "s" : ""}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${(S.anx || {})[k.id] ? `<span title="Anexos">📎 ${S.anx[k.id]}</span>` : ""}${k.para_todos ? `<span class="pill" title="Responsável: todos">👥 Todos</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
+    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${k.aguardando ? `<span class="pill prox" title="Aguardando">⏳ ${esc(k.aguardando)}</span>` : ""}${k.recorrencia ? `<span title="Rotina automática (recorrente)">🔁</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${ckAtr ? `<span class="pill atr" title="Itens do checklist com prazo vencido">☑ ${ckAtr} atrasado${ckAtr > 1 ? "s" : ""}</span>` : ""}${ckMeu && k.responsavel !== S.user.id ? `<span class="pill" title="Itens do checklist para você">☑ ${ckMeu} seu${ckMeu > 1 ? "s" : ""}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${(S.anx || {})[k.id] ? `<span title="Anexos">📎 ${S.anx[k.id]}</span>` : ""}${k.para_todos ? `<span class="pill" title="Responsável: todos">👥 Todos</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
   </button>`;
 }
 function render() {
@@ -658,10 +659,46 @@ async function mover(k, colId, ordem) {
   const mudou = k.coluna !== colId;
   const patch = { coluna: colId, ordem, atualizado_em: new Date().toISOString() };
   if (mudou) patch.concluido_em = para.concluida ? new Date().toISOString() : null;
+  let ag = null;
+  if (mudou && /aguardando/i.test(para.nome || "")) {
+    ag = await perguntarAguardando(k);
+    if (!ag) { render(); return false; }
+    patch.aguardando = ag.nome; patch.aguardando_uid = ag.uid || null;
+    if (ag.uid && ag.uid !== k.responsavel && !(k.participantes || []).includes(ag.uid)) k.participantes = [...(k.participantes || []), ag.uid];
+  } else if (mudou && k.aguardando) { patch.aguardando = null; patch.aguardando_uid = null; }
   Object.assign(k, patch); k._v = S.marc ? "v:" + para.nome : (S.cols.some(c => c.id === colId) ? colId : ((S.cols.find(c => c.nome === para.nome) || {}).id || vis)); render();
   const { error } = await sb.from("cq_cartoes").update(patch).eq("id", k.id);
   if (error) { toast("Não foi possível mover: " + error.message); return carregar(true); }
-  if (mudou) await evento(para.concluida ? "concluiu" : "moveu", `${de.nome} → ${para.nome}`, k.id, k.quadro);
+  if (mudou) await evento(para.concluida ? "concluiu" : "moveu", `${de.nome} → ${para.nome}` + (ag ? ` (aguardando ${ag.nome})` : ""), k.id, k.quadro);
+  return true;
+}
+function perguntarAguardando(k) {
+  return new Promise((resolve) => {
+    let d = document.getElementById("dlgA");
+    if (!d) { d = document.createElement("dialog"); d.id = "dlgA"; d.setAttribute("aria-label", "Aguardando quem"); document.body.appendChild(d); }
+    d.innerHTML = `<form method="dialog" class="dlg" style="grid-template-columns:minmax(0,1fr);max-width:440px;gap:12px">
+      <div class="row" style="justify-content:space-between"><h2 style="font-size:1.1rem;margin:0">⏳ Aguardando quem?</h2><button class="btn ghost sm" value="x" aria-label="Cancelar">✕</button></div>
+      <p class="note" style="margin:0">Tarefa: “${esc(k.titulo)}”. Para ir para “Aguardando alguém”, informe de quem depende.</p>
+      <div class="field"><label for="agP">Pessoa</label><select id="agP"><option value="">Escolha…</option>${S.pessoas.map(m => `<option value="${m.user_id}">${esc(m.nome)}</option>`).join("")}<option value="__outro">👤 Externo (pessoa da fazenda sem acesso ao quadro)</option></select></div>
+      <div class="field" id="agTF" hidden><label for="agT">Nome do externo</label><input id="agT" type="text" placeholder="Ex.: Marcelo (gerente), Thalia, Rodrigo"></div>
+      <div class="field"><label for="agO">Aguardando o quê? <span class="note">(opcional)</span></label><input id="agO" type="text" placeholder="Ex.: nota fiscal do diesel"></div>
+      <p class="err" id="agE" hidden>Escolha ou escreva quem está sendo aguardado.</p>
+      <div class="row"><button class="btn primary" type="button" id="agOk">Confirmar</button><button class="btn ghost" value="x">Cancelar</button></div>
+    </form>`;
+    let feito = false;
+    const fim = (v) => { if (feito) return; feito = true; resolve(v); if (d.open) d.close(); };
+    d.querySelector("#agP").onchange = (e) => { d.querySelector("#agTF").hidden = e.target.value !== "__outro"; if (e.target.value === "__outro") d.querySelector("#agT").focus(); };
+    d.querySelector("#agOk").onclick = () => {
+      const v = d.querySelector("#agP").value, oq = d.querySelector("#agO").value.trim();
+      let nome = "", uid = null;
+      if (v === "__outro") nome = d.querySelector("#agT").value.trim(); else if (v) { uid = v; nome = (S.pessoas.find(m => m.user_id === v) || {}).nome || ""; }
+      if (!nome) { d.querySelector("#agE").hidden = false; return; }
+      if (!uid) nome = nome + " (externo)";
+      fim({ nome: oq ? `${nome} — ${oq}` : nome, uid });
+    };
+    d.onclose = () => fim(null);
+    d.showModal();
+  });
 }
 function novoForm(btn) {
   const colId = btn.dataset.add;
@@ -675,7 +712,9 @@ function novoForm(btn) {
     ok.disabled = true;
     const irmaos = S.cards.filter(x => x._v === colId);
     const ordem = irmaos.length ? Math.max(...irmaos.map(x => x.ordem)) + 1 : 1;
-    const { data, error } = await sb.from("cq_cartoes").insert({ quadro: S.q.id, coluna: colId, titulo: t, ordem, criado_por: S.user.id }).select().single();
+    const extra = {};
+    if (/aguardando/i.test(colDe(colId).nome || "")) { const ag = await perguntarAguardando({ titulo: t }); if (!ag) { ok.disabled = false; return; } extra.aguardando = ag.nome; extra.aguardando_uid = ag.uid || null; }
+    const { data, error } = await sb.from("cq_cartoes").insert({ quadro: S.q.id, coluna: colId, titulo: t, ordem, criado_por: S.user.id, ...extra }).select().single();
     if (error) { ok.disabled = false; toast("Não foi possível criar: " + error.message); return; }
     await evento("criou", t, data.id, S.q.id);
     data._v = data.coluna; S.cards.push(data); render(); toast("Tarefa criada.");
@@ -705,6 +744,7 @@ async function abrir(id) {
         <div class="anxbar"><input type="file" id="kAxI" multiple hidden><button class="btn sm" type="button" id="kAxB">📎 Anexar arquivo</button><span class="note" style="margin:0">ou cole um print aqui (Ctrl + V) · até 10 MB</span></div></div>
     </div>
     <div class="side">
+      ${k.aguardando ? `<div class="field"><label>⏳ Aguardando</label><div class="row" style="flex-wrap:nowrap;gap:8px"><span style="flex:1">${esc(k.aguardando)}${k.aguardando_desde ? ` <span class="note">desde ${dBR(String(k.aguardando_desde).slice(0, 10))}</span>` : ""}</span><button class="btn ghost sm" type="button" id="kAgE">Alterar</button></div></div>` : ""}
       <div class="field"><label for="kCol">Coluna</label><select id="kCol">${S.colsAll.filter(c => c.quadro === k.quadro).map(c => `<option value="${c.id}"${c.id === k.coluna ? " selected" : ""}>${esc(c.nome)}</option>`).join("")}</select></div>
       <div class="field"><label for="kR">Responsável</label><select id="kR"><option value="">Ninguém</option><option value="__todos"${k.para_todos ? " selected" : ""}>👥 Todos</option>${S.pessoas.map(m => `<option value="${m.user_id}"${!k.para_todos && m.user_id === k.responsavel ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></div>
       <div class="field"><label>Pessoas marcadas</label><div class="ck" id="kPa">${S.pessoas.map(m => `<label><input type="checkbox" value="${m.user_id}"${(k.participantes || []).includes(m.user_id) ? " checked" : ""}><span>${esc(m.nome)}</span></label>`).join("")}</div><p class="note">Quem for marcado vê esta tarefa em "Marcadas para mim", mesmo sem acesso a este quadro.</p></div>
@@ -837,12 +877,20 @@ async function abrir(id) {
     if (marcNovos.length) mud.push("marcou: " + marcNovos.join(", "));
     k._pa0 = participantes.slice();
     if (mud.length) await evento("editou", mud.join(" · "), k.id, k.quadro);
-    if (colNova !== k.coluna) { const irm = S.cards.filter(x => x.coluna === colNova); await mover(k, colNova, irm.length ? Math.max(...irm.map(x => x.ordem)) + 1 : 1); }
+    if (colNova !== k.coluna) { const irm = S.cards.filter(x => x.coluna === colNova); const okM = await mover(k, colNova, irm.length ? Math.max(...irm.map(x => x.ordem)) + 1 : 1); if (okM === false && $("#kCol")) { $("#kCol").value = k.coluna; ultimo = JSON.stringify(coletar()); } }
     st("Salvo ✓"); render(); return true;
   }
   $("#kS").onclick = async () => { if (await gravar(true)) { fim = true; d.close(); toast("Tarefa salva."); } };
   $("#kT").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); gravar(false); } };
   const FORA = ["kCo", "kCi", "kAxI", "kRec"];
+  if ($("#kAgE")) $("#kAgE").onclick = async () => {
+    const ag = await perguntarAguardando(k); if (!ag) return;
+    const { error } = await sb.from("cq_cartoes").update({ aguardando: ag.nome, aguardando_uid: ag.uid || null, atualizado_em: new Date().toISOString() }).eq("id", k.id);
+    if (error) return toast("Não foi possível alterar: " + error.message);
+    k.aguardando = ag.nome; k.aguardando_uid = ag.uid || null;
+    await evento("editou", "aguardando: " + ag.nome, k.id, k.quadro);
+    render(); const el = $("#kAgE"); if (el && el.previousElementSibling) el.previousElementSibling.textContent = ag.nome;
+  };
   $("#fK").addEventListener("input", (e) => { if (!FORA.includes(e.target.id)) agendar(); });
   $("#fK").addEventListener("change", (e) => { if (!FORA.includes(e.target.id)) agendar(); });
   const DSEM = ["", "segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"];

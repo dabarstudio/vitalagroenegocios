@@ -124,6 +124,8 @@ details.det table{font-size:.82rem;margin-top:6px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="/vitalagroenegocios/dfc/engine.js?v=1"></script>
 </head>
 <body>
@@ -460,13 +462,14 @@ function renderAp() {
   el.innerHTML = `<div class="row" style="justify-content:space-between"><div><div class="eyebrow">Apontamentos de conciliação</div><h2 style="font-size:1.15rem">Atualização de ${dataHora(a.criado_em)}</h2></div><span class="note">por ${esc(a.criado_por_nome)}</span></div>
     <div class="tiles">${Object.entries(cont).map(([k, n]) => `<div class="tile t-${SEVC[k]}"><span class="k">${k === "Info" ? "Informativos" : "Prioridade " + k.toLowerCase()}</span><span class="v">${n}</span></div>`).join("")}</div>
     <div class="row"><div class="chips" role="group" aria-label="Filtrar por prioridade">${["Todas", "Alta", "Média", "Baixa", "Info"].map((k) => `<button class="chipb" aria-pressed="${S.filtro === k}" data-f="${k}">${k === "Info" ? "Informativos" : k}</button>`).join("")}</div>
-      <div class="spacer"></div><button class="btn sm" id="bApXls">Baixar apontamentos (.xlsx)</button></div>
+      <div class="spacer"></div><button class="btn sm" id="bApPdf" title="Relatório analítico com as transferências de cada apontamento. Segue o filtro de prioridade escolhido.">Baixar apontamentos (.pdf)</button><button class="btn sm" id="bApXls">Baixar apontamentos (.xlsx)</button></div>
     <div class="tablewrap"><table><thead><tr><th>Prioridade</th><th>Mês</th><th>Tema</th><th>Apontamento</th><th class="num">Valor</th></tr></thead><tbody>
       ${vis.map((x, i) => `<tr><td><span class="sev t-${SEVC[x.sev]}">${esc(x.sev)}</span></td><td class="mono">${esc(x.mes || "–")}</td><td>${esc(x.cat)}</td>
         <td><div>${esc(x.desc)}</div><div class="acao">Ação: ${esc(x.acao)}</div>${x.det && x.det.length ? `<details class="det"><summary>${x.det.length} transferência${x.det.length > 1 ? "s" : ""}</summary><div class="tablewrap"><table><thead><tr><th>Data</th><th>Histórico</th><th>Origem → Destino</th><th class="num">Efeito</th></tr></thead><tbody>${x.det.map((d) => `<tr><td class="mono">${esc(d[0])}</td><td>${esc(d[1])}</td><td>${esc(d[2])} → ${esc(d[3])}</td><td class="num">${VDFC.brl(d[4])}</td></tr>`).join("")}</tbody></table></div></details>` : ""}</td>
         <td class="num">${typeof x.valor === "number" ? VDFC.brl(x.valor) : "–"}</td></tr>`).join("") || `<tr><td colspan="5" class="note">Nenhum apontamento nesta prioridade.</td></tr>`}
     </tbody></table></div>`;
   el.querySelectorAll("[data-f]").forEach((b) => b.onclick = () => { S.filtro = b.dataset.f; renderAp(); });
+  $("#bApPdf").onclick = () => apPdf(a, vis).catch((e) => toast("Não consegui gerar o PDF: " + e.message));
   $("#bApXls").onclick = () => {
     const rows = [["Prioridade", "Mês", "Tema", "Apontamento", "Valor (R$)", "Ação sugerida", "Responsável", "Status"]].concat(ap.map((x) => [x.sev, x.mes, x.cat, x.desc, x.valor, x.acao, "", "A verificar"]));
     const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -475,6 +478,61 @@ function renderAp() {
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Apontamentos"); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), "Transferências apontadas");
     XLSX.writeFile(wb, `Apontamentos ${S.emp.empresa} ${new Date(a.criado_em).toLocaleDateString("pt-BR").replace(/\//g, "-")}.xlsx`);
   };
+}
+
+/* Relatório analítico em PDF: cada apontamento com a ação sugerida e as transferências que o originaram. */
+async function apPdf(a, lista) {
+  if (!window.jspdf) throw new Error("biblioteca de PDF não carregou; recarregue a página.");
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 36;
+  const VERDE = [0, 88, 47], COR = { Alta: [176, 42, 42], "Média": [183, 121, 31], Baixa: [90, 98, 94], Info: [43, 108, 176] };
+  const brl = (v) => typeof v === "number" ? VDFC.brl(v) : "–";
+  let logo = null;
+  try { const b = await (await fetch("/vitalagroenegocios/logo.png")).blob(); logo = await new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); }); } catch {}
+  const filtro = S.filtro === "Todas" ? "todas as prioridades" : S.filtro === "Info" ? "só informativos" : "só prioridade " + S.filtro.toLowerCase();
+  const cont = { Alta: 0, "Média": 0, Baixa: 0, Info: 0 }; lista.forEach((x) => cont[x.sev] = (cont[x.sev] || 0) + 1);
+  // cabeçalho
+  if (logo) doc.addImage(logo, "PNG", M, M - 6, 44, 44);
+  doc.setTextColor(...VERDE); doc.setFont("helvetica", "bold"); doc.setFontSize(16);
+  doc.text("Apontamentos de conciliação · Fechamento DFC", M + 56, M + 10);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(70);
+  doc.text(`${S.emp.empresa} · atualização de ${dataHora(a.criado_em)} por ${a.criado_por_nome || "–"} · ${filtro} · ${lista.length} apontamento${lista.length === 1 ? "" : "s"}`, M + 56, M + 26);
+  doc.text(`Alta: ${cont.Alta}   Média: ${cont["Média"]}   Baixa: ${cont.Baixa}   Informativos: ${cont.Info}`, M + 56, M + 39);
+  doc.setDrawColor(...VERDE); doc.setLineWidth(1.2); doc.line(M, M + 50, W - M, M + 50);
+  let y = M + 62;
+  lista.forEach((x, i) => {
+    doc.autoTable({
+      startY: y, margin: { left: M, right: M }, theme: "grid",
+      head: [["#", "Prioridade", "Mês", "Tema", "Apontamento e ação sugerida", "Valor"]],
+      body: [[String(i + 1), x.sev === "Info" ? "Informativo" : x.sev, x.mes || "–", x.cat, `${x.desc}\nAção: ${x.acao}`, brl(x.valor)]],
+      showHead: i === 0 ? "firstPage" : "never",
+      styles: { fontSize: 8.6, cellPadding: 4, lineColor: [210, 214, 211], valign: "top" },
+      headStyles: { fillColor: VERDE, textColor: 255, fontStyle: "bold" },
+      columnStyles: { 0: { cellWidth: 22, halign: "right" }, 1: { cellWidth: 62, fontStyle: "bold", textColor: COR[x.sev] || [0, 0, 0] }, 2: { cellWidth: 50 }, 3: { cellWidth: 120 }, 5: { cellWidth: 82, halign: "right" } },
+      bodyStyles: { fillColor: [244, 247, 245] },
+    });
+    y = doc.lastAutoTable.finalY;
+    if (x.det && x.det.length) {
+      const tot = x.det.reduce((s, d) => s + (+d[4] || 0), 0);
+      doc.autoTable({
+        startY: y, margin: { left: M + 22, right: M }, theme: "plain",
+        head: [["Data", "Histórico", "Origem", "Destino", "Efeito"]],
+        body: x.det.map((d) => [d[0], d[1], d[2], d[3], brl(+d[4])]),
+        foot: x.det.length > 1 ? [["", "", "", `Total (${x.det.length} transferências)`, brl(tot)]] : undefined,
+        styles: { fontSize: 7.8, cellPadding: 2.6, textColor: [40, 40, 40] },
+        headStyles: { fontStyle: "bold", textColor: [90, 90, 90], lineWidth: { bottom: 0.5 }, lineColor: [200, 200, 200] },
+        footStyles: { fontStyle: "bold", textColor: [40, 40, 40] },
+        columnStyles: { 0: { cellWidth: 58 }, 2: { cellWidth: 150 }, 3: { cellWidth: 150 }, 4: { cellWidth: 82, halign: "right" } },
+      });
+      y = doc.lastAutoTable.finalY;
+    }
+    y += 10;
+  });
+  if (!lista.length) { doc.setFontSize(10); doc.setTextColor(90); doc.text("Nenhum apontamento nesta prioridade.", M, y + 10); }
+  const n = doc.internal.getNumberOfPages(), gerado = new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  for (let p = 1; p <= n; p++) { doc.setPage(p); doc.setFontSize(8); doc.setTextColor(120);
+    doc.text(`Vital Agro & Negócios · Fechamento DFC ${S.emp.empresa} · gerado em ${gerado}`, M, H - 18); doc.text(`Página ${p} de ${n}`, W - M, H - 18, { align: "right" }); }
+  doc.save(`Apontamentos ${S.emp.empresa} ${new Date(a.criado_em).toLocaleDateString("pt-BR").replace(/\//g, "-")}.pdf`);
 }
 
 /* ---------- administração ---------- */

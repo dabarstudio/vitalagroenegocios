@@ -204,6 +204,9 @@ td.num,th.num{text-align:right;white-space:nowrap}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:.85rem;color:var(--muted)}
 .kpi b{font:700 1.05rem var(--display);color:var(--fg);margin-right:4px}
 .kpi.bad b{color:var(--bad)}
+button.kpi{font:inherit;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+button.kpi:hover{border-color:var(--brand-2)}
+button.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg);box-shadow:inset 0 0 0 1px var(--brand)}
 .board{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:12px;align-items:start}
 @media (max-width:900px){.board{grid-template-columns:minmax(0,1fr)}}
 .col{background:var(--surface-2);border-radius:var(--r);padding:10px;display:grid;gap:8px;align-content:start;min-height:120px}
@@ -367,7 +370,7 @@ function abrirPorUrl(u) {
   try { const x = new URL(u, location.href); const c = x.searchParams.get("card"); if (c) irParaNotif({ cartao: c, id: Number(x.searchParams.get("n")) || 0, lida: !x.searchParams.get("n") }); } catch {}
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.abrir) abrirPorUrl(e.data.abrir); });
-const VERSAO = "20261109140556";
+const VERSAO = "20261109140846";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -559,6 +562,8 @@ function passa(k) {
   if (S.fAtrib) { const u = S.fAtrib; if (!(k.para_todos || k.responsavel === u || (k.participantes || []).includes(u) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === u)))) return false; }
   const fim = colDe(k.coluna).concluida;
   if (S.filtro === "minhas") return k.para_todos || k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === S.user.id && !i.ok));
+  if (S.filtro === "abertas") return !fim && !colDe(k.coluna).referencia;
+  if (S.filtro === "semana") return !fim && !colDe(k.coluna).referencia && !!k.prazo && dias(k.prazo) >= 0 && dias(k.prazo) <= 7;
   if (S.filtro === "atrasadas") return !fim && k.prazo && dias(k.prazo) < 0;
   if (S.filtro === "semdono") return !k.responsavel && !k.para_todos;
   return true;
@@ -591,7 +596,7 @@ function render() {
   const F = [["todas", "Todas"], ["minhas", `Minhas (${minhas})`], ["atrasadas", `Atrasadas (${atr})`], ["semdono", "Sem responsável"]];
   $("#app").innerHTML = `
   <div class="bar">
-    <div class="kpis"><span class="kpi"><b>${abertas.length}</b>em aberto</span><span class="kpi${atr ? " bad" : ""}"><b>${atr}</b>atrasada${atr === 1 ? "" : "s"}</span><span class="kpi"><b>${semana}</b><span class="lg">vencem em 7 dias</span><span class="sh">em 7 dias</span></span></div>
+    <div class="kpis"><button type="button" class="kpi" data-k="abertas" aria-pressed="${S.filtro === "abertas"}" title="Mostrar só as tarefas em aberto"><b>${abertas.length}</b>em aberto</button><button type="button" class="kpi${atr ? " bad" : ""}" data-k="atrasadas" aria-pressed="${S.filtro === "atrasadas"}" title="Mostrar só as atrasadas"><b>${atr}</b>atrasada${atr === 1 ? "" : "s"}</button><button type="button" class="kpi" data-k="semana" aria-pressed="${S.filtro === "semana"}" title="Mostrar só as que vencem nos próximos 7 dias"><b>${semana}</b><span class="lg">vencem em 7 dias</span><span class="sh">em 7 dias</span></button></div>
     <div class="spacer"></div>
     <input type="search" id="busca" placeholder="Buscar…" value="${esc(S.busca)}" aria-label="Buscar">
     <div class="ctl"><select id="fOrd" class="fsel" aria-label="Organizar por"><option value="">Organizar: manual</option><option value="prazo"${S.ordem === "prazo" ? " selected" : ""}>Organizar: vencimento</option></select>
@@ -612,6 +617,7 @@ function render() {
   }).join("")}</div>`;
   $("#busca").oninput = (e) => { S.busca = e.target.value; const p = e.target.selectionStart; render(); const b = $("#busca"); b.focus(); b.setSelectionRange(p, p); };
   $$("[data-f]").forEach(b => b.onclick = () => { S.filtro = b.dataset.f; render(); });
+  $$("[data-k]").forEach(b => b.onclick = () => { S.filtro = S.filtro === b.dataset.k ? "todas" : b.dataset.k; render(); });
   $("#fCri").onchange = (e) => { S.fCriado = e.target.value; render(); };
   if ($("#placar")) {
     $("#placar").ontoggle = (e) => { try { localStorage.setItem("cq.placar", e.target.open ? "1" : "0"); } catch {} };

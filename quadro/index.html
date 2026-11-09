@@ -226,6 +226,15 @@ async function carregar(silencioso) {
       sb.from("cq_cartoes").select("*").eq("quadro", Q).eq("arquivado", false).order("ordem"),
       sb.from("cq_membros").select("*").eq("quadro", Q).order("nome"),
     ]);
+    if (S.q.dono && !c.error && !k.error) {
+      const d = S.q.dono;
+      const f = await sb.from("cq_cartoes").select("*").neq("quadro", Q).eq("arquivado", false).or(`responsavel.eq.${d},participantes.cs.{${d}}`).order("ordem");
+      if (!f.error && f.data && f.data.length) {
+        const qs = [...new Set(f.data.map(x => x.quadro))];
+        const fc = await sb.from("cq_colunas").select("*").in("quadro", qs).order("ordem");
+        k.data = (k.data || []).concat(f.data); c.data = (c.data || []).concat(fc.data || []);
+      }
+    }
   }
   if (c.error || k.error) { if (!silencioso) falha("Erro ao carregar: " + (c.error || k.error).message); return; }
   S.colsAll = c.data || []; S.cards = k.data || []; S.mem = m.data || [];
@@ -234,7 +243,14 @@ async function carregar(silencioso) {
     for (const col of S.colsAll) if (!vist.has(col.nome)) vist.set(col.nome, { id: "v:" + col.nome, nome: col.nome, ordem: col.ordem, concluida: col.concluida });
     S.cols = [...vist.values()].sort((a, b) => a.ordem - b.ordem);
     for (const x of S.cards) x._v = "v:" + ((S.colsAll.find(col => col.id === x.coluna) || {}).nome || "");
-  } else { S.cols = S.colsAll; for (const x of S.cards) x._v = x.coluna; }
+  } else {
+    S.cols = S.colsAll.filter(col => col.quadro === S.q.id);
+    for (const x of S.cards) {
+      if (x.quadro === S.q.id) { x._v = x.coluna; continue; }
+      const nm = (S.colsAll.find(col => col.id === x.coluna) || {}).nome;
+      x._v = (S.cols.find(col => col.nome === nm) || S.cols[0] || {}).id;
+    }
+  }
   const emp = S.marc ? (S.outros[0] || {}).empresa : S.q.empresa;
   if (emp && S.empP !== emp) { const { data } = await sb.rpc("cq_pessoas", { p_empresa: emp }); S.pessoas = (data || []).sort((a, b) => a.nome.localeCompare(b.nome)); S.empP = emp; }
   const ids = S.cards.map(x => x.id);
@@ -271,7 +287,7 @@ function cardHTML(k) {
   const resp = nomeDe(k.responsavel);
   return `<button class="k" draggable="true" data-id="${k.id}" type="button" aria-label="${esc(k.titulo)}">
     <span class="t">${esc(k.titulo)}</span>
-    <span class="m">${S.marc ? `<span class="pill">${esc(quadroNome(k.quadro))}</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
+    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
   </button>`;
 }
 function render() {
@@ -322,12 +338,14 @@ function render() {
   $$("[data-add]").forEach(b => b.onclick = () => novoForm(b));
 }
 async function mover(k, colId, ordem) {
+  let vis = colId;
   if (String(colId).startsWith("v:")) { const real = S.colsAll.find(c => c.quadro === k.quadro && c.nome === colId.slice(2)); if (!real) return toast("Coluna não encontrada neste quadro."); colId = real.id; }
+  else if (colDe(colId).quadro && colDe(colId).quadro !== k.quadro) { const real = S.colsAll.find(c => c.quadro === k.quadro && c.nome === colDe(colId).nome); if (!real) return toast("Coluna não encontrada no quadro de origem."); colId = real.id; }
   const de = colDe(k.coluna), para = colDe(colId);
   const mudou = k.coluna !== colId;
   const patch = { coluna: colId, ordem, atualizado_em: new Date().toISOString() };
   if (mudou) patch.concluido_em = para.concluida ? new Date().toISOString() : null;
-  Object.assign(k, patch); k._v = S.marc ? "v:" + para.nome : colId; render();
+  Object.assign(k, patch); k._v = S.marc ? "v:" + para.nome : (S.cols.some(c => c.id === colId) ? colId : ((S.cols.find(c => c.nome === para.nome) || {}).id || vis)); render();
   const { error } = await sb.from("cq_cartoes").update(patch).eq("id", k.id);
   if (error) { toast("Não foi possível mover: " + error.message); return carregar(true); }
   if (mudou) await evento(para.concluida ? "concluiu" : "moveu", `${de.nome} → ${para.nome}`, k.id, k.quadro);
@@ -416,7 +434,7 @@ async function abrir(id) {
     if (marcNovos.length) mud.push("marcou: " + marcNovos.join(", "));
     if (mud.length) await evento("editou", mud.join(" · "), k.id, k.quadro);
     if (colNova !== k.coluna) { const irm = S.cards.filter(x => x.coluna === colNova); await mover(k, colNova, irm.length ? Math.max(...irm.map(x => x.ordem)) + 1 : 1); }
-    d.close(); render(); toast("Tarefa salva.");
+    d.close(); render(); toast("Tarefa salva."); if (S.q && S.q.dono) carregar(true);
   };
   $("#kA").onclick = async () => {
     const { error } = await sb.from("cq_cartoes").update({ arquivado: true }).eq("id", k.id);

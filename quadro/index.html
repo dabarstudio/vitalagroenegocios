@@ -111,6 +111,7 @@ td.num,th.num{text-align:right;white-space:nowrap}
 @media (max-width:900px){.board{grid-template-columns:minmax(0,1fr)}}
 .col{background:var(--surface-2);border-radius:var(--r);padding:10px;display:grid;gap:8px;align-content:start;min-height:120px}
 .col.drop{outline:2px dashed var(--brand-2);outline-offset:-2px}
+.fsel{border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:var(--surface);color:inherit;font:inherit;font-size:.86rem;max-width:230px}
 .col.ref{background:rgba(201,167,74,.13);border:1px dashed rgba(201,167,74,.6)}
 .col.ref .colh h2::after{content:" · fixas";font-weight:400;font-size:.78rem;color:var(--muted)}
 .col.ref .k{border-left:3px solid #c9a74a}
@@ -229,7 +230,7 @@ async function iniciar() {
   if (opts.length > 1) {
     sel.hidden = false;
     sel.innerHTML = opts.map(([v, t]) => `<option value="${v}"${(S.marc ? v === MARC : S.q && v === S.q.id) ? " selected" : ""}>${esc(t)}</option>`).join("");
-    sel.onchange = () => { S.marc = sel.value === MARC; S.q = S.marc ? null : S.proprios.find(q => q.id === sel.value); try { localStorage.setItem("cq.q", sel.value); } catch {} S.filtro = "todas"; carregar(); };
+    sel.onchange = () => { S.marc = sel.value === MARC; S.q = S.marc ? null : S.proprios.find(q => q.id === sel.value); try { localStorage.setItem("cq.q", sel.value); } catch {} S.filtro = "todas"; S.fCriado = ""; S.fAtrib = ""; carregar(); };
   }
   await carregar();
   ligarTempoReal();
@@ -243,7 +244,7 @@ async function carregar(silencioso) {
   if (S.marc) {
     const ids = S.outros.map(q => q.id);
     $("#tQ").textContent = "Marcadas para mim"; $("#tE").textContent = "Tarefas de outros quadros em que você foi marcado(a)"; document.title = "Marcadas para mim · Vital";
-    [c, k] = await Promise.all([sb.from("cq_colunas").select("*").in("quadro", ids).order("ordem"), sb.from("cq_cartoes").select("*").in("quadro", ids).eq("arquivado", false).order("ordem")]);
+    [c, k] = await Promise.all([sb.from("cq_colunas").select("*").in("quadro", ids).order("ordem"), sb.from("cq_cartoes").select("*").in("quadro", ids).eq("arquivado", false).or(`responsavel.eq.${S.user.id},participantes.cs.{${S.user.id}}`).order("ordem")]);
     m = { data: [] };
   } else {
     $("#tQ").textContent = S.q.nome; $("#tE").textContent = S.q.empresa + " · Quadro de tarefas"; document.title = S.q.nome + " · Vital";
@@ -253,6 +254,16 @@ async function carregar(silencioso) {
       sb.from("cq_cartoes").select("*").eq("quadro", Q).eq("arquivado", false).order("ordem"),
       sb.from("cq_membros").select("*").eq("quadro", Q).order("nome"),
     ]);
+    if (S.q.geral && !c.error && !k.error) {
+      const ids = S.quadros.filter(q => q.empresa === S.q.empresa && q.id !== Q).map(q => q.id);
+      if (ids.length) {
+        const [f, fc] = await Promise.all([
+          sb.from("cq_cartoes").select("*").in("quadro", ids).eq("arquivado", false).order("ordem"),
+          sb.from("cq_colunas").select("*").in("quadro", ids).order("ordem"),
+        ]);
+        if (!f.error) { k.data = (k.data || []).concat(f.data || []); c.data = (c.data || []).concat(fc.data || []); }
+      }
+    }
     if (S.q.dono && !c.error && !k.error) {
       const d = S.q.dono;
       const f = await sb.from("cq_cartoes").select("*").neq("quadro", Q).eq("arquivado", false).or(`responsavel.eq.${d},participantes.cs.{${d}}`).order("ordem");
@@ -296,6 +307,8 @@ async function evento(acao, detalhe, cartao, quadro) { await sb.from("cq_eventos
 
 function passa(k) {
   if (S.busca) { const b = S.busca.toLowerCase(); if (!((k.titulo || "") + " " + (k.descricao || "") + " " + nomeDe(k.responsavel)).toLowerCase().includes(b)) return false; }
+  if (S.fCriado && (S.fCriado === "auto" ? k.criado_por : k.criado_por !== S.fCriado)) return false;
+  if (S.fAtrib) { const u = S.fAtrib; if (!(k.responsavel === u || (k.participantes || []).includes(u) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === u)))) return false; }
   const fim = colDe(k.coluna).concluida;
   if (S.filtro === "minhas") return k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === S.user.id && !i.ok));
   if (S.filtro === "atrasadas") return !fim && k.prazo && dias(k.prazo) < 0;
@@ -333,6 +346,8 @@ function render() {
     <div class="kpis"><span class="kpi"><b>${abertas.length}</b>em aberto</span><span class="kpi${atr ? " bad" : ""}"><b>${atr}</b>atrasadas</span><span class="kpi"><b>${semana}</b>vencem em 7 dias</span></div>
     <div class="spacer"></div>
     <input type="search" id="busca" placeholder="Buscar tarefa ou pessoa" value="${esc(S.busca)}" aria-label="Buscar">
+    <select id="fCri" class="fsel" aria-label="Criado por"><option value="">Criado por: todos</option><option value="auto"${S.fCriado === "auto" ? " selected" : ""}>Criado por: rotina automática</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fCriado === m.user_id ? " selected" : ""}>Criado por: ${esc(m.nome)}</option>`).join("")}</select>
+    <select id="fAtr" class="fsel" aria-label="Atribuído a"><option value="">Atribuído a: todos</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fAtrib === m.user_id ? " selected" : ""}>Atribuído a: ${esc(m.nome)}</option>`).join("")}</select>
     <div class="chips">${F.map(([v, t]) => `<button class="chipb" type="button" data-f="${v}" aria-pressed="${S.filtro === v}">${t}</button>`).join("")}</div>
     ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}
   </div>
@@ -347,6 +362,8 @@ function render() {
   }).join("")}</div>`;
   $("#busca").oninput = (e) => { S.busca = e.target.value; const p = e.target.selectionStart; render(); const b = $("#busca"); b.focus(); b.setSelectionRange(p, p); };
   $$("[data-f]").forEach(b => b.onclick = () => { S.filtro = b.dataset.f; render(); });
+  $("#fCri").onchange = (e) => { S.fCriado = e.target.value; render(); };
+  $("#fAtr").onchange = (e) => { S.fAtrib = e.target.value; render(); };
   if ($("#bMem")) $("#bMem").onclick = abrirMembros;
   $$(".k").forEach(b => {
     b.onclick = () => abrir(b.dataset.id);

@@ -77,6 +77,16 @@ main{padding-block:20px 48px;display:grid;gap:16px}
 @media (max-width:640px){.grid2{grid-template-columns:minmax(0,1fr)}}
 .callout{background:var(--surface-2);border-radius:var(--r);padding:14px 16px;font-size:.93rem}
 .err{color:var(--bad);font-weight:600}
+.sino{position:relative;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:7px 10px;font-size:1.05rem;cursor:pointer;color:inherit}
+.sino .bdg{position:absolute;top:-6px;right:-6px;background:#d9342b;color:#fff;border-radius:999px;font-size:.7rem;font-weight:700;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px}
+.painelN{position:fixed;top:64px;right:12px;width:min(420px,calc(100vw - 24px));max-height:min(70vh,560px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.22);z-index:30;padding:8px}
+.painelN .hd{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.painelN .it{display:block;width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;padding:9px 8px;border-radius:10px;cursor:pointer}
+.painelN .it:hover{background:var(--surface-2)}
+.painelN .it.nova{background:rgba(31,107,58,.08)}
+.painelN .it b{font-weight:700}
+.painelN .it small{display:block;color:var(--muted);font-size:.76rem;margin-top:2px}
+.painelN .it q{display:block;color:var(--muted);font-size:.85rem;quotes:none;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
@@ -179,6 +189,7 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
     <div class="brandtxt"><b id="tQ">Quadro de tarefas</b><span id="tE">Área do cliente</span></div>
     <div class="spacer"></div>
     <select id="selQ" aria-label="Quadro" hidden style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface)"></select>
+    <button class="sino" id="sino" type="button" aria-label="Notificações" aria-expanded="false" hidden>🔔<span class="bdg" id="sinoN" hidden>0</span></button>
     <a class="tab" href="/vitalagroenegocios/cliente/">Área do cliente</a>
   </div>
 </header>
@@ -234,6 +245,7 @@ async function iniciar() {
   }
   await carregar();
   ligarTempoReal();
+  iniciarNotif();
   setInterval(() => { if (document.visibilityState === "visible" && !$("#dlg").open && !document.querySelector(".addf")) carregar(true); }, 30000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("#dlg").open) carregar(true); });
 }
@@ -266,7 +278,8 @@ async function carregar(silencioso) {
     }
     if (S.q.dono && !c.error && !k.error) {
       const d = S.q.dono;
-      const f = await sb.from("cq_cartoes").select("*").neq("quadro", Q).eq("arquivado", false).or(`responsavel.eq.${d},participantes.cs.{${d}}`).order("ordem");
+      const mesmos = S.quadros.filter(q => q.empresa === S.q.empresa && q.id !== Q).map(q => q.id);
+      const f = await sb.from("cq_cartoes").select("*").in("quadro", mesmos.length ? mesmos : ["00000000-0000-0000-0000-000000000000"]).eq("arquivado", false).or(`responsavel.eq.${d},participantes.cs.{${d}},para_todos.eq.true`).order("ordem");
       if (!f.error && f.data && f.data.length) {
         const qs = [...new Set(f.data.map(x => x.quadro))];
         const fc = await sb.from("cq_colunas").select("*").in("quadro", qs).order("ordem");
@@ -308,11 +321,11 @@ async function evento(acao, detalhe, cartao, quadro) { await sb.from("cq_eventos
 function passa(k) {
   if (S.busca) { const b = S.busca.toLowerCase(); if (!((k.titulo || "") + " " + (k.descricao || "") + " " + nomeDe(k.responsavel)).toLowerCase().includes(b)) return false; }
   if (S.fCriado && (S.fCriado === "auto" ? k.criado_por : k.criado_por !== S.fCriado)) return false;
-  if (S.fAtrib) { const u = S.fAtrib; if (!(k.responsavel === u || (k.participantes || []).includes(u) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === u)))) return false; }
+  if (S.fAtrib) { const u = S.fAtrib; if (!(k.para_todos || k.responsavel === u || (k.participantes || []).includes(u) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === u)))) return false; }
   const fim = colDe(k.coluna).concluida;
-  if (S.filtro === "minhas") return k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === S.user.id && !i.ok));
+  if (S.filtro === "minhas") return k.para_todos || k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id) || (Array.isArray(k.checklist) && k.checklist.some(i => i.resp === S.user.id && !i.ok));
   if (S.filtro === "atrasadas") return !fim && k.prazo && dias(k.prazo) < 0;
-  if (S.filtro === "semdono") return !k.responsavel;
+  if (S.filtro === "semdono") return !k.responsavel && !k.para_todos;
   return true;
 }
 function prazoPill(k, fim) {
@@ -327,19 +340,19 @@ function cardHTML(k) {
   const fim = colDe(k.coluna).concluida;
   const ck = Array.isArray(k.checklist) ? k.checklist : [];
   const feitos = ck.filter(i => i.ok).length;
-  const resp = nomeDe(k.responsavel);
+  const resp = k.para_todos ? "" : nomeDe(k.responsavel);
   const ckAtr = fim ? 0 : ck.filter(i => !i.ok && i.prazo && dias(i.prazo) < 0).length;
   const ckMeu = ck.filter(i => !i.ok && i.resp === S.user.id).length;
   return `<button class="k" draggable="true" data-id="${k.id}" type="button" aria-label="${esc(k.titulo)}">
     <span class="t">${esc(k.titulo)}</span>
-    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${k.recorrencia ? `<span title="Rotina automática (recorrente)">🔁</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${ckAtr ? `<span class="pill atr" title="Itens do checklist com prazo vencido">☑ ${ckAtr} atrasado${ckAtr > 1 ? "s" : ""}</span>` : ""}${ckMeu && k.responsavel !== S.user.id ? `<span class="pill" title="Itens do checklist para você">☑ ${ckMeu} seu${ckMeu > 1 ? "s" : ""}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${(S.anx || {})[k.id] ? `<span title="Anexos">📎 ${S.anx[k.id]}</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
+    <span class="m">${S.marc || (S.q && k.quadro !== S.q.id) ? `<span class="pill" title="Tarefa do quadro ${esc(quadroNome(k.quadro))}">↗ ${esc(quadroNome(k.quadro))}</span>` : ""}${k.recorrencia ? `<span title="Rotina automática (recorrente)">🔁</span>` : ""}${(k.participantes || []).length ? `<span title="Pessoas marcadas">👥 ${k.participantes.length}</span>` : ""}${k.prioridade ? `<span class="pill ${k.prioridade}">${PRI[k.prioridade]}</span>` : ""}${prazoPill(k, fim)}${ck.length ? `<span class="pill${feitos === ck.length ? " okp" : ""}">☑ ${feitos}/${ck.length}</span>` : ""}${ckAtr ? `<span class="pill atr" title="Itens do checklist com prazo vencido">☑ ${ckAtr} atrasado${ckAtr > 1 ? "s" : ""}</span>` : ""}${ckMeu && k.responsavel !== S.user.id ? `<span class="pill" title="Itens do checklist para você">☑ ${ckMeu} seu${ckMeu > 1 ? "s" : ""}</span>` : ""}${S.coms[k.id] ? `<span>💬 ${S.coms[k.id]}</span>` : ""}${(S.anx || {})[k.id] ? `<span title="Anexos">📎 ${S.anx[k.id]}</span>` : ""}${k.para_todos ? `<span class="pill" title="Responsável: todos">👥 Todos</span>` : ""}${resp ? `<span class="av" title="${esc(resp)}">${esc(ini(resp))}</span>` : ""}</span>
   </button>`;
 }
 function render() {
   const abertas = S.cards.filter(k => !colDe(k.coluna).concluida && !colDe(k.coluna).referencia);
   const atr = abertas.filter(k => k.prazo && dias(k.prazo) < 0).length;
   const semana = abertas.filter(k => k.prazo && dias(k.prazo) >= 0 && dias(k.prazo) <= 7).length;
-  const minhas = abertas.filter(k => k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id)).length;
+  const minhas = abertas.filter(k => k.para_todos || k.responsavel === S.user.id || (k.participantes || []).includes(S.user.id)).length;
   const F = [["todas", "Todas"], ["minhas", `Minhas (${minhas})`], ["atrasadas", `Atrasadas (${atr})`], ["semdono", "Sem responsável"]];
   $("#app").innerHTML = `
   <div class="bar">
@@ -442,7 +455,7 @@ async function abrir(id) {
     </div>
     <div class="side">
       <div class="field"><label for="kCol">Coluna</label><select id="kCol">${S.colsAll.filter(c => c.quadro === k.quadro).map(c => `<option value="${c.id}"${c.id === k.coluna ? " selected" : ""}>${esc(c.nome)}</option>`).join("")}</select></div>
-      <div class="field"><label for="kR">Responsável</label><select id="kR"><option value="">Ninguém</option>${S.pessoas.map(m => `<option value="${m.user_id}"${m.user_id === k.responsavel ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></div>
+      <div class="field"><label for="kR">Responsável</label><select id="kR"><option value="">Ninguém</option><option value="__todos"${k.para_todos ? " selected" : ""}>👥 Todos</option>${S.pessoas.map(m => `<option value="${m.user_id}"${!k.para_todos && m.user_id === k.responsavel ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></div>
       <div class="field"><label>Pessoas marcadas</label><div class="ck" id="kPa">${S.pessoas.map(m => `<label><input type="checkbox" value="${m.user_id}"${(k.participantes || []).includes(m.user_id) ? " checked" : ""}><span>${esc(m.nome)}</span></label>`).join("")}</div><p class="note">Quem for marcado vê esta tarefa em "Marcadas para mim", mesmo sem acesso a este quadro.</p></div>
       <div class="field"><label for="kPz">Prazo</label><input type="date" id="kPz" value="${k.prazo || ""}"></div>
       <div class="field"><label for="kPr">Prioridade</label><select id="kPr"><option value="">Normal</option>${Object.entries(PRI).map(([v, t]) => `<option value="${v}"${k.prioridade === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
@@ -522,7 +535,7 @@ async function abrir(id) {
     carregarHist(k.id);
   };
   let fim = false, tAuto = null, gravando = null, ultimo = "";
-  const coletar = () => ({ titulo: $("#kT").value.trim(), participantes: $$("#kPa input:checked").map(i => i.value), descricao: $("#kD").value.trim() || null, responsavel: $("#kR").value || null, prazo: $("#kPz").value || null, prioridade: $("#kPr").value || null, checklist: ck.map(i => ({ ...i })), coluna: $("#kCol").value });
+  const coletar = () => ({ titulo: $("#kT").value.trim(), participantes: $$("#kPa input:checked").map(i => i.value), descricao: $("#kD").value.trim() || null, responsavel: ($("#kR").value === "__todos" ? null : $("#kR").value || null), para_todos: $("#kR").value === "__todos", prazo: $("#kPz").value || null, prioridade: $("#kPr").value || null, checklist: ck.map(i => ({ ...i })), coluna: $("#kCol").value });
   const st = (t) => { const e = $("#kSt"); if (e) e.textContent = t; };
   ultimo = JSON.stringify(coletar());
   var agendar = () => { if (fim) return; st("Alterações não salvas…"); clearTimeout(tAuto); tAuto = setTimeout(() => gravar(false), 1200); };
@@ -538,11 +551,25 @@ async function abrir(id) {
   }
   async function gravarAgora(atual, js) {
     const { titulo, participantes } = atual;
-    const novo = { titulo, participantes, descricao: atual.descricao, responsavel: atual.responsavel, prazo: atual.prazo, prioridade: atual.prioridade, checklist: atual.checklist, atualizado_em: new Date().toISOString() };
+    const novo = { titulo, participantes, descricao: atual.descricao, responsavel: atual.responsavel, para_todos: atual.para_todos, prazo: atual.prazo, prioridade: atual.prioridade, checklist: atual.checklist, atualizado_em: new Date().toISOString() };
     const mud = [];
-    if (novo.responsavel !== (k.responsavel || null)) mud.push("responsável: " + (nomeDe(novo.responsavel) || "ninguém"));
+    if (novo.para_todos && !k.para_todos) mud.push("responsável: Todos");
+    else if (novo.responsavel !== (k.responsavel || null) || (!novo.para_todos && k.para_todos)) mud.push("responsável: " + (nomeDe(novo.responsavel) || "ninguém"));
     if (novo.prazo !== (k.prazo || null)) mud.push("prazo: " + (dBR(novo.prazo) || "sem prazo"));
     const colNova = atual.coluna;
+    { const ant = Array.isArray(k.checklist) ? k.checklist : [], usados = new Set();
+      for (const it of novo.checklist) {
+        const j = ant.findIndex((a, x) => !usados.has(x) && a.t === it.t);
+        if (j < 0) { mud.push("checklist: incluiu \"" + it.t + "\""); continue; }
+        usados.add(j); const a = ant[j];
+        if (it.ok && !a.ok) mud.push("checklist: concluiu \"" + it.t + "\"");
+        if (!it.ok && a.ok) mud.push("checklist: reabriu \"" + it.t + "\"");
+        if ((it.resp || "") !== (a.resp || "") && it.resp) mud.push("checklist: \"" + it.t + "\" para " + (nomeDe(it.resp) || "alguém"));
+        if ((it.prazo || "") !== (a.prazo || "") && it.prazo) mud.push("checklist: \"" + it.t + "\" até " + dBR(it.prazo));
+      }
+      ant.forEach((a, x) => { if (!usados.has(x)) mud.push("checklist: removeu \"" + a.t + "\""); });
+      if ((novo.titulo || "") !== (k.titulo || "")) mud.push("título: " + novo.titulo);
+    }
     const { error } = await sb.from("cq_cartoes").update(novo).eq("id", k.id);
     if (error) { st("Erro ao salvar"); toast("Não foi possível salvar: " + error.message); return false; }
     ultimo = js;
@@ -579,6 +606,52 @@ async function carregarComs(id) {
   const marca = (h) => { for (const m of [...S.pessoas].sort((a, b) => b.nome.length - a.nome.length)) h = h.split("@" + esc(m.nome)).join(`<span class="men">@${esc(m.nome)}</span>`); return h; };
   el.innerHTML = (data || []).map(c => `<div class="com"><small>${esc(c.nome)} · ${dataHora(c.em)}</small>${marca(esc(c.texto)).replace(/\n/g, "<br>")}</div>`).join("") || `<span class="note">Nenhum comentário ainda.</span>`;
   el.scrollTop = el.scrollHeight;
+}
+const NTXT = { mencao: "mencionou você em", comentou: "comentou em", moveu: "moveu", concluiu: "concluiu", editou: "alterou", criou: "criou", anexou: "anexou um arquivo em", "apagou anexo": "apagou um anexo de", arquivou: "arquivou" };
+function textoNotif(n) { return `<b>${esc(n.autor_nome || "Alguém")}</b> ${esc(NTXT[n.tipo] || n.tipo)} <b>“${esc(n.titulo || "tarefa")}”</b>`; }
+function quando(iso) { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? "agora" : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : dataHora(iso); }
+async function iniciarNotif() {
+  const b = $("#sino"); if (!b) return; b.hidden = false;
+  await contarNotif();
+  b.onclick = (e) => { e.stopPropagation(); const pn = $("#painelN"); if (pn && !pn.hidden) return fecharNotif(); abrirNotif(); try { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); } catch {} };
+  document.addEventListener("click", (e) => { const pn = $("#painelN"); if (pn && !pn.hidden && !pn.contains(e.target)) fecharNotif(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharNotif(); });
+  if (sb.channel) sb.channel("cq-notif-" + S.user.id).on("postgres_changes", { event: "INSERT", schema: "public", table: "cq_notificacoes", filter: `user_id=eq.${S.user.id}` }, (p) => {
+    const n = p.new || {}; contarNotif();
+    const txt = (n.autor_nome || "Alguém") + " " + (NTXT[n.tipo] || n.tipo) + " “" + (n.titulo || "tarefa") + "”";
+    toast("🔔 " + txt);
+    try { if (document.hidden && "Notification" in window && Notification.permission === "granted") { const no = new Notification("Quadro de tarefas · Vital", { body: txt + (n.texto ? "\n" + n.texto : ""), tag: "cq-" + n.id }); no.onclick = () => { window.focus(); irParaNotif(n); no.close(); }; } } catch {}
+    if (!$("#painelN")?.hidden) abrirNotif();
+  }).subscribe();
+}
+async function contarNotif() {
+  const { count } = await sb.from("cq_notificacoes").select("id", { count: "exact", head: true }).eq("user_id", S.user.id).eq("lida", false);
+  const bd = $("#sinoN"); if (!bd) return; bd.hidden = !count; bd.textContent = count > 99 ? "99+" : String(count || 0);
+  document.title = (count ? `(${count}) ` : "") + document.title.replace(/^\(\d+\+?\) /, "");
+}
+function fecharNotif() { const pn = $("#painelN"); if (pn) pn.hidden = true; $("#sino")?.setAttribute("aria-expanded", "false"); }
+async function abrirNotif() {
+  let pn = $("#painelN"); if (!pn) { pn = document.createElement("div"); pn.id = "painelN"; pn.className = "painelN"; pn.setAttribute("role", "dialog"); pn.setAttribute("aria-label", "Notificações"); document.body.appendChild(pn); }
+  pn.hidden = false; $("#sino").setAttribute("aria-expanded", "true");
+  const { data } = await sb.from("cq_notificacoes").select("*").eq("user_id", S.user.id).order("em", { ascending: false }).limit(40);
+  const L = data || [];
+  pn.innerHTML = `<div class="hd"><b>Notificações</b><button class="btn ghost sm" type="button" id="nTodas"${L.some(n => !n.lida) ? "" : " disabled"}>Marcar todas como lidas</button></div>` +
+    (L.map(n => `<button class="it${n.lida ? "" : " nova"}" type="button" data-n="${n.id}">${n.lida ? "" : "● "}${textoNotif(n)}${n.texto ? `<q>${esc(n.texto)}</q>` : ""}<small>${quando(n.em)}</small></button>`).join("") || `<p class="note" style="padding:10px">Nenhuma notificação ainda. Você recebe aviso quando for mencionado(a) ou quando um card seu ou em que foi marcado(a) mudar.</p>`);
+  $("#nTodas").onclick = async (e) => { e.stopPropagation(); await sb.from("cq_notificacoes").update({ lida: true }).eq("user_id", S.user.id).eq("lida", false); contarNotif(); abrirNotif(); };
+  $$("[data-n]", pn).forEach(b => b.onclick = async (e) => { e.stopPropagation(); const n = L.find(x => String(x.id) === b.dataset.n); fecharNotif(); if (n) irParaNotif(n); });
+}
+async function irParaNotif(n) {
+  if (!n.lida) { await sb.from("cq_notificacoes").update({ lida: true }).eq("id", n.id); contarNotif(); }
+  if (!n.cartao) return;
+  if (!S.cards.some(x => x.id === n.cartao)) {
+    const sel = $("#selQ");
+    const alvo = S.proprios.find(q => q.id === n.quadro) || S.proprios.find(q => q.geral && q.empresa === (S.quadros.find(x => x.id === n.quadro) || {}).empresa) || S.proprios.find(q => q.dono === S.user.id);
+    if (alvo) { S.marc = false; S.q = alvo; if (sel) sel.value = alvo.id; }
+    else if (S.outros.length) { S.marc = true; S.q = null; if (sel) sel.value = MARC; }
+    S.filtro = "todas"; S.fCriado = ""; S.fAtrib = ""; S.busca = "";
+    await carregar(true);
+  }
+  if (S.cards.some(x => x.id === n.cartao)) abrir(n.cartao); else toast("Essa tarefa não está mais disponível (pode ter sido arquivada ou excluída).");
 }
 function ligarTempoReal() {
   if (S.rt || !sb.channel) return;

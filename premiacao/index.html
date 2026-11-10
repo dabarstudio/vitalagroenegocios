@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#00582F">
+<meta name="robots" content="noindex">
+<title>Premiação COE e CCA · Vital Agro & Negócios</title>
+<link rel="icon" href="/vitalagroenegocios/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Premiação COE e CCA: mesma barra da Área do cliente; passos 1-2-3 e resultado */
+:root{
+  color-scheme:light;
+  --bg:#F3F6F1; --surface:#FFFFFF; --surface-2:#E8EFE4; --line:#D3DECD;
+  --fg:#18241B; --muted:#57665A; --brand:#00582F; --brand-2:#007941; --leaf:#79C25B; --on-brand:#FFFFFF;
+  --warn:#9A6200; --warn-bg:#FFF3D6; --bad:#B3261E; --bad-bg:#FBE4E1; --ok:#1F7A3F; --ok-bg:#E1F2E5; --info:#2F6FA6; --info-bg:#E3EDF6;
+  --lamp-off:#C9D3C6; --red:#D93A2B; --green:#2FA352;
+  --display:"Poppins","Segoe UI",system-ui,sans-serif; --body:"Source Sans 3","Segoe UI",system-ui,sans-serif; --mono:ui-monospace,Consolas,monospace; --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522; --info:#8DB9E3; --info-bg:#1B2A38;
+  --lamp-off:#2E4034; --red:#F0604F; --green:#4CC66F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522; --info:#8DB9E3; --info-bg:#1B2A38;
+  --lamp-off:#2E4034; --red:#F0604F; --green:#4CC66F; color-scheme:dark}
+html{padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+img{max-width:100%}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+.wrap{max-width:1020px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.logo{width:44px;height:44px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none;border:1px solid var(--line);text-decoration:none}
+.logo img{width:36px}
+.brandtxt{min-width:0}
+.brandtxt b{font-family:var(--display);display:block;color:var(--brand)}
+.brandtxt span{font-size:.8rem;color:var(--muted)}
+.spacer{flex:1}
+.top a.tab{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--muted);font-weight:600;white-space:nowrap;text-decoration:none}
+.top a.tab:hover{background:var(--surface-2);color:var(--brand)}
+main{padding-block:20px 48px;display:grid;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.stack{display:grid;gap:14px;align-content:start}
+.muted,.note{color:var(--muted)} .note{font-size:.88rem;margin:0}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.btn{border:1px solid var(--line);background:var(--surface);padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center;color:var(--fg)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.ghost{border-color:transparent;background:none;color:var(--brand)}
+.btn.sm{padding:6px 10px;font-size:.88rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.field{display:grid;gap:6px;min-width:0}
+.field label{font-weight:600;font-size:.92rem}
+.field input,.field select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.callout{background:var(--surface-2);border-radius:var(--r);padding:14px 16px;font-size:.93rem}
+.err{color:var(--bad);font-weight:600}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface-2);white-space:nowrap}
+td.num,th.num{text-align:right;white-space:nowrap}
+.mono{font-family:var(--mono);font-size:.85em;white-space:nowrap}
+.field textarea{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%}
+.passo{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;align-items:start}
+.num1{width:34px;height:34px;border-radius:50%;background:var(--brand);color:var(--on-brand);display:grid;place-items:center;font:700 1rem var(--display)}
+.passo.ok .num1{background:var(--ok)}
+.passo.pend .num1{background:var(--warn)}
+.arq{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface-2)}
+.arq .tx{flex:1;min-width:180px}
+.arq .tx b{display:block}
+.chip{display:inline-block;border-radius:999px;padding:3px 10px;font-size:.8rem;font-weight:700;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.chip.v{background:var(--ok-bg);color:var(--ok)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:720px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{border-radius:10px;padding:12px 14px;display:grid;gap:4px;background:var(--surface-2)}
+.tile .k{font:700 .72rem var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tile .v{font:700 1.35rem/1.1 var(--display);font-variant-numeric:tabular-nums;color:var(--brand)}
+.al{border-radius:10px;padding:10px 14px;font-size:.93rem}
+.al.alta{background:var(--bad-bg);color:var(--bad)} .al.media{background:var(--warn-bg);color:var(--warn)} .al.ok{background:var(--ok-bg);color:var(--ok)}
+.eq td{vertical-align:middle}
+.eq input[type=text]{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 9px;width:100%;min-width:110px}
+.eq select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 9px}
+.eq input[type=checkbox]{width:18px;height:18px;accent-color:var(--brand)}
+tr.fora td{color:var(--muted)}
+tr.tot td{font-weight:700;background:var(--surface-2)}
+details summary{cursor:pointer;color:var(--brand);font-weight:700}
+.sug{font-size:.86rem;color:var(--info)}
+.sug button{margin-left:6px}
+#selEmp{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;max-width:200px}
+</style>
+<script src="/vitalagroenegocios/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="/vitalagroenegocios/premiacao/motor.js?v=1"></script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/vitalagroenegocios/" title="Página inicial da Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
+    <div class="brandtxt"><b>Premiação COE e CCA</b><span id="subEmp">Área do cliente</span></div>
+    <div class="spacer"></div>
+    <select id="selEmp" aria-label="Empresa" hidden></select>
+    <a class="tab" href="/vitalagroenegocios/cliente/#docs">Entregáveis</a>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <div class="card"><p class="note">Carregando…</p></div>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+"use strict";
+/* Tudo fica guardado nos Entregáveis (tabela ent_arquivos + armazenamento "entregaveis"), sem tabela nova:
+   [COE] Base do COE · MM/AAAA      → relatório de fichas que o COE envia (um por mês)
+   [COE] Critérios de premiação     → arquivo de critérios; a vigência é o mês de competência; percentuais na descrição (JSON)
+   [COE] Memória de cálculo · MM/AAAA → Excel do fechamento; a aba _config guarda equipe, Home Care e critérios usados
+   Premiação COE e CCA · Mês/AAAA   → PDF publicado para o cliente (aparece normalmente nos Entregáveis) */
+const P_BASE = "[COE] Base do COE", P_CRIT = "[COE] Critérios de premiação", P_MEM = "[COE] Memória de cálculo", T_PDF = "Premiação COE e CCA";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const mesNome = (ym) => { const m = MESES[+ym.slice(5, 7) - 1]; return m[0].toUpperCase() + m.slice(1) + "/" + ym.slice(0, 4); };
+const mm = (ym) => ym.slice(5, 7) + "/" + ym.slice(0, 4);
+const fmtD = (iso) => iso ? new Date(iso).toLocaleDateString("pt-BR") : "";
+const tam = (n) => n == null ? "" : n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toFixed(1).replace(".", ",") + " MB";
+const { brl, pct, num, norm } = VCOE;
+let toastT; function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 4500); }
+const slug = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "empresa";
+const uuid = () => crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+const MIME = { pdf: "application/pdf", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xls: "application/vnd.ms-excel", xlsm: "application/vnd.ms-excel.sheet.macroEnabled.12", csv: "text/csv", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+const ext = (n) => (String(n).split(".").pop() || "").toLowerCase();
+
+const CFG = window.VITAL_CONFIG || {};
+const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+const S = { user: null, perfil: null, adm: false, empresas: [], emp: "", mes: "", arqs: [], base: null, crit: null, critParams: null, mem: null, cfg: null, res: null, painel: null, sujo: false, ocupado: false };
+
+/* ---------- início ---------- */
+async function iniciar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = "/vitalagroenegocios/cliente/?volta=/vitalagroenegocios/premiacao/"; return; }
+  S.user = session.user;
+  const { data: perfil } = await sb.from("perfis").select("papel, nome, email, login").eq("user_id", S.user.id).maybeSingle();
+  S.perfil = perfil || { papel: "", nome: S.user.email }; S.adm = S.perfil.papel === "admin";
+  const nomes = new Set();
+  const { data: arqs } = await sb.from("ent_arquivos").select("empresa, titulo").limit(3000);
+  (arqs || []).forEach((a) => { if (S.adm ? /arcanjos/i.test(a.empresa) : a.titulo.startsWith("[COE]")) nomes.add(a.empresa); });
+  if (S.adm) { const { data: g } = await sb.from("gestor_empresas").select("empresa"); (g || []).forEach((x) => { if (/arcanjos/i.test(x.empresa)) nomes.add(x.empresa); }); }
+  S.empresas = [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  if (!S.empresas.length) return falha(S.adm ? "Nenhuma empresa da Arcanjos cadastrada nos Entregáveis ainda. Publique um entregável para a Arcanjos ou crie o acesso dela na Área do cliente." : "Ainda não há premiação do COE publicada para a sua empresa.");
+  let salvo = null; try { salvo = localStorage.getItem("coe.emp"); } catch {}
+  S.emp = S.empresas.includes(salvo) ? salvo : (S.empresas.find((e) => /health/i.test(e)) || S.empresas[0]);
+  const sel = $("#selEmp");
+  if (S.empresas.length > 1) { sel.hidden = false; sel.innerHTML = S.empresas.map((e) => `<option${e === S.emp ? " selected" : ""}>${esc(e)}</option>`).join("");
+    sel.onchange = async () => { if (S.sujo && !confirm("Há alterações não publicadas. Trocar de empresa mesmo assim?")) { sel.value = S.emp; return; } S.emp = sel.value; try { localStorage.setItem("coe.emp", S.emp); } catch {} S.mes = ""; await carregar(); }; }
+  await carregarPainel();
+  await carregar();
+}
+function falha(msg) { $("#app").innerHTML = `<div class="card stack"><h2 style="font-size:1.2rem">Premiação COE e CCA</h2><p>${esc(msg)}</p><div><a class="btn" href="/vitalagroenegocios/cliente/">Voltar para a Área do cliente</a></div></div>`; }
+
+/* Sugestão de faturamento do Home Care a partir do painel financeiro já publicado (categoria Home Care/Operador de Saúde) */
+async function carregarPainel() {
+  try { const { data } = await sb.from("ent_paineis").select("empresa, chave, dados"); S.painel = (data || []).find((p) => /arcanjos/i.test(p.empresa) && p.dados && p.dados.fatos) || null; } catch { S.painel = null; }
+}
+function hcDoPainel(ym) {
+  const D = S.painel && S.painel.dados; if (!D || !D.meses) return null;
+  const i = D.meses.indexOf(ym); if (i < 0) return null;
+  let v = 0, achou = false;
+  for (const f of D.fatos) if (f[0] === i && !f[5] && D.cats[f[2]] && D.cats[f[2]].g === "R_HOME") { v += f[7]; achou = true; }
+  return achou ? VCOE.r2(v) : null;
+}
+
+/* ---------- arquivos guardados ---------- */
+async function carregar() {
+  $("#subEmp").textContent = S.emp + " · Área do cliente";
+  const { data, error } = await sb.from("ent_arquivos").select("*").eq("empresa", S.emp).like("titulo", "[COE]%").order("criado_em", { ascending: false });
+  if (error) return falha("Não foi possível carregar: " + error.message);
+  S.arqs = data || [];
+  const pdfs = await sb.from("ent_arquivos").select("*").eq("empresa", S.emp).like("titulo", T_PDF + "%").order("criado_em", { ascending: false });
+  S.pdfs = pdfs.data || [];
+  const meses = mesesDisponiveis();
+  const d = new Date(), ant = new Date(d.getFullYear(), d.getMonth() - 1, 1), mesAnt = ant.getFullYear() + "-" + String(ant.getMonth() + 1).padStart(2, "0");
+  // padrão: mês anterior (competência fechada); se houver base mais recente ainda não publicada, abre nela
+  const aberto = meses.find((m) => baseDo(m) && !memDo(m) && m >= mesAnt);
+  if (!S.mes || !meses.includes(S.mes)) S.mes = S.adm ? (aberto || mesAnt) : (meses.find((m) => memDo(m)) || meses[0]);
+  await abrirMes();
+}
+const compDe = (a) => a.competencia.slice(0, 7);
+const baseDo = (ym) => S.arqs.find((a) => a.titulo.startsWith(P_BASE) && compDe(a) === ym);
+const memDo = (ym) => S.arqs.find((a) => a.titulo.startsWith(P_MEM) && compDe(a) === ym);
+const pdfDo = (ym) => S.pdfs.find((a) => compDe(a) === ym);
+const critDo = (ym) => S.arqs.filter((a) => a.titulo.startsWith(P_CRIT) && compDe(a) <= ym).sort((a, b) => compDe(b).localeCompare(compDe(a)) || b.criado_em.localeCompare(a.criado_em))[0] || null;
+function mesesDisponiveis() {
+  const set = new Set(S.arqs.filter((a) => S.adm ? !a.titulo.startsWith(P_CRIT) : a.titulo.startsWith(P_MEM)).map(compDe));
+  if (S.adm) { const d = new Date(); for (let i = 0; i < 3; i++) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); set.add(x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0")); } }
+  return [...set].sort().reverse();
+}
+async function baixarBuf(a) { const { data, error } = await sb.storage.from("entregaveis").download(a.caminho); if (error) throw new Error(error.message); return await data.arrayBuffer(); }
+async function abrirArq(a) { const { data, error } = await sb.storage.from("entregaveis").createSignedUrl(a.caminho, 60, { download: a.nome_arquivo }); if (error) { toast("Não foi possível abrir o arquivo."); return; } location.assign(data.signedUrl); }
+function paramsCrit(a) { try { const j = JSON.parse(a.descricao || "{}"); return { ...VCOE.PADRAO, ...j }; } catch { return { ...VCOE.PADRAO }; } }
+
+async function abrirMes() {
+  S.base = baseDo(S.mes) || null; S.crit = critDo(S.mes); S.mem = memDo(S.mes) || null; S.fichas = null; S.res = null; S.sujo = false; S.erroBase = "";
+  S.critParams = S.crit ? paramsCrit(S.crit) : { ...VCOE.PADRAO };
+  let cfgSalva = null;
+  if (S.mem) { try { cfgSalva = lerConfig(await baixarBuf(S.mem)); } catch (e) { console.warn(e); } }
+  if (!cfgSalva) { const ant = S.arqs.filter((a) => a.titulo.startsWith(P_MEM) && compDe(a) < S.mes).sort((a, b) => compDe(b).localeCompare(compDe(a)))[0];
+    if (ant) { try { const c = lerConfig(await baixarBuf(ant)); if (c) cfgSalva = { equipe: c.equipe, hcFat: 0 }; } catch {} } }
+  S.cfg = { equipe: (cfgSalva && cfgSalva.equipe) || [], hcFat: (cfgSalva && cfgSalva.hcFat) || 0, publicado: !!S.mem, critUsado: cfgSalva && cfgSalva.crit };
+  // um fechamento já publicado mantém os percentuais com que foi calculado
+  if (S.mem && cfgSalva && cfgSalva.crit) S.critParams = { ...VCOE.PADRAO, ...cfgSalva.crit };
+  if (S.base) { try { const b = VCOE.lerBase(await baixarBuf(S.base)); S.fichas = b.fichas; S.temTipo = b.temTipo; S.cfg.equipe = VCOE.equipeSugerida(S.fichas, S.cfg.equipe); } catch (e) { S.erroBase = e.message; } }
+  render();
+}
+function lerConfig(buf) {
+  const wb = XLSX.read(buf, { type: "array" }); const ws = wb.Sheets["_config"]; if (!ws) return null;
+  const v = ws["A1"] && ws["A1"].v; return v ? JSON.parse(v) : null;
+}
+
+/* ---------- tela ---------- */
+function render() {
+  if (S.fichas) S.res = VCOE.calcular(S.fichas, { ...S.critParams, hcFat: S.cfg.hcFat, equipe: S.cfg.equipe }, S.temTipo);
+  const meses = mesesDisponiveis();
+  const ro = !S.adm;
+  const c = S.critParams;
+  const sug = hcDoPainel(S.mes);
+  $("#app").innerHTML = `
+  <div class="card stack">
+    <div class="row" style="justify-content:space-between;gap:10px">
+      <div><div class="eyebrow">${esc(S.emp)}</div><h2 style="font-size:1.35rem">Premiação COE e CCA · ${mesNome(S.mes)}</h2>
+        <p class="note">${S.mem ? `Fechamento publicado em ${fmtD(S.mem.criado_em)}.` : S.adm ? "Ainda não publicado para o cliente." : "Fechamento ainda não publicado."}</p></div>
+      <div class="field" style="min-width:180px"><label for="selMes">Mês de competência</label>
+        <select id="selMes">${meses.map((m) => `<option value="${m}" ${m === S.mes ? "selected" : ""}>${mesNome(m)}${memDo(m) ? " · publicado" : baseDo(m) ? " · base enviada" : ""}</option>`).join("")}</select></div>
+    </div>
+  </div>
+
+  <div class="card passo ${S.base ? "ok" : "pend"}"><div class="num1">1</div><div class="stack">
+    <div><h3 style="font-size:1.1rem">Base do COE do mês</h3><p class="note">Relatório de fichas que o COE envia (Excel exportado do sistema, com as colunas Operador, Valor e Status).</p></div>
+    ${S.base ? `<div class="arq"><div class="tx"><b>${esc(S.base.nome_arquivo)}</b><span class="note">${S.fichas ? S.fichas.length + " fichas lidas · " : ""}enviado em ${fmtD(S.base.criado_em)} · ${tam(S.base.tamanho)}</span></div>
+        <button class="btn sm" data-abrir="${S.base.id}">Baixar</button>${S.adm ? `<label class="btn sm ghost" for="upBase">Substituir</label>` : ""}</div>` :
+      S.adm ? `<div class="arq"><div class="tx"><b>Nenhuma base enviada para ${mesNome(S.mes)}.</b><span class="note">Envie o arquivo que o COE mandou.</span></div><label class="btn sm primary" for="upBase">Enviar base do mês</label></div>` :
+      `<p class="note">A Vital ainda não recebeu a base deste mês.</p>`}
+    ${S.erroBase ? `<div class="al alta">${esc(S.erroBase)}</div>` : ""}
+    ${S.adm ? `<input type="file" id="upBase" accept=".xlsx,.xls,.xlsm,.csv" hidden>` : ""}
+  </div></div>
+
+  <div class="card passo ${S.crit ? "ok" : ""}"><div class="num1">2</div><div class="stack">
+    <div><h3 style="font-size:1.1rem">Critérios de premiação</h3><p class="note">${S.mem && S.cfg.critUsado ? "Percentuais usados neste fechamento publicado." : "Vale o último arquivo de critérios com vigência até este mês."}</p></div>
+    <div class="chips"><span class="chip v">Operador COE: ${pct(c.op)} de cada remoção particular fechada</span><span class="chip v">CCA: ${pct(c.cca)} da soma das particulares</span>
+      <span class="chip v">Home Care: ${pct(c.hc)} do faturamento ÷ ${c.cotas} cotas</span><span class="chip">Status que contam: ${esc((c.status || []).join(", "))}</span></div>
+    ${S.crit ? `<div class="arq"><div class="tx"><b>${esc(S.crit.nome_arquivo)}</b><span class="note">vigente desde ${mesNome(compDe(S.crit))} · anexado em ${fmtD(S.crit.criado_em)}</span></div><button class="btn sm" data-abrir="${S.crit.id}">Baixar</button></div>` : `<p class="note">Nenhum arquivo de critérios anexado: valendo a regra padrão acima.</p>`}
+    ${S.adm ? `<details id="novoCrit"><summary>Anexar novos critérios</summary>
+      <form class="stack" id="fCrit" style="margin-top:12px" novalidate>
+        <div class="grid2"><div class="field"><label for="cArq">Arquivo dos critérios (Excel, PDF ou Word)</label><input id="cArq" type="file" accept=".xlsx,.xls,.pdf,.docx"></div>
+          <div class="field"><label for="cVig">Vale a partir de</label><input id="cVig" type="month" value="${S.mes}"></div></div>
+        <p class="note" id="cLido"></p>
+        <div class="grid2">
+          <div class="field"><label for="cOp">% do operador COE (por remoção particular)</label><input id="cOp" inputmode="decimal" value="${(c.op * 100).toString().replace(".", ",")}"></div>
+          <div class="field"><label for="cCca">% do CCA (sobre a soma das particulares)</label><input id="cCca" inputmode="decimal" value="${(c.cca * 100).toString().replace(".", ",")}"></div>
+          <div class="field"><label for="cHc">% do Home Care (sobre o faturamento)</label><input id="cHc" inputmode="decimal" value="${(c.hc * 100).toString().replace(".", ",")}"></div>
+          <div class="field"><label for="cCot">Home Care dividido em quantas cotas</label><input id="cCot" inputmode="numeric" value="${c.cotas}"></div>
+          <div class="field"><label for="cSt">Status do sistema que contam (separe por vírgula)</label><input id="cSt" value="${esc((c.status || []).join(", "))}"></div>
+        </div>
+        <p class="note">Se o arquivo for Excel no modelo da planilha de premiação, os percentuais são lidos sozinhos. Confira antes de salvar.</p>
+        <p class="note err" id="cErr" role="alert"></p>
+        <div><button class="btn primary" id="cOk" type="submit">Salvar critérios</button></div>
+      </form></details>` : ""}
+  </div></div>
+
+  <div class="card passo ${S.res && !S.res.alertas.length ? "ok" : ""}"><div class="num1">3</div><div class="stack">
+    <div><h3 style="font-size:1.1rem">Equipe e Home Care</h3><p class="note">${ro ? "Quem participa da premiação neste mês." : "Quem é COE ou CCA e quem entra nas cotas do Home Care. Os operadores novos que aparecem na base entram aqui sozinhos. Um mesmo nome pode ter mais de uma grafia no sistema: separe por vírgula."}</p></div>
+    <div class="tablewrap"><table class="eq"><thead><tr><th>Nome</th><th>Como aparece no sistema</th><th>Função</th><th>Cota Home Care</th>${ro ? "" : "<th></th>"}</tr></thead><tbody>
+      ${S.cfg.equipe.map((p, i) => ro ? `<tr><td>${esc(p.nome)}</td><td>${esc((p.sistema || []).join(", "))}</td><td>${esc(p.funcao || "Fora")}</td><td>${p.hc ? "Sim" : "Não"}</td></tr>` :
+        `<tr><td><input type="text" data-eq="${i}" data-k="nome" value="${esc(p.nome)}" aria-label="Nome">${p.novo ? ' <span class="chip">novo</span>' : ""}</td>
+          <td><input type="text" data-eq="${i}" data-k="sistema" value="${esc((p.sistema || []).join(", "))}" aria-label="Nome no sistema"></td>
+          <td><select data-eq="${i}" data-k="funcao" aria-label="Função">${[["COE", "COE"], ["CCA", "CCA"], ["", "Fora da premiação"]].map(([v, l]) => `<option value="${v}" ${(p.funcao || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
+          <td><input type="checkbox" data-eq="${i}" data-k="hc" ${p.hc ? "checked" : ""} aria-label="Cota de Home Care"></td>
+          <td><button class="btn sm ghost" data-tirar="${i}" type="button">Remover</button></td></tr>`).join("") || `<tr><td colspan="5" class="note">Envie a base do mês para listar os operadores.</td></tr>`}
+    </tbody></table></div>
+    ${ro ? "" : `<div><button class="btn sm" id="addP" type="button">+ Adicionar pessoa (ex.: CCA)</button></div>`}
+    <div class="grid2"><div class="field"><label for="hcFat">Faturamento do Home Care em ${mesNome(S.mes)} (R$)</label>
+      <input id="hcFat" inputmode="decimal" ${ro ? "readonly" : ""} value="${S.cfg.hcFat ? S.cfg.hcFat.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}" placeholder="0,00">
+      ${!ro && sug != null && Math.abs(sug - S.cfg.hcFat) > 0.009 ? `<span class="sug">Painel financeiro: ${brl(sug)} em Home Care/Operador de Saúde (Life + Health) neste mês.<button class="btn sm ghost" id="usaSug" type="button">Usar</button></span>` : ""}</div>
+      <div class="field"><label>Cota de cada pessoa no Home Care</label><div class="tile"><span class="v">${brl(S.res ? S.res.cota : 0)}</span><span class="note">${pct(c.hc)} de ${brl(S.cfg.hcFat)} ÷ ${c.cotas}</span></div></div></div>
+  </div></div>
+
+  ${resultadoHtml()}`;
+  ligar();
+}
+
+function resultadoHtml() {
+  const R = S.res;
+  if (!R) return `<div class="card"><p class="note">${S.base ? "Não foi possível ler a base." : "O resultado aparece aqui depois que a base do mês for enviada."}</p></div>`;
+  const pend = R.alertas;
+  return `<div class="card stack">
+    <div class="row" style="justify-content:space-between"><h3 style="font-size:1.15rem">Resultado de ${mesNome(S.mes)}</h3>
+      <div class="row" style="gap:8px"><button class="btn sm" id="bPdf" type="button">Baixar PDF</button><button class="btn sm" id="bXls" type="button">Baixar Excel</button>
+      ${S.adm ? `<button class="btn sm primary" id="bPub" type="button">${S.mem ? "Republicar" : "Publicar"} para a ${esc(S.emp)}</button>` : ""}</div></div>
+    <div class="tiles">
+      <div class="tile"><span class="k">Remoções particulares válidas</span><span class="v">${R.qtdValidas}</span></div>
+      <div class="tile"><span class="k">Faturamento particular</span><span class="v">${brl(R.fatValido)}</span></div>
+      <div class="tile"><span class="k">Faturamento Home Care</span><span class="v">${brl(S.cfg.hcFat)}</span></div>
+      <div class="tile"><span class="k">Total de prêmios</span><span class="v">${brl(R.tot.total)}</span></div></div>
+    ${pend.length ? pend.map((a) => `<div class="al ${a.nivel}">${esc(a.txt)}</div>`).join("") : `<div class="al ok">Conferências ok: todas as fichas têm operador cadastrado, CCA definido e cotas do Home Care fechando.</div>`}
+    <div class="tablewrap"><table><thead><tr><th>Nome</th><th>Função</th><th class="num">Remoções</th><th class="num">Faturado</th><th class="num">Particular (${pct(S.critParams.op)})</th><th class="num">CCA (${pct(S.critParams.cca)})</th><th class="num">Home Care</th><th class="num">Total</th></tr></thead><tbody>
+      ${R.pessoas.map((p) => `<tr><td>${esc(p.nome)}</td><td>${esc(p.funcao)}</td><td class="num">${p.remocoes}</td><td class="num">${brl(p.faturado)}</td><td class="num">${brl(p.part)}</td><td class="num">${brl(p.cca)}</td><td class="num">${brl(p.hc)}</td><td class="num"><b>${brl(p.total)}</b></td></tr>`).join("")}
+      <tr class="tot"><td>Total</td><td></td><td class="num">${R.tot.remocoes}</td><td class="num">${brl(R.tot.faturado)}</td><td class="num">${brl(R.tot.part)}</td><td class="num">${brl(R.tot.cca)}</td><td class="num">${brl(R.tot.hc)}</td><td class="num">${brl(R.tot.total)}</td></tr>
+    </tbody></table></div>
+    <details><summary>Ficha a ficha (${R.linhas.length} fichas, ${R.fora.length} fora da premiação)</summary>
+      <div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>Ficha</th><th>Data</th><th>Operador</th><th>Ambulância</th><th class="num">Valor</th><th class="num">Prêmio</th><th>Situação</th></tr></thead><tbody>
+        ${R.linhas.map((l) => `<tr class="${l.premia ? "" : "fora"}"><td class="mono">${esc(l.ficha)}</td><td>${esc(l.data)}</td><td>${esc(l.pessoa || l.operador)}</td><td>${esc(l.ambulancia)}</td><td class="num">${brl(l.valor)}</td><td class="num">${brl(l.premio)}</td><td>${l.premia ? "Premiada" : esc(l.motivo)}</td></tr>`).join("")}
+      </tbody></table></div></details>
+    ${S.adm && S.sujo ? `<p class="note">Há alterações na equipe ou no Home Care que ainda não foram publicadas.</p>` : ""}
+  </div>`;
+}
+
+function ligar() {
+  $("#selMes").onchange = async (e) => { if (S.sujo && !confirm("Há alterações não publicadas. Trocar de mês mesmo assim?")) { e.target.value = S.mes; return; } S.mes = e.target.value; await abrirMes(); };
+  document.querySelectorAll("[data-abrir]").forEach((b) => b.onclick = () => abrirArq(S.arqs.find((a) => a.id === b.dataset.abrir)));
+  const pdfB = $("#bPdf"); if (pdfB) pdfB.onclick = async () => { try { const d = await gerarPdf(); d.save(nomePdf()); } catch (e) { toast(e.message); } };
+  const xB = $("#bXls"); if (xB) xB.onclick = () => { const wb = gerarXlsx(); XLSX.writeFile(wb, nomeXls()); };
+  if (!S.adm) return;
+  $("#upBase").onchange = (e) => enviarBase(e.target.files[0]);
+  document.querySelectorAll("[data-eq]").forEach((el) => {
+    const ev = el.type === "checkbox" || el.tagName === "SELECT" ? "change" : "change";
+    el.addEventListener(ev, () => { const p = S.cfg.equipe[+el.dataset.eq], k = el.dataset.k;
+      p[k] = k === "hc" ? el.checked : k === "sistema" ? el.value.split(",").map((s) => s.trim()).filter(Boolean) : el.value.trim();
+      if (k === "funcao" && el.value === "") p.hc = false;
+      delete p.novo; S.sujo = true; render(); });
+  });
+  document.querySelectorAll("[data-tirar]").forEach((b) => b.onclick = () => { S.cfg.equipe.splice(+b.dataset.tirar, 1); S.sujo = true; render(); });
+  $("#addP").onclick = () => { S.cfg.equipe.push({ nome: "Nova pessoa", sistema: [], funcao: "CCA", hc: true }); S.sujo = true; render(); const ins = document.querySelectorAll('[data-k="nome"]'); const last = ins[ins.length - 1]; last.focus(); last.select(); };
+  $("#hcFat").onchange = (e) => { S.cfg.hcFat = num(e.target.value); S.sujo = true; render(); };
+  const us = $("#usaSug"); if (us) us.onclick = () => { S.cfg.hcFat = hcDoPainel(S.mes); S.sujo = true; render(); };
+  const pub = $("#bPub"); if (pub) pub.onclick = publicar;
+  const cArq = $("#cArq"); if (cArq) cArq.onchange = async () => {
+    const f = cArq.files[0]; $("#cLido").textContent = ""; if (!f || !/^xls/.test(ext(f.name))) return;
+    try { const { achou } = VCOE.lerCriterios(await f.arrayBuffer()); const ks = Object.keys(achou);
+      if (achou.op != null) $("#cOp").value = String(+(achou.op * 100).toFixed(4)).replace(".", ",");
+      if (achou.cca != null) $("#cCca").value = String(+(achou.cca * 100).toFixed(4)).replace(".", ",");
+      if (achou.hc != null) $("#cHc").value = String(+(achou.hc * 100).toFixed(4)).replace(".", ",");
+      if (achou.cotas != null) $("#cCot").value = achou.cotas;
+      $("#cLido").textContent = ks.length ? `Lido do arquivo: ${ks.length} de 4 regras. Confira os campos abaixo.` : "Não reconheci os percentuais neste arquivo. Preencha os campos abaixo.";
+    } catch { $("#cLido").textContent = "Não consegui ler o Excel. Preencha os campos abaixo."; }
+  };
+  const fc = $("#fCrit"); if (fc) fc.onsubmit = salvarCriterios;
+}
+
+/* ---------- gravação (somente Vital) ---------- */
+async function subir(titulo, comp, f, nomeArq, desc, cat = "Planilha de gestão") {
+  const limpo = nomeArq.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9._-]+/g, "_").slice(-100);
+  const caminho = `${slug(S.emp)}/${uuid()}/${limpo}`, tipo = MIME[ext(nomeArq)] || "application/octet-stream";
+  const up = await sb.storage.from("entregaveis").upload(caminho, f, { contentType: tipo, upsert: false }); if (up.error) throw new Error(up.error.message);
+  const { data, error } = await sb.from("ent_arquivos").insert({ empresa: S.emp, titulo, categoria: cat, competencia: comp + "-01", caminho, nome_arquivo: nomeArq, tamanho: f.size, tipo, descricao: desc || "" }).select().single();
+  if (error) { await sb.storage.from("entregaveis").remove([caminho]); throw new Error(error.message); }
+  return data;
+}
+async function apagar(a) { if (!a) return; await sb.storage.from("entregaveis").remove([a.caminho]); await sb.from("ent_arquivos").delete().eq("id", a.id); }
+
+async function enviarBase(f) {
+  if (!f) return;
+  try {
+    const b = VCOE.lerBase(await f.arrayBuffer());
+    if (!b.fichas.length) throw new Error("O arquivo não tem fichas.");
+    if (b.faltando.length) throw new Error("Faltam as colunas: " + b.faltando.join(", ") + ".");
+    if (S.base && !confirm(`Substituir a base de ${mesNome(S.mes)} (${S.base.nome_arquivo}) por ${f.name}?`)) return;
+    toast("Enviando a base…");
+    const novo = await subir(`${P_BASE} · ${mm(S.mes)}`, S.mes, f, f.name, `${b.fichas.length} fichas`);
+    if (S.base) await apagar(S.base);
+    toast(`Base de ${mesNome(S.mes)} enviada: ${b.fichas.length} fichas.`);
+    await carregar();
+  } catch (e) { toast("Não foi possível usar este arquivo: " + e.message); $("#upBase").value = ""; }
+}
+async function salvarCriterios(e) {
+  e.preventDefault(); const err = $("#cErr"); err.textContent = "";
+  const f = $("#cArq").files[0], vig = $("#cVig").value;
+  const pc = (id) => num($(id).value) / 100;
+  const par = { op: pc("#cOp"), cca: pc("#cCca"), hc: pc("#cHc"), cotas: Math.round(num($("#cCot").value)), status: $("#cSt").value.split(",").map((s) => s.trim()).filter(Boolean) };
+  if (!f) { err.textContent = "Anexe o arquivo com os critérios."; return; }
+  if (!vig) { err.textContent = "Informe a partir de quando vale."; return; }
+  if (!(par.op >= 0 && par.op < 1 && par.cca >= 0 && par.cca < 1 && par.hc >= 0 && par.hc < 1)) { err.textContent = "Confira os percentuais (ex.: 7 para 7%)."; return; }
+  if (!(par.cotas >= 1)) { err.textContent = "Informe em quantas cotas o Home Care é dividido."; return; }
+  if (!par.status.length) { err.textContent = "Informe ao menos um status que conta."; return; }
+  $("#cOk").disabled = true;
+  try { await subir(P_CRIT, vig, f, f.name, JSON.stringify(par), "Contrato e proposta"); toast("Critérios salvos. Valem a partir de " + mesNome(vig) + "."); await carregar(); }
+  catch (x) { err.textContent = "Não foi possível salvar: " + x.message; $("#cOk").disabled = false; }
+}
+async function publicar() {
+  const R = S.res; if (!R) return;
+  const graves = R.alertas.filter((a) => a.nivel === "alta");
+  if (graves.length && !confirm("Ainda há pendências:\n\n• " + graves.map((a) => a.txt).join("\n• ") + "\n\nPublicar mesmo assim?")) return;
+  if (S.cfg.equipe.some((p) => !p.nome)) { toast("Há pessoa sem nome na equipe."); return; }
+  const b = $("#bPub"); b.disabled = true; b.textContent = "Publicando…";
+  try {
+    const xl = XLSX.write(gerarXlsx(true), { bookType: "xlsx", type: "array" });
+    const mem = await subir(`${P_MEM} · ${mm(S.mes)}`, S.mes, new Blob([xl], { type: MIME.xlsx }), nomeXls(), "Memória de cálculo da premiação");
+    const doc = await gerarPdf(); const pdf = doc.output("blob");
+    const antPdf = pdfDo(S.mes);
+    await subir(`${T_PDF} · ${mesNome(S.mes)}`, S.mes, pdf, nomePdf(), `${R.qtdValidas} remoções particulares · total ${brl(R.tot.total)}`, "Relatório gerencial");
+    if (S.mem) await apagar(S.mem); if (antPdf) await apagar(antPdf);
+    S.sujo = false; toast("Publicado: o PDF já aparece nos Entregáveis da " + S.emp + "."); await carregar();
+  } catch (e) { toast("Não foi possível publicar: " + e.message); b.disabled = false; b.textContent = "Publicar"; }
+}
+
+/* ---------- Excel ---------- */
+const nomeXls = () => `Premiacao COE ${S.emp} ${S.mes}.xlsx`;
+const nomePdf = () => `Premiacao COE e CCA ${S.emp} ${mesNome(S.mes).replace("/", " ")}.pdf`;
+function gerarXlsx(comConfig) {
+  const R = S.res, c = S.critParams, wb = XLSX.utils.book_new();
+  const res = [["Premiação COE e CCA · " + mesNome(S.mes)], [S.emp + " · elaborado por Vital Agro & Negócios – BPO Financeiro"], [],
+    ["Nome", "Função", "Remoções", "Faturado", "Prêmio particular", "Prêmio CCA", "Prêmio Home Care", "Total"],
+    ...R.pessoas.map((p) => [p.nome, p.funcao, p.remocoes, p.faturado, p.part, p.cca, p.hc, p.total]),
+    ["Total", "", R.tot.remocoes, R.tot.faturado, R.tot.part, R.tot.cca, R.tot.hc, R.tot.total], [],
+    ["Faturamento particular válido", R.fatValido], ["Faturamento Home Care", S.cfg.hcFat], ["Cota Home Care", R.cota], [],
+    ["Pendências"], ...(R.alertas.length ? R.alertas.map((a) => [a.txt]) : [["Nenhuma"]])];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res), "Resumo");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Ficha", "Data", "Operador (sistema)", "Pessoa", "Função", "Ambulância", "Percurso", "Status", "Valor", "Prêmio", "Situação"],
+    ...R.linhas.map((l) => [l.ficha, l.data, l.operador, l.pessoa, l.funcao, l.ambulancia, l.percurso, l.status, l.valor, l.premio, l.premia ? "Premiada" : l.motivo])]), "Fichas");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Regra", "Valor"], ["Operador COE: % de cada remoção particular fechada", c.op], ["CCA: % da soma das particulares", c.cca],
+    ["Home Care: % do faturamento", c.hc], ["Home Care: nº de cotas", c.cotas], ["Status que contam", (c.status || []).join(", ")],
+    ["Arquivo de critérios", S.crit ? S.crit.nome_arquivo + " (vigente desde " + mesNome(compDe(S.crit)) + ")" : "Regra padrão"], [],
+    ["Equipe", "Função", "Nomes no sistema", "Cota Home Care"], ...S.cfg.equipe.map((p) => [p.nome, p.funcao || "Fora", (p.sistema || []).join(", "), p.hc ? "Sim" : "Não"])]), "Critérios e equipe");
+  if (comConfig) { const ws = XLSX.utils.aoa_to_sheet([[JSON.stringify({ v: 1, mes: S.mes, hcFat: S.cfg.hcFat, equipe: S.cfg.equipe.map(({ novo, ...p }) => p), crit: c, critArquivo: S.crit ? S.crit.id : null, base: S.base ? S.base.id : null })]]);
+    XLSX.utils.book_append_sheet(wb, ws, "_config"); wb.Workbook = { Sheets: wb.SheetNames.map((n) => ({ Hidden: n === "_config" ? 1 : 0 })) }; }
+  return wb;
+}
+
+/* ---------- PDF no padrão Vital ---------- */
+let LOGO = null;
+async function logo() { if (LOGO) return LOGO; try { const b = await (await fetch("/vitalagroenegocios/logo.png")).blob(); LOGO = await new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); }); } catch {} return LOGO; }
+async function gerarPdf() {
+  if (!window.jspdf) throw new Error("A biblioteca de PDF não carregou; recarregue a página.");
+  const R = S.res, c = S.critParams;
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: "pt", format: "a4" });
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 40;
+  const VERDE = [0, 88, 47], VERDE2 = [0, 121, 65], CINZA = [87, 102, 90], CLARO = [225, 242, 229];
+  const lg = await logo();
+  if (lg) doc.addImage(lg, "PNG", M, M - 8, 46, 46);
+  doc.setTextColor(...VERDE); doc.setFont("helvetica", "bold"); doc.setFontSize(17);
+  doc.text("Premiação COE e CCA · " + mesNome(S.mes), M + 58, M + 8);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(...CINZA);
+  doc.text(`${S.emp} · competência ${mm(S.mes)} · base do COE: ${S.base ? S.base.nome_arquivo : "–"}`, M + 58, M + 24);
+  doc.text("Vital Agro & Negócios – BPO Financeiro", M + 58, M + 37);
+  doc.setDrawColor(...VERDE2); doc.setLineWidth(1.4); doc.line(M, M + 48, W - M, M + 48);
+  // indicadores
+  const tiles = [["Remoções particulares", String(R.qtdValidas)], ["Faturamento particular", brl(R.fatValido)], ["Faturamento Home Care", brl(S.cfg.hcFat)], ["Total de prêmios", brl(R.tot.total)]];
+  const tw = (W - 2 * M - 3 * 8) / 4; let y = M + 62;
+  tiles.forEach(([k, v], i) => { const x = M + i * (tw + 8); doc.setFillColor(...CLARO); doc.roundedRect(x, y, tw, 46, 6, 6, "F");
+    doc.setFontSize(7.5); doc.setTextColor(...CINZA); doc.setFont("helvetica", "bold"); doc.text(k.toUpperCase(), x + 9, y + 15);
+    doc.setFontSize(13); doc.setTextColor(...VERDE); doc.text(v, x + 9, y + 35); });
+  y += 62;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...VERDE2); doc.text("Premiação por pessoa", M, y); y += 6;
+  doc.autoTable({ startY: y, margin: { left: M, right: M }, theme: "grid",
+    head: [["Nome", "Função", "Remoções", "Faturado", `Particular (${pct(c.op)})`, `CCA (${pct(c.cca)})`, "Home Care", "Total"]],
+    body: R.pessoas.map((p) => [p.nome, p.funcao, String(p.remocoes), brl(p.faturado), brl(p.part), brl(p.cca), brl(p.hc), brl(p.total)]),
+    foot: [["Total", "", String(R.tot.remocoes), brl(R.tot.faturado), brl(R.tot.part), brl(R.tot.cca), brl(R.tot.hc), brl(R.tot.total)]],
+    styles: { fontSize: 8.6, cellPadding: 4.5, lineColor: [211, 222, 205] }, headStyles: { fillColor: VERDE, textColor: 255, fontStyle: "bold" },
+    footStyles: { fillColor: CLARO, textColor: VERDE, fontStyle: "bold" }, columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right", fontStyle: "bold" } } });
+  y = doc.lastAutoTable.finalY + 18;
+  // critérios aplicados
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...VERDE2); doc.text("Critérios aplicados", M, y); y += 6;
+  doc.autoTable({ startY: y, margin: { left: M, right: M }, theme: "plain",
+    body: [["Operador COE", `${pct(c.op)} de cada remoção particular fechada por ele, de qualquer valor`],
+      ["CCA", `${pct(c.cca)} da soma das remoções particulares válidas (${brl(R.fatValido)})`],
+      ["Home Care", `${pct(c.hc)} do faturamento de Home Care (${brl(S.cfg.hcFat)}), dividido em ${c.cotas} cotas de ${brl(R.cota)}`],
+      ["Fichas que contam", `Particulares com status ${(c.status || []).join(", ")} e valor maior que zero`],
+      ["Arquivo de critérios", S.crit ? `${S.crit.nome_arquivo}, vigente desde ${mesNome(compDe(S.crit))}` : "Regra padrão da planilha de premiação"]],
+    styles: { fontSize: 8.6, cellPadding: 3.5, textColor: [43, 43, 43] }, columnStyles: { 0: { cellWidth: 110, fontStyle: "bold", textColor: VERDE } } });
+  y = doc.lastAutoTable.finalY + 12;
+  if (R.alertas.length) {
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(179, 38, 30); doc.text("Pendências", M, y); y += 6;
+    doc.autoTable({ startY: y, margin: { left: M, right: M }, theme: "plain", body: R.alertas.map((a) => ["•", a.txt]),
+      styles: { fontSize: 8.6, cellPadding: 3, textColor: [179, 38, 30] }, columnStyles: { 0: { cellWidth: 12 } } });
+    y = doc.lastAutoTable.finalY + 12;
+  }
+  // fichas
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...VERDE2);
+  if (y > H - 120) { doc.addPage(); y = M; }
+  doc.text("Ficha a ficha", M, y); y += 6;
+  doc.autoTable({ startY: y, margin: { left: M, right: M, bottom: 40 }, theme: "grid",
+    head: [["Ficha", "Data", "Operador", "Ambulância", "Valor", "Prêmio", "Situação"]],
+    body: R.linhas.map((l) => [l.ficha, l.data, l.pessoa || l.operador, l.ambulancia || "–", brl(l.valor), brl(l.premio), l.premia ? "Premiada" : l.motivo]),
+    styles: { fontSize: 8, cellPadding: 3.5, lineColor: [211, 222, 205] }, headStyles: { fillColor: VERDE, textColor: 255, fontStyle: "bold" },
+    columnStyles: { 4: { halign: "right" }, 5: { halign: "right" } },
+    didParseCell: (d) => { if (d.section === "body" && R.linhas[d.row.index] && !R.linhas[d.row.index].premia) d.cell.styles.textColor = [150, 150, 150]; } });
+  const n = doc.internal.getNumberOfPages(), gerado = new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  for (let p = 1; p <= n; p++) { doc.setPage(p); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(120);
+    doc.text(`Vital Agro & Negócios · BPO Financeiro Grupo Arcanjos · gerado em ${gerado}`, M, H - 20); doc.text(`Página ${p} de ${n}`, W - M, H - 20, { align: "right" }); }
+  return doc;
+}
+
+addEventListener("beforeunload", (e) => { if (S.sujo) { e.preventDefault(); e.returnValue = ""; } });
+iniciar().catch((e) => falha("Erro ao abrir: " + (e.message || e)));
+})();
+</script>
+</body>
+</html>

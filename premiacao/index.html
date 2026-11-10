@@ -82,7 +82,7 @@ td.num,th.num{text-align:right;white-space:nowrap}
 .arq{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface-2)}
 .arq .tx{flex:1;min-width:180px}
 .arq .tx b{display:block}
-.chip{display:inline-block;border-radius:999px;padding:3px 10px;font-size:.8rem;font-weight:700;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.chip{display:inline-block;border-radius:999px;padding:3px 10px;font-size:.8rem;font-weight:700;background:var(--surface-2);color:var(--muted);white-space:normal;line-height:1.35}
 .chip.v{background:var(--ok-bg);color:var(--ok)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
@@ -101,7 +101,32 @@ tr.tot td{font-weight:700;background:var(--surface-2)}
 details summary{cursor:pointer;color:var(--brand);font-weight:700}
 .sug{font-size:.86rem;color:var(--info)}
 .sug button{margin-left:6px}
-#selEmp{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;max-width:200px}
+#selEmp{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%}
+.passo>div,.card>*{min-width:0}
+.cab{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end}
+.cab .sels{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:10px}
+.pubs{display:grid;gap:8px}
+.acoes{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:640px){
+  .top .brandtxt span{display:none}
+  .top .brandtxt b{font-size:1rem;line-height:1.2}
+  .card{padding:16px}
+  .passo{grid-template-columns:minmax(0,1fr);gap:8px}
+  .num1{width:28px;height:28px;font-size:.9rem}
+  .cab{grid-template-columns:minmax(0,1fr)}
+  .cab .sels{grid-template-columns:minmax(0,1fr)}
+  .tile .v{font-size:1.1rem}
+  .acoes .btn{flex:1 1 auto}
+  table.eq thead{display:none}
+  table.eq,table.eq tbody,table.eq tr,table.eq td{display:block;width:100%}
+  table.eq tr{border-bottom:1px solid var(--line);padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px}
+  table.eq td{border:0;padding:0}
+  table.eq td[data-l]::before{content:attr(data-l);display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:3px}
+  table.eq td.nm,table.eq td.sy{grid-column:1/-1}
+  table.eq input[type=text]{min-width:0}
+  table.eq select{width:100%;min-width:0}
+  .res table{font-size:.85rem} .res th,.res td{padding:7px 8px}
+}
 </style>
 <script src="/vitalagroenegocios/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
@@ -116,7 +141,6 @@ details summary{cursor:pointer;color:var(--brand);font-weight:700}
     <a class="logo" href="/vitalagroenegocios/" title="Página inicial da Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
     <div class="brandtxt"><b>Premiação COE e CCA</b><span id="subEmp">Área do cliente</span></div>
     <div class="spacer"></div>
-    <select id="selEmp" aria-label="Empresa" hidden></select>
     <a class="tab" href="/vitalagroenegocios/cliente/#docs">Entregáveis</a>
   </div>
 </header>
@@ -168,9 +192,6 @@ async function iniciar() {
   if (!S.empresas.length) return falha(S.adm ? "Nenhuma empresa da Arcanjos cadastrada nos Entregáveis ainda. Publique um entregável para a Arcanjos ou crie o acesso dela na Área do cliente." : "Ainda não há premiação do COE publicada para a sua empresa.");
   let salvo = null; try { salvo = localStorage.getItem("coe.emp"); } catch {}
   S.emp = S.empresas.includes(salvo) ? salvo : (S.empresas.find((e) => /health/i.test(e)) || S.empresas[0]);
-  const sel = $("#selEmp");
-  if (S.empresas.length > 1) { sel.hidden = false; sel.innerHTML = S.empresas.map((e) => `<option${e === S.emp ? " selected" : ""}>${esc(e)}</option>`).join("");
-    sel.onchange = async () => { if (S.sujo && !confirm("Há alterações não publicadas. Trocar de empresa mesmo assim?")) { sel.value = S.emp; return; } S.emp = sel.value; try { localStorage.setItem("coe.emp", S.emp); } catch {} S.mes = ""; await carregar(); }; }
   await carregarPainel();
   await carregar();
 }
@@ -244,12 +265,16 @@ function render() {
   const sug = hcDoPainel(S.mes);
   $("#app").innerHTML = `
   <div class="card stack">
-    <div class="row" style="justify-content:space-between;gap:10px">
-      <div><div class="eyebrow">${esc(S.emp)}</div><h2 style="font-size:1.35rem">Premiação COE e CCA · ${mesNome(S.mes)}</h2>
+    <div class="cab">
+      <div><div class="eyebrow">${esc(S.emp)}</div><h2 style="font-size:1.3rem">Premiação · ${mesNome(S.mes)}</h2>
         <p class="note">${S.mem ? `Fechamento publicado em ${fmtD(S.mem.criado_em)}.` : S.adm ? "Ainda não publicado para o cliente." : "Fechamento ainda não publicado."}</p></div>
-      <div class="field" style="min-width:180px"><label for="selMes">Mês de competência</label>
+      <div class="sels">
+        ${S.empresas.length > 1 ? `<div class="field"><label for="selEmp">Empresa</label><select id="selEmp">${S.empresas.map((e) => `<option${e === S.emp ? " selected" : ""}>${esc(e)}</option>`).join("")}</select></div>` : ""}
+        <div class="field"><label for="selMes">Mês de competência</label>
         <select id="selMes">${meses.map((m) => `<option value="${m}" ${m === S.mes ? "selected" : ""}>${mesNome(m)}${memDo(m) ? " · publicado" : baseDo(m) ? " · base enviada" : ""}</option>`).join("")}</select></div>
+      </div>
     </div>
+    ${pdfsHtml()}
   </div>
 
   <div class="card passo ${S.base ? "ok" : "pend"}"><div class="num1">1</div><div class="stack">
@@ -288,12 +313,12 @@ function render() {
   <div class="card passo ${S.res && !S.res.alertas.length ? "ok" : ""}"><div class="num1">3</div><div class="stack">
     <div><h3 style="font-size:1.1rem">Equipe e Home Care</h3><p class="note">${ro ? "Quem participa da premiação neste mês." : "Quem é COE ou CCA e quem entra nas cotas do Home Care. Os operadores novos que aparecem na base entram aqui sozinhos. Um mesmo nome pode ter mais de uma grafia no sistema: separe por vírgula."}</p></div>
     <div class="tablewrap"><table class="eq"><thead><tr><th>Nome</th><th>Como aparece no sistema</th><th>Função</th><th>Cota Home Care</th>${ro ? "" : "<th></th>"}</tr></thead><tbody>
-      ${S.cfg.equipe.map((p, i) => ro ? `<tr><td>${esc(p.nome)}</td><td>${esc((p.sistema || []).join(", "))}</td><td>${esc(p.funcao || "Fora")}</td><td>${p.hc ? "Sim" : "Não"}</td></tr>` :
-        `<tr><td><input type="text" data-eq="${i}" data-k="nome" value="${esc(p.nome)}" aria-label="Nome">${p.novo ? ' <span class="chip">novo</span>' : ""}</td>
-          <td><input type="text" data-eq="${i}" data-k="sistema" value="${esc((p.sistema || []).join(", "))}" aria-label="Nome no sistema"></td>
-          <td><select data-eq="${i}" data-k="funcao" aria-label="Função">${[["COE", "COE"], ["CCA", "CCA"], ["", "Fora da premiação"]].map(([v, l]) => `<option value="${v}" ${(p.funcao || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
-          <td><input type="checkbox" data-eq="${i}" data-k="hc" ${p.hc ? "checked" : ""} aria-label="Cota de Home Care"></td>
-          <td><button class="btn sm ghost" data-tirar="${i}" type="button">Remover</button></td></tr>`).join("") || `<tr><td colspan="5" class="note">Envie a base do mês para listar os operadores.</td></tr>`}
+      ${S.cfg.equipe.map((p, i) => ro ? `<tr><td class="nm" data-l="Nome">${esc(p.nome)}</td><td class="sy" data-l="No sistema">${esc((p.sistema || []).join(", ")) || "–"}</td><td data-l="Função">${esc(p.funcao || "Fora")}</td><td data-l="Home Care">${p.hc ? "Sim" : "Não"}</td></tr>` :
+        `<tr><td class="nm" data-l="Nome"><input type="text" data-eq="${i}" data-k="nome" value="${esc(p.nome)}" aria-label="Nome">${p.novo ? ' <span class="chip">novo</span>' : ""}</td>
+          <td class="sy" data-l="Como aparece no sistema"><input type="text" data-eq="${i}" data-k="sistema" value="${esc((p.sistema || []).join(", "))}" aria-label="Nome no sistema"></td>
+          <td data-l="Função"><select data-eq="${i}" data-k="funcao" aria-label="Função">${[["COE", "COE"], ["CCA", "CCA"], ["", "Fora da premiação"]].map(([v, l]) => `<option value="${v}" ${(p.funcao || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
+          <td data-l="Cota Home Care"><input type="checkbox" data-eq="${i}" data-k="hc" ${p.hc ? "checked" : ""} aria-label="Cota de Home Care"></td>
+          <td><button class="btn sm ghost" data-tirar="${i}" type="button">Remover</button></td></tr>`).join("") || `<tr><td colspan="5" class="note">${S.adm ? "Envie a base do mês para listar os operadores." : "Sem equipe registrada para este mês."}</td></tr>`}
     </tbody></table></div>
     ${ro ? "" : `<div><button class="btn sm" id="addP" type="button">+ Adicionar pessoa (ex.: CCA)</button></div>`}
     <div class="grid2"><div class="field"><label for="hcFat">Faturamento do Home Care em ${mesNome(S.mes)} (R$)</label>
@@ -306,13 +331,20 @@ function render() {
   ligar();
 }
 
+function pdfsHtml() {
+  if (!S.pdfs || !S.pdfs.length) return "";
+  const atual = pdfDo(S.mes);
+  return `<details ${atual ? "" : ""}><summary>Relatórios publicados (${S.pdfs.length})</summary><div class="pubs" style="margin-top:10px">
+    ${S.pdfs.map((a) => `<div class="arq"><div class="tx"><b>${esc(a.titulo)}</b><span class="note">${a.descricao ? esc(a.descricao) + " · " : ""}publicado em ${fmtD(a.criado_em)}</span></div><button class="btn sm primary" data-pdfpub="${a.id}" type="button">Baixar PDF</button></div>`).join("")}
+  </div></details>${atual ? `<div class="acoes"><button class="btn primary" data-pdfpub="${atual.id}" type="button">Baixar o PDF publicado de ${mesNome(S.mes)}</button></div>` : ""}`;
+}
 function resultadoHtml() {
   const R = S.res;
   if (!R) return `<div class="card"><p class="note">${S.base ? "Não foi possível ler a base." : "O resultado aparece aqui depois que a base do mês for enviada."}</p></div>`;
   const pend = R.alertas;
-  return `<div class="card stack">
+  return `<div class="card stack res">
     <div class="row" style="justify-content:space-between"><h3 style="font-size:1.15rem">Resultado de ${mesNome(S.mes)}</h3>
-      <div class="row" style="gap:8px"><button class="btn sm" id="bPdf" type="button">Baixar PDF</button><button class="btn sm" id="bXls" type="button">Baixar Excel</button>
+      <div class="acoes"><button class="btn sm" id="bPdf" type="button">Baixar PDF</button><button class="btn sm" id="bXls" type="button">Baixar Excel</button>
       ${S.adm ? `<button class="btn sm primary" id="bPub" type="button">${S.mem ? "Republicar" : "Publicar"} para a ${esc(S.emp)}</button>` : ""}</div></div>
     <div class="tiles">
       <div class="tile"><span class="k">Remoções particulares válidas</span><span class="v">${R.qtdValidas}</span></div>
@@ -335,6 +367,8 @@ function resultadoHtml() {
 function ligar() {
   $("#selMes").onchange = async (e) => { if (S.sujo && !confirm("Há alterações não publicadas. Trocar de mês mesmo assim?")) { e.target.value = S.mes; return; } S.mes = e.target.value; await abrirMes(); };
   document.querySelectorAll("[data-abrir]").forEach((b) => b.onclick = () => abrirArq(S.arqs.find((a) => a.id === b.dataset.abrir)));
+  document.querySelectorAll("[data-pdfpub]").forEach((b) => b.onclick = () => abrirArq(S.pdfs.find((a) => a.id === b.dataset.pdfpub)));
+  const se = $("#selEmp"); if (se) se.onchange = async () => { if (S.sujo && !confirm("Há alterações não publicadas. Trocar de empresa mesmo assim?")) { se.value = S.emp; return; } S.emp = se.value; try { localStorage.setItem("coe.emp", S.emp); } catch {} S.mes = ""; await carregar(); };
   const pdfB = $("#bPdf"); if (pdfB) pdfB.onclick = async () => { try { const d = await gerarPdf(); d.save(nomePdf()); } catch (e) { toast(e.message); } };
   const xB = $("#bXls"); if (xB) xB.onclick = () => { const wb = gerarXlsx(); XLSX.writeFile(wb, nomeXls()); };
   if (!S.adm) return;

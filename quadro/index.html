@@ -230,7 +230,10 @@ button.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg
 .k{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:grid;gap:6px;text-align:left;width:100%}
 .k:hover{border-color:var(--brand-2)}
 .k.drag{opacity:.4}
-.k .t{font-weight:600;line-height:1.3}
+.k .t{font-weight:600;line-height:1.3;overflow-wrap:anywhere;min-width:0}
+.board,.col,.k,.k .m{min-width:0}.k{max-width:100%;overflow:hidden}.col{overflow:hidden}
+.k .pill{max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35;padding:2px 8px}
+.pess{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.pess .lbl{font-size:.8rem;color:var(--muted);font-weight:700;margin-right:2px}.pess .chipb{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px}.pess .chipb .av{width:22px;height:22px;font-size:.7rem;margin-left:0}.pess .chipb[data-pp=""]{padding:6px 12px}
 .k .m{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.78rem;color:var(--muted)}
 .pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 8px;font-weight:700;font-size:.74rem;background:var(--surface-2);color:var(--muted);white-space:nowrap}
 .pill.atr{background:var(--bad-bg);color:var(--bad)} .pill.prox{background:var(--warn-bg);color:var(--warn)} .pill.okp{background:var(--ok-bg);color:var(--ok)}
@@ -655,6 +658,7 @@ function render() {
     <select id="fCri" class="fsel" aria-label="Criado por"><option value="">Criado por: todos</option><option value="auto"${S.fCriado === "auto" ? " selected" : ""}>Criado por: rotina automática</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fCriado === m.user_id ? " selected" : ""}>Criado por: ${esc(m.nome)}</option>`).join("")}</select>
     <select id="fAtr" class="fsel" aria-label="Atribuído a"><option value="">Atribuído a: todos</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fAtrib === m.user_id ? " selected" : ""}>Atribuído a: ${esc(m.nome)}</option>`).join("")}</select>
     <div class="chips">${F.map(([v, t]) => `<button class="chipb" type="button" data-f="${v}" aria-pressed="${S.filtro === v}">${t}</button>`).join("")}</div>
+    ${S.pessoas.length > 1 ? `<div class="pess" role="group" aria-label="Filtrar por pessoa"><span class="lbl">Pessoa:</span><button class="chipb" type="button" data-pp="" aria-pressed="${!S.fAtrib}">Todas</button>${S.pessoas.map(m => `<button class="chipb" type="button" data-pp="${m.user_id}" aria-pressed="${S.fAtrib === m.user_id}" title="Tarefas de ${esc(m.nome)}"><span class="av">${esc(ini(m.nome))}</span>${esc(m.nome.split(" ")[0])}</button>`).join("")}</div>` : ""}
     ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}
     <div class="chips" role="group" aria-label="Visualização"><button class="chipb" type="button" data-vis="quadro" aria-pressed="${S.vis !== "lista"}">▦ Quadro</button><button class="chipb" type="button" data-vis="lista" aria-pressed="${S.vis === "lista"}">☰ Lista</button>${S.vis === "lista" ? "" : `<button class="chipb" type="button" id="bSel" aria-pressed="${!!S.modoSel}" title="Marcar várias tarefas para mudar de uma vez">☑ Selecionar</button>`}</div></div>
   </div>
@@ -687,6 +691,7 @@ function render() {
   $("#fAtr").onchange = (e) => { S.fAtrib = e.target.value; render(); };
   if ($("#bMem")) $("#bMem").onclick = abrirMembros;
   ligarLote();
+  $$("[data-pp]").forEach(b => b.onclick = () => { S.fAtrib = S.fAtrib === b.dataset.pp ? "" : b.dataset.pp; render(); });
   $$(".k").forEach(b => {
     if (S.sel.has(b.dataset.id)) b.classList.add("sel");
     b.onclick = () => { if (S.modoSel) { S.sel.has(b.dataset.id) ? S.sel.delete(b.dataset.id) : S.sel.add(b.dataset.id); render(); return; } abrir(b.dataset.id); };

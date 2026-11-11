@@ -1,8 +1,7 @@
 <!doctype html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="color-scheme" content="light">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#00582F">
 <meta name="robots" content="noindex">
@@ -381,7 +380,7 @@ function abrirPorUrl(u) {
   try { const x = new URL(u, location.href); const c = x.searchParams.get("card"); if (c) irParaNotif({ cartao: c, id: Number(x.searchParams.get("n")) || 0, lida: !x.searchParams.get("n") }); } catch {}
 }
 if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.abrir) abrirPorUrl(e.data.abrir); });
-const VERSAO = "20261109141146";
+const VERSAO = "__VERSAO__";
 async function checarVersao() {
   try {
     const t = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.text());
@@ -422,7 +421,7 @@ async function iniciar() {
   if (!S.proprios.length && !S.outros.length) return falha("Você ainda não participa de nenhum quadro. Fale com a Vital.");
   let salvo = new URLSearchParams(location.search).get("q"); if (!salvo) try { salvo = localStorage.getItem("cq.q"); } catch {}
   S.marc = salvo === MARC && S.outros.length > 0 || !S.proprios.length;
-  S.q = S.marc ? null : (S.proprios.find(q => q.id === salvo) || S.proprios[0]);
+  S.q = S.marc ? null : (S.proprios.find(q => q.id === salvo) || (S.time && S.proprios.find(q => q.geral && q.empresa === "Vital Agro & Negócios")) || S.proprios[0]);
   const sel = $("#selQ");
   const opts = S.proprios.map(q => [q.id, (S.time ? q.empresa + " · " : "") + q.nome]);
   if (S.outros.length) opts.push([MARC, `📌 Marcadas para mim`]);

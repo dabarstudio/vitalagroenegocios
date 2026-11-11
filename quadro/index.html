@@ -284,6 +284,17 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
 @media (max-width:640px){#kSt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cki{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) 22px;grid-template-areas:"c t t x" ". r p .";row-gap:4px}.cki input[type=checkbox]{grid-area:c}.cki .ckt{grid-area:t}.cki select{grid-area:r}.cki input[type=date]{grid-area:p}.cki .x{grid-area:x}}
 .ck label{font-weight:400!important}
 .vazio{color:var(--muted);font-size:.85rem;padding:6px 4px}
+/* v-fix: rodape no fim da pagina (nao flutua no iPhone) + cartoes nunca passam da coluna */
+html,body{overflow-x:clip}
+.rodape{position:static;margin-top:8px}
+body{padding-bottom:0}
+.toast,.convite{bottom:calc(16px + env(safe-area-inset-bottom,0px))!important}
+.lote{bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+.col{grid-template-columns:minmax(0,1fr)}
+.k{grid-template-columns:minmax(0,1fr)}
+.k>*,.k .m>*{max-width:100%;min-width:0}
+.k .m .av{flex:none}
+.k .m{overflow-wrap:anywhere}
 </style>
 <script src="/vitalagroenegocios/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>

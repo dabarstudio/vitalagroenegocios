@@ -414,19 +414,24 @@ function renderLista(){
   let ps = S.projetos.slice();
   if (f.status==="ativos") ps = ps.filter(p=>["planejado","andamento","pausado"].includes(p.status)); else if (f.status) ps = ps.filter(p=>p.status===f.status);
   if (f.serv) ps = ps.filter(p=>p.servico===f.serv);
-  ps.sort((a,b)=>(a.prazo||"9999").localeCompare(b.prazo||"9999"));
+  let ord = "az"; try { ord = localStorage.getItem("proj.ord") || "az"; } catch {}
+  const az = (x,y) => String(x||"").localeCompare(String(y||""), "pt", {sensitivity:"base"});
+  const ORDS = { az:(a,b)=>az(a.nome,b.nome), za:(a,b)=>az(b.nome,a.nome), cli:(a,b)=>az(a.cliente||"Interno",b.cliente||"Interno")||az(a.nome,b.nome), prazo:(a,b)=>(a.prazo||"9999").localeCompare(b.prazo||"9999")||az(a.nome,b.nome) };
+  ps.sort(ORDS[ord] || ORDS.az);
   v.innerHTML = `<div class="row" style="justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><div class="eyebrow">Equipe Vital</div><h2 style="font-size:1.35rem">Projetos</h2></div>
       ${S.socio?`<button class="btn primary" id="novoP">+ Novo projeto</button>`:""}</div>
     <div class="row" style="gap:10px;flex-wrap:wrap">
       <div class="field" style="min-width:170px"><label for="fSt">Situação</label><select id="fSt"><option value="ativos">Ativos</option><option value="">Todos</option>${Object.entries(STP).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>
       <div class="field" style="min-width:190px"><label for="fSv">Serviço</label><select id="fSv"><option value="">Todos</option>${opSERV("")}</select></div>
+      <div class="field" style="min-width:170px"><label for="fOrd">Ordenar</label><select id="fOrd"><option value="az">Nome A → Z</option><option value="za">Nome Z → A</option><option value="cli">Cliente A → Z</option><option value="prazo">Prazo mais próximo</option></select></div>
       <div class="vis chips" role="group" aria-label="Visualização"><button type="button" class="chip" data-vis="cards" aria-pressed="${vis==="cards"}">▦ Cards</button><button type="button" class="chip" data-vis="lista" aria-pressed="${vis==="lista"}">☰ Lista</button></div>
     </div>
     ${ps.length ? (vis==="lista" ? listaP(ps) : `<div class="pgrid">${ps.map(cardP).join("")}</div>`) : `<div class="card empty">${S.projetos.length?"Nenhum projeto com esse filtro.":S.socio?"Nenhum projeto ainda. Clique em “Novo projeto”.":"Você ainda não foi incluído em nenhum projeto."}</div>`}
     ${S.socio && SEL.size ? barraLote(ps) : (S.socio && ps.length ? `<p class="note2" style="margin:0">Dica: marque a caixinha “selecionar” dos projetos para mudar situação, responsável ou prazo de vários de uma vez.</p>` : "")}`;
-  $("#fSt").value = f.status; $("#fSv").value = f.serv;
+  $("#fSt").value = f.status; $("#fSv").value = f.serv; $("#fOrd").value = ORDS[ord] ? ord : "az"; $("#fOrd").onchange = e => { try { localStorage.setItem("proj.ord", e.target.value); } catch {} renderLista(); };
   $("#fSt").onchange = e => { f.status = e.target.value; renderLista(); }; $("#fSv").onchange = e => { f.serv = e.target.value; renderLista(); };
   v.onclick = e => {
+    const ob=e.target.closest("[data-ord]"); if (ob) { const k = ob.dataset.ord === "az" && ord === "az" ? "za" : ob.dataset.ord; try { localStorage.setItem("proj.ord", k); } catch {} renderLista(); return; }
     const vb=e.target.closest("[data-vis]"); if (vb) { try { localStorage.setItem("proj.vis", vb.dataset.vis); } catch {} renderLista(); return; }
     const ck=e.target.closest("[data-sel]"); if (ck) { if (ck.checked) SEL.add(ck.dataset.sel); else SEL.delete(ck.dataset.sel); renderLista(); return; }
     if (e.target.closest(".pck")) return;
@@ -439,7 +444,7 @@ function renderLista(){
 const SEL = new Set();
 function listaP(ps){
   const todos = S.socio && ps.length && ps.every(p => SEL.has(p.id));
-  return `<div class="card" style="padding:6px 10px;overflow-x:auto"><table class="ltab"><thead><tr>${S.socio?`<th style="width:34px"><input type="checkbox" id="selTodos" aria-label="Selecionar todos" ${todos?"checked":""}></th>`:""}<th>Projeto</th><th>Cliente</th><th>Serviço</th><th>Situação</th><th>Responsável</th><th>Prazo</th><th>Andamento</th></tr></thead><tbody>
+  return `<div class="card" style="padding:6px 10px;overflow-x:auto"><table class="ltab"><thead><tr>${S.socio?`<th style="width:34px"><input type="checkbox" id="selTodos" aria-label="Selecionar todos" ${todos?"checked":""}></th>`:""}<th data-ord="az" style="cursor:pointer" title="Ordenar por nome (clique de novo para inverter)">Projeto ⇅</th><th data-ord="cli" style="cursor:pointer" title="Ordenar por cliente">Cliente ⇅</th><th>Serviço</th><th>Situação</th><th>Responsável</th><th data-ord="prazo" style="cursor:pointer" title="Ordenar por prazo">Prazo ⇅</th><th>Andamento</th></tr></thead><tbody>
     ${ps.map(p => { const pr = progresso(p.id), venc = p.prazo && p.prazo < hoje() && !["concluido","cancelado"].includes(p.status);
       return `<tr data-p="${esc(p.id)}" class="${SEL.has(p.id)?"sel":""}">${S.socio?`<td><input type="checkbox" data-sel="${esc(p.id)}" aria-label="Selecionar ${esc(p.nome)}" ${SEL.has(p.id)?"checked":""}></td>`:""}<td><b>${esc(p.nome)}</b>${p.pro_bono?' <span class="qd ok">pró bono</span>':""}</td><td>${esc(p.cliente||"Interno")}</td><td>${esc(SERV[p.servico]||p.servico||"")}</td><td><span class="st s-${p.status}">${STP[p.status]}</span></td><td>${esc(nome(p.responsavel))}</td><td class="${venc?"late":""}">${fmtD(p.prazo)}</td><td style="min-width:110px"><div class="bar" title="${pct(pr)}"><i style="width:${Math.round(pr*100)}%"></i></div></td></tr>`; }).join("")}</tbody></table></div>`;
 }

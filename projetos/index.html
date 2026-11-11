@@ -1,8 +1,7 @@
 <!doctype html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="color-scheme" content="light">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#00582F">
 <title>Projetos · Vital Agro & Negócios</title>
@@ -338,7 +337,7 @@ function progresso(pid){ const ts=tarefasDe(pid); return ts.length ? ts.filter(t
 function abas(){
   if (!S.me) { $("#tabsTop").innerHTML = $("#tabsBottom").innerHTML = ""; return; }
   const T = S.ext ? [["lista","Projetos"],["minhas","Minhas tarefas"]] : [["lista","Projetos"],["minhas","Minhas tarefas"],["ia","Assistente"],["quadros","Quadros"],["clientes","Clientes"],["comercial","Comercial"],["kpi","Indicadores"],["vsm","Fluxo de valor"]].concat(S.socio?[["contratos","Contratos"],["financeiro","Financeiro"],["leg","Legislação"]]:[]).concat(S.papel==="admin"?[["equipe","Equipe"]]:[]);
-  const DICA = {lista:"Trabalhos contratados pelos clientes", ia:"Peça análises e documentos ao assistente", minhas:"Tudo o que está com você", quadros:"Kanban: Business (demandas) e Funil de vendas (leads)", clientes:"Cadastro de clientes", comercial:"Indicadores do Funil de vendas", kpi:"Prazos, horas e rentabilidade", vsm:"Etapas padrão de cada serviço", contratos:"Contratos, aditivos e procurações dos clientes (só sócios)", financeiro:"Financeiro da Vital (só sócios)", leg:"Novidades da legislação para aprovar", equipe:"Logins e acessos da equipe"};
+  const DICA = {lista:"Trabalhos contratados pelos clientes", ia:"Peça análises e documentos ao assistente", minhas:"Tudo o que está com você", quadros:"Funil de vendas (leads) e acesso ao quadro de tarefas", clientes:"Cadastro de clientes", comercial:"Indicadores do Funil de vendas", kpi:"Prazos, horas e rentabilidade", vsm:"Etapas padrão de cada serviço", contratos:"Contratos, aditivos e procurações dos clientes (só sócios)", financeiro:"Financeiro da Vital (só sócios)", leg:"Novidades da legislação para aprovar", equipe:"Logins e acessos da equipe"};
   const h = T.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" title="${DICA[k]||""}" aria-selected="${S.cur===k||(k==="lista"&&S.cur==="proj")}">${l}</button>`).join("") + (S.ext ? "" : `<a class="tab" href="/vitalagroenegocios/simulador/" title="Simulador tributário">Simulador</a>`) + `<a class="tab" href="/vitalagroenegocios/cliente/" title="Início da área Vital: entregáveis, mídias, acessos">Área Vital</a>` + (S.ext ? "" : `<a class="tab" href="https://www.iobonline.com.br/" target="_blank" rel="noopener" title="IOB Online: entre com o seu login da IOB">IOB Online ↗</a>`);
   $("#tabsTop").innerHTML = h; navInferior(h);
   $("#novoW").innerHTML = S.ext ? "" : `<button class="btn sm" id="btnNovo" title="Criar projeto, demanda, lead ou cliente">+ Novo</button>`;
@@ -355,7 +354,7 @@ document.addEventListener("click", e => { const t=e.target.closest("[data-tab]")
 /* frase curta explicando cada tela (aparece abaixo do título) */
 const AJUDA = {
   lista:"Cada card é um trabalho contratado por um cliente. Clique para ver e mover as tarefas. Ao criar um projeto, o cliente é cadastrado e o cartão entra no Business sozinho.",
-  quadros:"Business = demandas da equipe (os projetos aparecem aqui sozinhos). Funil de vendas = interessados até virarem clientes; ao mover para a coluna de ganho, o projeto e o cliente são criados sozinhos.",
+  quadros:"As demandas da equipe agora ficam no Quadro de tarefas (botão no topo), onde os projetos aparecem sozinhos. Funil de vendas = interessados até virarem clientes; ao mover para a coluna de ganho, o projeto e o cliente são criados sozinhos.",
   clientes:"Todos os clientes da Vital. Clientes novos entram aqui sozinhos quando um projeto é criado ou um negócio é ganho no Funil.",
   comercial:"Resultado do Funil de vendas: quantos leads entraram, quantos viraram clientes e onde agir agora.",
   kpi:"Prazos cumpridos, horas trabalhadas e rentabilidade dos projetos.",
@@ -380,7 +379,8 @@ function escolherNovo(){
     if (k==="tar") { const p=S.projetos.find(x=>x.id===S.proj); if (p) dlgTarefa(p); return; }
     try { await carregarQ(); } catch(x) { toast("Não foi possível carregar: "+(x.message||x)); return; }
     if (k==="cli") { go("clientes"); dlgCliente(); return; }
-    const q = Q.quadros.find(x=>x.tipo===(k==="lead"?"vendas":"tarefas")); if (!q) { toast("Quadro não encontrado."); return; }
+    if (k!=="lead") { location.href="/vitalagroenegocios/quadro/"; return; }
+    const q = Q.quadros.find(x=>x.tipo==="vendas"); if (!q) { toast("Quadro não encontrado."); return; }
     Q.cur = q.id; go("quadros"); dlgCartao(null, colsDe(q.id).find(c=>c.tipo==="etapa")); };
   d.showModal();
 }
@@ -691,7 +691,7 @@ function desenhaMinhas(){
   const h30=S.horas.filter(h=>h.user_id===S.me&&dias(h.data,hoje())<=30).reduce((s,h)=>s+(+h.horas),0);
   const qNome = id => (Q.quadros.find(q=>q.id===id)||{}).nome || "";
   v.innerHTML = `<div><div class="eyebrow">Equipe Vital</div><h2 style="font-size:1.35rem">Minhas tarefas</h2>
-      <p class="note2" style="margin:2px 0 0">Tudo o que está com você: tarefas dos projetos e cartões dos Quadros (demandas do Business e leads do Funil). Atualiza sozinho.</p></div>
+      <p class="note2" style="margin:2px 0 0">Tudo o que está com você: tarefas dos projetos e leads do Funil. As demandas da equipe estão no <a href="/vitalagroenegocios/quadro/">Quadro de tarefas</a>, onde também há a visão “minhas”. Atualiza sozinho.</p></div>
     <div class="kpis"><div class="kpi"><span class="l">Em aberto</span><span class="v">${ts.length+ks.length}</span></div><div class="kpi ${nAtr?"ruim":"bom"}"><span class="l">Atrasadas</span><span class="v">${nAtr}</span></div>
       <div class="kpi"><span class="l">Minhas horas nos últimos 30 dias</span><span class="v">${n1(h30)}</span></div></div>
     ${ts.length?`<h3 style="margin:6px 0 0;font-size:1rem">Tarefas de projetos <span class="note2">(${ts.length})</span></h3><div class="stack">${ts.map(t=>{ const p=S.projetos.find(x=>x.id===t.projeto)||{}; return `<div class="card" style="padding:12px 14px;display:grid;gap:6px"><div class="note2">${esc(p.cliente||"Interno")} · <a href="#" data-ir="${esc(p.id)}">${esc(p.nome||"")}</a></div>${cardT(t).replace('<div class="tk" draggable="true"','<div class="tk" style="border:none;padding:0"')}</div>`; }).join("")}</div>`:""}
@@ -881,7 +881,7 @@ async function carregarQ(forcar){
   if (Q.ok && !forcar) return;
   const [qq, cc, ee, kk, ev, cl, acc] = await Promise.all([todos("quad_quadros"), todos("quad_colunas"), todos("quad_etiquetas"), todos("quad_cartoes"),
     todos("quad_eventos","cartao,de_nome,para_nome,em"), todos("cad_clientes"), sb.from("cofre_acesso").select("user_id")]);
-  Q.quadros = qq.sort((a,b)=>a.ordem-b.ordem); Q.colunas = cc; Q.etiquetas = ee; Q.cartoes = kk; Q.eventos = ev; Q.clientes = cl.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  Q.quadros = qq.filter(q=>q.tipo!=="tarefas").sort((a,b)=>a.ordem-b.ordem); const qIds=new Set(Q.quadros.map(q=>q.id)); Q.colunas = cc.filter(c=>qIds.has(c.quadro)); Q.etiquetas = ee; Q.cartoes = kk.filter(k=>qIds.has(k.quadro)); Q.eventos = ev; Q.clientes = cl.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
   Q.acesso = (acc.data||[]).map(x=>x.user_id);
   Q.cofreOk = S.papel==="admin" || Q.acesso.includes(S.me);
   Q.valores = {};
@@ -921,7 +921,7 @@ function desenhaQuadro(){
   if (!q) { v.innerHTML=`<div class="card empty">Nenhum quadro ainda.</div>`; return; }
   const vendas = q.tipo==="vendas", cols=colsDe(q.id), ks=cartoesFiltrados(q), filtrando = Q.f.busca||Q.f.resp||Q.f.etq||Q.f.atras;
   const etqs = Q.etiquetas.filter(e=>e.quadro===q.id).map(e=>e.nome).sort((a,b)=>a.localeCompare(b,"pt-BR"));
-  v.innerHTML = `<div class="row" style="justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><div class="eyebrow">Equipe Vital · uso interno</div>
+  v.innerHTML = `<div class="row" style="justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><div class="card" style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px;border-left:4px solid var(--brand)"><div><b>Tarefas da equipe: novo quadro</b><div class="note2" style="margin:0">O Business mudou para o quadro novo (o mesmo modelo da TNZ): checklist, comentários, anexos, rotinas, "aguardando alguém" e avisos no celular. Os projetos continuam aparecendo lá sozinhos.</div></div><a class="btn primary sm" href="/vitalagroenegocios/quadro/">Abrir quadro de tarefas</a></div><div class="eyebrow">Equipe Vital · Funil de vendas</div>
       <div class="chips" role="tablist" aria-label="Quadros" style="margin-top:4px">${Q.quadros.map(x=>`<button class="chip" role="tab" data-qq="${x.id}" aria-pressed="${x.id===q.id}">${esc(x.nome)}</button>`).join("")}</div></div>
       <div class="row" style="gap:6px">${S.socio?`<button class="btn sm ghost" id="qCols">Colunas</button>`:""}<button class="btn primary sm" id="qNovo">+ Cartão</button></div></div>
     <div class="qbar">

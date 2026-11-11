@@ -6,7 +6,7 @@
   --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
   --f-num:"IBM Plex Mono",ui-monospace,monospace;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+@media (prefers-color-scheme: dark) and (max-width: 0px){ :root:not([data-theme="light"]){
   --bg:#0D1510; --surface:#152019; --ink:#E3ECE5; --muted:#9BAFA1; --line:#283A2E; --tint:#1A2E21;
   --brand:#5DBB7E; --bar:#405146; color-scheme:dark }}
 :root[data-theme="dark"]{ --bg:#0D1510; --surface:#152019; --ink:#E3ECE5; --muted:#9BAFA1; --line:#283A2E; --tint:#1A2E21; --brand:#5DBB7E; --bar:#405146; color-scheme:dark }
@@ -25,7 +25,7 @@ h1,h2,h3{font-family:var(--f-display);line-height:1.12;margin:0;text-wrap:balanc
 .btn.solid{background:var(--brand-light);color:#0B2A17}
 .btn.line{border-color:rgba(255,255,255,.45);color:#fff}
 .btn.green{background:var(--brand);color:#fff}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .btn.green{color:#0B2A17} }
+@media (prefers-color-scheme: dark) and (max-width: 0px){ :root:not([data-theme="light"]) .btn.green{color:#0B2A17} }
 :root[data-theme="dark"] .btn.green{color:#0B2A17}
 
 /* topo */
@@ -248,7 +248,7 @@ section.blk.tight{padding-block:44px}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:none;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:7px 14px;font:600 .86rem var(--f-body);cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .tabs button[aria-selected="true"]{color:#0B2A17} }
+@media (prefers-color-scheme: dark) and (max-width: 0px){ :root:not([data-theme="light"]) .tabs button[aria-selected="true"]{color:#0B2A17} }
 :root[data-theme="dark"] .tabs button[aria-selected="true"]{color:#0B2A17}
 .nw{display:grid;gap:3px;padding:12px 2px;border-bottom:1px solid var(--line);text-decoration:none}
 .nw:last-child{border-bottom:0}
@@ -263,7 +263,7 @@ section.blk.tight{padding-block:44px}
 .cot .v{font:500 .98rem var(--f-num);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .cot .x{text-align:right;font-size:.75rem;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
 .x.up{color:var(--brand)} .x.dn{color:#C4320A}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .x.dn{color:#F2A08F} }
+@media (prefers-color-scheme: dark) and (max-width: 0px){ :root:not([data-theme="light"]) .x.dn{color:#F2A08F} }
 :root[data-theme="dark"] .x.dn{color:#F2A08F}
 .dolar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;background:var(--tint);border-radius:12px;padding:12px 14px;margin:6px 0 4px;align-items:baseline}
 .dolar .v{font:500 1.12rem var(--f-num);font-variant-numeric:tabular-nums;text-align:right}
@@ -301,7 +301,7 @@ section.blk.tight{padding-block:44px}
 .ep .tx{min-width:0;display:grid;gap:3px}
 @media (max-width:600px){ .ep{grid-template-columns:56px minmax(0,1fr)} .ep .ac{grid-column:2;justify-content:flex-start} }
 .badge{display:inline-block;background:var(--brand);color:#fff;border-radius:999px;padding:1px 9px;font:600 .7rem var(--f-body);margin-left:6px;vertical-align:2px}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .badge{color:#0B2A17} }
+@media (prefers-color-scheme: dark) and (max-width: 0px){ :root:not([data-theme="light"]) .badge{color:#0B2A17} }
 :root[data-theme="dark"] .badge{color:#0B2A17}
 .papo .prox{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--tint);font-size:.92rem}
 .papo .prox b{color:var(--brand)}
@@ -528,7 +528,7 @@ footer .fcols a:hover{text-decoration:underline;color:#fff}
   .ctabar a{flex:1;justify-content:center;min-height:46px}
   body.temcta{padding-bottom:76px}
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ctabar{background:rgba(21,32,25,.96)} }
+@media (prefers-color-scheme: dark) and (max-width: 0px){ :root:not([data-theme="light"]) .ctabar{background:rgba(21,32,25,.96)} }
 @media (prefers-reduced-motion:reduce){ .ctabar{transition:none} }
 /* faixa "já é cliente" */
 .jacli{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px}

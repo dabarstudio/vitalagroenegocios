@@ -411,7 +411,8 @@ async function iniciar() {
   const { data: perfil } = await sb.from("perfis").select("papel, nome").eq("user_id", S.user.id).maybeSingle();
   S.perfil = perfil || { papel: "", nome: S.user.email };
   S.time = ["admin", "equipe"].includes(S.perfil.papel);
-  const { data: qs, error } = await sb.from("cq_quadros").select("*").order("empresa").order("nome");
+  const { data: qs0, error } = await sb.from("cq_quadros").select("*").order("empresa").order("nome");
+  const qs = (qs0 || []).filter(q => !q.wl_escritorio || q.empresa === "Vital Agro & Negócios");
   if (error) return falha("Não foi possível abrir o quadro: " + error.message);
   S.quadros = qs || [];
   const { data: mm } = await sb.from("cq_membros").select("quadro").eq("user_id", S.user.id);

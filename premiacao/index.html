@@ -134,7 +134,7 @@ details summary{cursor:pointer;color:var(--brand);font-weight:700}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="/vitalagroenegocios/premiacao/motor.js?v=1"></script>
+<script src="/vitalagroenegocios/premiacao/motor.js?v=2"></script>
 </head>
 <body>
 <header class="top">
@@ -290,7 +290,7 @@ function render() {
 
   <div class="card passo ${S.crit ? "ok" : ""}"><div class="num1">2</div><div class="stack">
     <div><h3 style="font-size:1.1rem">Critérios de premiação</h3><p class="note">${S.mem && S.cfg.critUsado ? "Percentuais usados neste fechamento publicado." : "Vale o último arquivo de critérios com vigência até este mês."}</p></div>
-    <div class="chips"><span class="chip v">Operador COE: ${pct(c.op)} de cada remoção particular fechada</span><span class="chip v">CCA: ${pct(c.cca)} da soma das particulares</span>
+    <div class="chips"><span class="chip v">Operador (COE e CCA): ${pct(c.op)} de cada remoção particular fechada</span><span class="chip v">CCA: ${pct(c.cca)} da soma das particulares</span>
       <span class="chip v">Home Care: ${pct(c.hc)} do faturamento ÷ ${c.cotas} cotas</span><span class="chip">Status que contam: ${esc((c.status || []).join(", "))}</span></div>
     ${S.crit ? `<div class="arq"><div class="tx"><b>${esc(S.crit.nome_arquivo)}</b><span class="note">vigente desde ${mesNome(compDe(S.crit))} · anexado em ${fmtD(S.crit.criado_em)}</span></div><button class="btn sm" data-abrir="${S.crit.id}">Baixar</button></div>` : `<p class="note">Nenhum arquivo de critérios anexado: valendo a regra padrão acima.</p>`}
     ${S.adm ? `<details id="novoCrit"><summary>Anexar novos critérios</summary>
@@ -513,7 +513,7 @@ async function gerarPdf() {
   // critérios aplicados
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...VERDE2); doc.text("Critérios aplicados", M, y); y += 6;
   doc.autoTable({ startY: y, margin: { left: M, right: M }, theme: "plain",
-    body: [["Operador COE", `${pct(c.op)} de cada remoção particular fechada por ele, de qualquer valor`],
+    body: [["Operadores", `${pct(c.op)} de cada remoção particular fechada por ele (COE ou CCA), de qualquer valor`],
       ["CCA", `${pct(c.cca)} da soma das remoções particulares válidas (${brl(R.fatValido)})`],
       ["Home Care", `${pct(c.hc)} do faturamento de Home Care (${brl(S.cfg.hcFat)}), dividido em ${c.cotas} cotas de ${brl(R.cota)}`],
       ["Fichas que contam", `Particulares com status ${(c.status || []).join(", ")} e valor maior que zero`],

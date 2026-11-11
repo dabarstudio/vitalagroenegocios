@@ -90,8 +90,9 @@ const VCOE = (() => {
       else if (!(f.valor > 0)) motivo = "Valor zerado";
       else if (!particular) motivo = "Não é particular (" + f.tipo + ")";
       else if (!p) motivo = "Operador não cadastrado";
-      else if (p.funcao !== "COE") motivo = p.funcao === "CCA" ? "Fechada pelo CCA" : "Fora da premiação";
-      const premia = valida && p && p.funcao === "COE";
+      else if (p.funcao !== "COE" && p.funcao !== "CCA") motivo = "Fora da premiação";
+      // o CCA também recebe o percentual das remoções particulares que ele mesmo fechou
+      const premia = valida && p && (p.funcao === "COE" || p.funcao === "CCA");
       return { ...f, pessoa: p ? p.nome : "", funcao: p ? p.funcao : "", valida, premia, motivo: premia ? "" : motivo, premio: premia ? r2(f.valor * cfg.op) : 0 };
     });
     const fatValido = r2(linhas.filter((l) => l.valida).reduce((s, l) => s + l.valor, 0));

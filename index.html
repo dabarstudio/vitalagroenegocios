@@ -1,8 +1,7 @@
 <!doctype html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="color-scheme" content="light">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Vital Agro & Negócios · Contabilidade para o campo e a empresa</title>
 <meta name="description" content="Contabilidade, BPO financeiro, regularização fiscal e planejamento tributário para empresas e produtores rurais. Notícias da Reforma Tributária e cotações agrícolas.">
@@ -66,13 +65,6 @@
 
   <section class="blk tight vs-prova" id="prova">
     <div class="wrap">
-      <div class="head" id="vNumH"><span class="eyebrow">Números reais, atualizados pelo nosso sistema</span><h2>O trabalho da Vital em números.</h2></div>
-      <div class="vs-num" id="vNum">
-        <div class="vs-k"><span class="vs-v" data-k="clientes">–</span><span class="vs-l">clientes atendidos</span></div>
-        <div class="vs-k"><span class="vs-v" data-k="concluidos">–</span><span class="vs-l" data-s="projeto entregue">projetos entregues</span></div>
-        <div class="vs-k"><span class="vs-v" data-k="lives">–</span><span class="vs-l" data-s="live gratuita do Papo de Porteira">lives gratuitas do Papo de Porteira</span></div>
-        <div class="vs-k"><span class="vs-v" data-k="pro_bono">–</span><span class="vs-l" data-s="atendimento pró bono">atendimentos pró bono</span></div>
-      </div>
       <div class="vs-dep" id="vDep" hidden>
         <div class="vs-dep-h"><h3>O que dizem os clientes</h3><div class="vs-nav"><button type="button" class="vs-bt" data-d="-1" aria-label="Depoimento anterior">‹</button><button type="button" class="vs-bt" data-d="1" aria-label="Próximo depoimento">›</button></div></div>
         <div class="vs-trilho" id="vDepT" tabindex="0" aria-label="Depoimentos de clientes"></div>
@@ -249,8 +241,8 @@ f.addEventListener("submit",function(ev){
       : '<p class="nota">Em breve: fotos das visitas, aulas e eventos da equipe. Acompanhe também no Instagram <a href="https://www.instagram.com/vital_consultoria/" target="_blank" rel="noopener">@vital_consultoria</a>.</p>' };
   V.bast=function(dias,lim){ return Midias.carregar().then(function(l){ var lim0=new Date(Date.now()-dias*864e5).toISOString().slice(0,10);
     return l.filter(function(x){ return x.categoria==="bastidores"&&x.tipo==="foto"&&(!dias||(x.data||"")>=lim0) }).slice(0,lim||8) }) };
-  if(!document.getElementById("vNum")) return;
-  Api.rpc("site_numeros").then(function(j){ document.querySelectorAll("#vNum [data-k]").forEach(function(e){ var v=j&&j[e.dataset.k]; e.textContent=n(v); var lb=e.parentNode.querySelector("[data-s]"); if(lb&&v===1) lb.textContent=lb.dataset.s; if(!(v>=10)) e.closest(".vs-k").hidden=true });
+  if(!document.getElementById("prova")) return;
+  if(document.getElementById("vNum")) Api.rpc("site_numeros").then(function(j){ document.querySelectorAll("#vNum [data-k]").forEach(function(e){ var v=j&&j[e.dataset.k]; e.textContent=n(v); var lb=e.parentNode.querySelector("[data-s]"); if(lb&&v===1) lb.textContent=lb.dataset.s; if(!(v>=10)) e.closest(".vs-k").hidden=true });
     if(!document.querySelector("#vNum .vs-k:not([hidden])")){ document.getElementById("vNum").hidden=true; document.getElementById("vNumH").hidden=true } }).catch(function(){ document.getElementById("vNum").hidden=true; document.getElementById("vNumH").hidden=true });
   Api.ler("site_depoimentos?select=nome,empresa,cidade,servico,texto,nota&order=criado_em.desc&limit=12").then(function(l){ if(!l.length) return;
     document.getElementById("vDepT").innerHTML=l.map(function(d){ return '<figure class="vs-q">'+(d.nota?'<span class="vs-est" aria-label="'+d.nota+' de 5 estrelas">'+"★★★★★".slice(0,d.nota)+'</span>':"")+'<blockquote>'+esc(d.texto)+'</blockquote><figcaption><b>'+esc(d.nome)+'</b>'+[d.empresa,d.cidade].filter(Boolean).map(function(s){return " · "+esc(s)}).join("")+(d.servico?'<br>'+esc(d.servico):"")+'</figcaption></figure>' }).join("");

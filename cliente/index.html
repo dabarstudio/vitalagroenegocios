@@ -126,7 +126,10 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .p-ped{background:#E8EEF9;color:#1F3B73}.p-prod{background:#FFF1D6;color:#7A4B00}.p-ok{background:#DFF3E4;color:#1F6A35}.p-can{background:#EEE;color:#555}
 @media (max-width:560px){.ped{grid-template-columns:minmax(0,1fr)}}
 .hub{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-.hubg{display:grid;gap:8px;margin-top:6px}.hubg h3{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0 0;font-family:inherit;font-weight:700}
+.hubgs{columns:300px 4;column-gap:14px;margin-top:4px}.hubgs .hubg{break-inside:avoid;margin:0 0 14px}
+.hubg{display:grid;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px}.hubg h3{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:2px 4px 0;font-family:inherit;font-weight:700}
+.hubl{display:grid;gap:6px}.hubl .hubc{padding:10px 12px;border-radius:10px;gap:2px;background:var(--bg,#f6f7f4);border-color:transparent}.hubl .hubc:hover{border-color:var(--brand);background:var(--surface)}
+.hubl .hubc b{font-size:.96rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.hubl .hubc span{font-size:.8rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.hubl .hubn{margin-left:0}
 .hubn{display:inline-block;margin-left:8px;font-style:normal;font-family:inherit;font-size:.72rem;font-weight:700;color:#fff;background:#b3261e;border-radius:99px;padding:2px 8px;vertical-align:middle}
 .hubbusca{position:relative;min-width:min(360px,100%);flex:0 1 360px}.hubbusca input{width:100%}.hubres{position:absolute;z-index:20;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:6px;display:grid;max-height:60vh;overflow:auto}
 .hubri{all:unset;cursor:pointer;padding:9px 10px;border-radius:8px;font-size:.92rem}.hubri:hover,.hubri:focus-visible{background:#e8f1ea}
@@ -436,7 +439,7 @@ function renderInicio(){
     return h.startsWith("#") ? `<button class="hubc" type="button" data-tab="${h.slice(1)}"><b>${t}${b}</b><span>${d}</span></button>` : `<a class="hubc" href="${h}"><b>${t}${b}</b><span>${d}</span></a>`; };
   $("#v-inicio").innerHTML = `<div class="row" style="justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap"><div><div class="eyebrow">${adm?"Administração":soc?"Sócio(a)":"Equipe Vital"}</div><h2 style="font-size:1.35rem">Olá${nome?", "+esc(nome):""}! O que vamos fazer?</h2></div>
       <div class="hubbusca"><label class="sr" for="hBusca">Buscar cliente</label><input id="hBusca" type="search" placeholder="🔎 Buscar cliente, projeto ou painel…" autocomplete="off"><div id="hRes" class="hubres" hidden></div></div></div>
-    ${G.map(([t, cs]) => `<section class="hubg"><h3>${t}</h3><div class="hub">${cs.map(card).join("")}</div></section>`).join("")}`;
+    <div class="hubgs">${G.map(([t, cs]) => `<section class="hubg"><h3>${t}</h3><div class="hubl">${cs.map(card).join("")}</div></section>`).join("")}</div>`;
   contadores(); buscaInicio();
 }
 async function contadores(){

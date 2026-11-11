@@ -233,6 +233,7 @@ button.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg
 .k .t{font-weight:600;line-height:1.3;overflow-wrap:anywhere;min-width:0}
 .board,.col,.k,.k .m{min-width:0}.k{max-width:100%;overflow:hidden}.col{overflow:hidden}
 .k .pill{max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35;padding:2px 8px}
+.rbpo{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:10px;margin-top:10px}.rbpo .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.rbpo h3{margin:0;font-size:1rem}.rbpo .rk{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.rbpo .rk button{all:unset;cursor:pointer;border-radius:12px;padding:10px 12px;background:var(--surface-2);display:grid;gap:2px}.rbpo .rk button:hover{outline:2px solid var(--brand)}.rbpo .rk b{font-size:1.35rem}.rbpo .rk span{font-size:.8rem;color:var(--muted)}.rbpo .rk em{font-style:normal;font-size:.78rem;font-weight:700}
 .pess{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.pess .lbl{font-size:.8rem;color:var(--muted);font-weight:700;margin-right:2px}.pess .chipb{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px}.pess .chipb .av{width:22px;height:22px;font-size:.7rem;margin-left:0}.pess .chipb[data-pp=""]{padding:6px 12px}
 .k .m{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.78rem;color:var(--muted)}
 .pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 8px;font-weight:700;font-size:.74rem;background:var(--surface-2);color:var(--muted);white-space:nowrap}
@@ -663,6 +664,7 @@ function render() {
     <div class="chips" role="group" aria-label="Visualização"><button class="chipb" type="button" data-vis="quadro" aria-pressed="${S.vis !== "lista"}">▦ Quadro</button><button class="chipb" type="button" data-vis="lista" aria-pressed="${S.vis === "lista"}">☰ Lista</button>${S.vis === "lista" ? "" : `<button class="chipb" type="button" id="bSel" aria-pressed="${!!S.modoSel}" title="Marcar várias tarefas para mudar de uma vez">☑ Selecionar</button>`}</div></div>
   </div>
   ${S.q && S.q.geral && !S.marc ? placarHTML() : ""}
+  ${ehBPO() ? resumoBPO() : ""}
   ${S.vis === "lista" ? listaHTML() : `<div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
     const ks = S.cards.filter(k => k._v === c.id).sort(S.ordem === "prazo" ? porPrazo : (a, b) => a.ordem - b.ordem);
     const vis = ks.filter(passa);
@@ -691,6 +693,8 @@ function render() {
   $("#fAtr").onchange = (e) => { S.fAtrib = e.target.value; render(); };
   if ($("#bMem")) $("#bMem").onclick = abrirMembros;
   ligarLote();
+  $$("[data-rf]").forEach(b => b.onclick = () => { S.filtro = b.dataset.rf; render(); });
+  $$("[data-pdf]").forEach(b => b.onclick = () => pdfBPO(b.dataset.pdf));
   $$("[data-pp]").forEach(b => b.onclick = () => { S.fAtrib = S.fAtrib === b.dataset.pp ? "" : b.dataset.pp; render(); });
   $$(".k").forEach(b => {
     if (S.sel.has(b.dataset.id)) b.classList.add("sel");
@@ -714,6 +718,55 @@ function render() {
   });
   $$("[data-add]").forEach(b => b.onclick = () => novoForm(b));
 }
+/* ===== BPO: resumo dinâmico e PDFs para Diretoria e RH ===== */
+function ehBPO() { return !!(S.q && !S.marc && /^BPO ·/.test(S.q.nome || "")); }
+const RHX = /\b(RH|férias|ferias|rescis|FGTS|folha|salári|salari|Alelo|pró-labore|pro-labore|admiss|demiss|holerite|vale|benefíc|gestao\.pessoas|eSocial)/i;
+const ehRH = (k) => RHX.test((k.titulo || "") + " " + (k.descricao || ""));
+function valorDe(k) { const m = /Valor:\s*R\$\s*([\d.]+,\d{2})/i.exec(k.descricao || ""); return m ? +m[1].replace(/\./g, "").replace(",", ".") : 0; }
+const brlR = (v) => v ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "";
+function gruposBPO() {
+  const hoje = hojeISO(), ab = [], G = { venc: [], prox: [], agu: [], sem: [], ok: [] };
+  for (const k of S.cards) {
+    const c = colDe(k.coluna); if (c.referencia || k.origem_ref === "resumo-diario") continue;
+    if (c.concluida) { if (k.concluido_em && dataLocal(k.concluido_em) >= new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)) G.ok.push(k); continue; }
+    if (/aguardando/i.test(c.nome || "") || k.aguardando) G.agu.push(k);
+    else if (k.prazo && dias(k.prazo) <= 0) G.venc.push(k);
+    else if (k.prazo && dias(k.prazo) <= 5) G.prox.push(k);
+    else G.sem.push(k);
+  }
+  return G;
+}
+function resumoBPO() {
+  const G = gruposBPO(), tot = (l) => l.reduce((n, k) => n + valorDe(k), 0);
+  const box = (f, n, t, l, cor) => `<button type="button" data-rf="${f}" title="Mostrar no quadro"><b style="color:${cor}">${n}</b><span>${t}</span>${tot(l) ? `<em>${brlR(tot(l))}</em>` : ""}</button>`;
+  const rh = [...G.venc, ...G.prox, ...G.agu, ...G.sem].filter(ehRH).length;
+  return `<section class="rbpo" aria-label="Resumo de hoje"><div class="rh"><h3>📋 Resumo de hoje · ${new Date().toLocaleDateString("pt-BR")}</h3>
+      <div class="chips"><button class="btn sm" type="button" data-pdf="dir">📄 PDF Diretoria</button><button class="btn sm" type="button" data-pdf="rh">📄 PDF RH${rh ? ` (${rh})` : ""}</button></div></div>
+    <div class="rk">${box("atrasadas", G.venc.length, "vencidos ou vencem hoje", G.venc, "var(--bad)")}${box("semana", G.prox.length, "vencem em até 5 dias", G.prox, "var(--warn)")}${box("abertas", G.agu.length, "aguardando alguém", G.agu, "var(--muted)")}${box("abertas", G.sem.length, "pedidos sem prazo", G.sem, "var(--fg)")}${box("todas", G.ok.length, "concluídos em 7 dias", G.ok, "var(--ok)")}</div>
+    <p class="note" style="margin:0">Atualiza sozinho conforme o time move os cartões. Os PDFs saem com a situação deste momento.</p></section>`;
+}
+function pdfBPO(tipo) {
+  const G = gruposBPO(), f = tipo === "rh" ? (k) => ehRH(k) : (k) => !ehRH(k) || !!(k.prioridade === "alta");
+  const nomeQ = (S.q.nome || "").replace(/^BPO ·\s*/, ""), hoje = new Date().toLocaleDateString("pt-BR");
+  const logo = S.wl && S.wl.logo_url ? (/^https?:/.test(S.wl.logo_url) ? S.wl.logo_url : new URL("../" + S.wl.logo_url, location.href).href) : new URL("/vitalagroenegocios/logo.png", location.origin).href;
+  const det = (k) => esc((k.descricao || "").replace(/Valor:[^\n]*\n?/i, "").replace(/📧[^\n]*/g, "").trim()).replace(/\n/g, "<br>");
+  const linha = (k) => `<tr><td><b>${esc((k.titulo || "").replace(/^[^\p{L}\p{N}]+/u, ""))}</b>${det(k) ? `<div class="d">${det(k)}</div>` : ""}${(Array.isArray(k.checklist) && k.checklist.length) ? `<div class="d">${k.checklist.map(i => (i.ok ? "☑ " : "☐ ") + esc(i.t)).join(" · ")}</div>` : ""}</td><td class="n">${k.prazo ? k.prazo.split("-").reverse().join("/") : "—"}</td><td class="n">${brlR(valorDe(k)) || "—"}</td><td>${esc(k.para_todos ? "Todos" : (nomeDe(k.responsavel) || "—"))}</td></tr>`;
+  const bloco = (t, cor, l) => { l = l.filter(f).sort(porPrazo); if (!l.length) return ""; const tot = l.reduce((n, k) => n + valorDe(k), 0);
+    return `<h2 style="border-color:${cor}">${t} <span>${l.length} item(ns)${tot ? " · " + brlR(tot) : ""}</span></h2><table><thead><tr><th>Item</th><th>Prazo</th><th>Valor</th><th>Responsável</th></tr></thead><tbody>${l.map(linha).join("")}</tbody></table>`; };
+  const corpo = bloco("🔴 Vencidos ou vencem hoje", "#b3261e", G.venc) + bloco("🟠 Vencem em até 5 dias", "#b26a00", G.prox) + bloco("⏳ Aguardando retorno", "#6b7280", G.agu) + bloco(tipo === "rh" ? "🟡 Pedidos do RH sem prazo" : "🟡 Pedidos sem prazo", "#a68a00", G.sem) + bloco("✅ Concluídos nos últimos 7 dias", "#1f7a3a", G.ok);
+  const tit = tipo === "rh" ? "Relatório para o RH" : "Relatório para a Diretoria";
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${tit} · ${esc(nomeQ)} · ${hoje}</title><style>
+    @page{size:A4;margin:14mm}body{font:12px/1.4 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1d2b20;margin:0}header{display:flex;align-items:center;gap:14px;border-bottom:3px solid #00582F;padding-bottom:10px;margin-bottom:12px}header img{height:56px}h1{font-size:18px;margin:0;color:#00582F}header p{margin:2px 0 0;color:#555}
+    h2{font-size:13px;margin:16px 0 6px;padding-left:8px;border-left:5px solid}h2 span{font-weight:400;color:#555;font-size:11.5px}table{width:100%;border-collapse:collapse}th{text-align:left;font-size:10.5px;text-transform:uppercase;color:#666;border-bottom:1px solid #ccc;padding:4px 6px}td{border-bottom:1px solid #eee;padding:6px;vertical-align:top}td.n{white-space:nowrap}.d{color:#555;font-size:11px;margin-top:2px}
+    footer{margin-top:18px;font-size:10.5px;color:#777;border-top:1px solid #ddd;padding-top:6px}.vazio{padding:20px;text-align:center;color:#555}</style></head><body>
+    <header><img src="${logo}" alt=""><div><h1>${tit} · BPO ${esc(nomeQ)}</h1><p>Situação em ${hoje}, ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · Vital Agro & Negócios – BPO Financeiro</p></div></header>
+    ${corpo || `<div class="vazio">Nenhum assunto ${tipo === "rh" ? "do RH" : "da Diretoria"} em aberto neste momento.</div>`}
+    <footer>Gerado do quadro de tarefas da Vital. Concluído = movido para “Concluído” pelo time ou com evidência no e-mail.</footer>
+    <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
+  const w = window.open("", "_blank"); if (!w) return toast("Libere as janelas pop-up deste site para gerar o PDF.");
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
 /* ===== visão em lista e mudanças em lote ===== */
 function listaHTML() {
   const ord = new Map(S.cols.map((c, i) => [c.id, i]));

@@ -126,6 +126,11 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .p-ped{background:#E8EEF9;color:#1F3B73}.p-prod{background:#FFF1D6;color:#7A4B00}.p-ok{background:#DFF3E4;color:#1F6A35}.p-can{background:#EEE;color:#555}
 @media (max-width:560px){.ped{grid-template-columns:minmax(0,1fr)}}
 .hub{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.hubg{display:grid;gap:8px;margin-top:6px}.hubg h3{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0 0;font-family:inherit;font-weight:700}
+.hubn{display:inline-block;margin-left:8px;font-style:normal;font-family:inherit;font-size:.72rem;font-weight:700;color:#fff;background:#b3261e;border-radius:99px;padding:2px 8px;vertical-align:middle}
+.hubbusca{position:relative;min-width:min(360px,100%);flex:0 1 360px}.hubbusca input{width:100%}.hubres{position:absolute;z-index:20;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:6px;display:grid;max-height:60vh;overflow:auto}
+.hubri{all:unset;cursor:pointer;padding:9px 10px;border-radius:8px;font-size:.92rem}.hubri:hover,.hubri:focus-visible{background:#e8f1ea}
+.subnav{margin-bottom:6px}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .hubc{display:grid;gap:4px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;color:var(--fg);text-decoration:none;font:inherit;cursor:pointer}
 .hubc:hover{border-color:var(--brand)} .hubc b{font-family:var(--display);font-size:1.02rem;color:var(--brand)} .hubc span{font-size:.88rem;color:var(--muted)}
 /* ===== painéis ===== */
@@ -276,20 +281,32 @@ const reg = (acao, alvo="") => sb.rpc("registrar_acesso", {p_acao:acao, p_alvo:a
 const S = { user:null, perfil:null, papel:null, empresas:[], arqs:[], emp:"", cat:"", ano:"" };
 let TABS = [], cur = "login";
 function definirAbas(){
-  TABS = !S.papel ? [] : S.papel==="admin" ? [["inicio","Início"],["docs","Entregáveis"],["pub","Publicar"],["midias","Mídias"],["vitrine","Vitrine do site"],["papo","Papo"],["acessos","Acessos"],["conta","Minha conta"]]
-    : S.papel==="equipe" ? [["inicio","Início"],["midias","Mídias"],["papo","Papo"],["conta","Minha conta"]] : [["docs","Entregáveis"],["conta","Minha conta"]];
+  TABS = !S.papel ? [] : S.papel==="admin" ? [["inicio","Início"],["docs","Entregas"],["midias","Comunicação"],["acessos","Acessos"],["conta","Minha conta"]]
+    : S.papel==="equipe" ? [["inicio","Início"],["midias","Comunicação"],["conta","Minha conta"]] : [["docs","Entregas"],["conta","Minha conta"]];
   if ((S.paineis||[]).length && !TABS.some(t=>t[0]==="painel")) TABS.splice(S.papel==="admin"||S.papel==="equipe"?1:0, 0, ["painel","Painéis"]);
-  const h = TABS.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${cur===k}">${l}</button>`).join("") + (["admin","equipe","cliente","gestor"].includes(S.papel) ? `<a class="tab" href="/vitalagroenegocios/projetos/">Projetos</a>` : "") + (S.papel ? `<button class="tab" data-sair="1">Sair</button>` : "");
+  const h = TABS.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${cur===k || (GRUPO_TAB[cur]===k)}">${l}</button>`).join("") + (["admin","equipe","cliente","gestor"].includes(S.papel) ? `<a class="tab" href="/vitalagroenegocios/projetos/">Projetos</a>` : "") + (S.papel ? `<button class="tab" data-sair="1">Sair</button>` : "");
   $("#tabsTop").innerHTML = h; navInferior(h);
+}
+const GRUPO_TAB = { pub:"docs", papo:"midias", vitrine:"midias" };
+const COMUNIC = [["midias","Mídias"],["papo","Papo de Porteira"],["vitrine","Vitrine do site"]];
+function subNav(k){
+  if (!["midias","papo","vitrine"].includes(k)) return;
+  const v = $("#v-"+k); if (!v || v.querySelector(":scope > .subnav")) return;
+  const itens = COMUNIC.filter(([x]) => x !== "vitrine" || S.papel === "admin");
+  const n = document.createElement("nav"); n.className = "subnav pns"; n.setAttribute("aria-label", "Comunicação");
+  n.innerHTML = itens.map(([x,l]) => `<button class="tab" type="button" data-tab="${x}" aria-selected="${x===k}">${l}</button>`).join("");
+  v.prepend(n);
 }
 function go(k){
   if (!S.papel) k = "login";
   cur = k; definirAbas();
   document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== "v-"+k);
   ({painel:renderPainel, inicio:renderInicio, login:renderLogin, termos:renderTermos, docs:renderDocs, conta:renderConta, pub:renderPub, acessos:renderAcessos, midias:renderMidias, vitrine:renderVitrine, papo:renderPapo, dabar:renderDabar})[k]?.();
-  try{ history.replaceState(null,"","#"+k); }catch{}
+  subNav(k); setTimeout(() => subNav(k), 400); setTimeout(() => subNav(k), 1500);
+  try{ if (location.hash.slice(1) !== k) history.pushState(null,"","#"+k); }catch{}
   window.scrollTo({top:0});
 }
+window.addEventListener("popstate", () => { const k = location.hash.slice(1); if (S.papel && k && k !== cur && k !== "login") go(k); });
 document.addEventListener("click", e => { const t=e.target.closest("[data-tab]"); if (t) { go(t.dataset.tab); return; } if (e.target.closest("[data-sair]")) sair(); });
 
 /* encerra a sessão depois de um tempo sem uso (segurança) */
@@ -349,6 +366,7 @@ async function entrar(user, novoLogin){
   const {data:perfil} = await sb.from("perfis").select("papel, nome, email, login, socio").eq("user_id", user.id).maybeSingle();
   if (!perfil || !["admin","cliente","gestor","equipe"].includes(perfil.papel)) { await sb.auth.signOut(); S.papel=null; toast("Este acesso não está liberado para a área do cliente."); go("login"); return; }
   S.user = user; S.perfil = perfil; S.papel = perfil.papel; reinicia();
+  try { sessionStorage.setItem("vital_aba", "1"); } catch {}
   try { localStorage.setItem("vital_user", JSON.stringify({n:perfil.nome||perfil.login||"", p:perfil.papel})); } catch {}
   if (novoLogin) reg("entrar").catch(()=>{});
   if (perfil.papel !== "admin") {
@@ -358,7 +376,8 @@ async function entrar(user, novoLogin){
   if (volta()) return;
   await inicio();
 }
-async function inicio(){ await carregarPaineis(); try { const {data} = await sb.from("dfc_empresas").select("empresa"); S.dfc = data||[]; } catch { S.dfc = []; } try { const {data} = await sb.from("cq_quadros").select("id"); S.cq = data||[]; } catch { S.cq = []; } if (S.papel==="equipe") { go("inicio"); return; } await carregar(); go(S.papel==="admin" ? "inicio" : (S.paineis||[]).length ? "painel" : "docs"); }
+async function inicio(){ await carregarPaineis(); try { const {data} = await sb.from("dfc_empresas").select("empresa"); S.dfc = data||[]; } catch { S.dfc = []; } try { const {data} = await sb.from("cq_quadros").select("id"); S.cq = data||[]; } catch { S.cq = []; } const alvo = S.alvo; S.alvo = null; const ok = alvo && alvo !== "login" && alvo !== "termos" && (TABS.some(t => t[0] === alvo) || (GRUPO_TAB[alvo] && TABS.some(t => t[0] === GRUPO_TAB[alvo])) || (alvo === "painel" && (S.paineis||[]).length) || (alvo === "dabar" && (S.papel==="admin" || (S.perfil && S.perfil.socio))));
+  if (S.papel==="equipe") { go(ok ? alvo : "inicio"); return; } await carregar(); go(ok ? alvo : S.papel==="admin" ? "inicio" : (S.paineis||[]).length ? "painel" : "docs"); }
 function volta(){ const v = new URLSearchParams(location.search).get("volta"); if (v && /^\/[a-z0-9/_-]*$/i.test(v)) { location.href = v; return true; } return false; }
 async function sair(){ clearTimeout(inat); try { localStorage.removeItem("vital_user"); } catch {} await sb.auth.signOut().catch(()=>{}); S.papel=null; S.arqs=[]; go("login"); }
 
@@ -388,29 +407,66 @@ function renderTermos(){
 
 /* ===== início: recursos de cada perfil ===== */
 function renderInicio(){
-  const adm = S.papel==="admin", soc = adm || !!(S.perfil && S.perfil.socio), nome = (S.perfil.nome||"").split(" ")[0];
-  const C = [
-    ["Projetos e tarefas", "Andamento dos trabalhos de cada cliente, etapas e horas lançadas.", "/vitalagroenegocios/projetos/#lista", true],
-    ["Minhas tarefas", "Tudo o que está no seu nome, de todos os projetos.", "/vitalagroenegocios/projetos/#minhas", true],
-    ["Funil de vendas", "Leads até virarem clientes.", "/vitalagroenegocios/projetos/#quadros", true],
-    ["Comercial e indicadores", "Leads por responsável, origem e serviço; prazos e rentabilidade.", "/vitalagroenegocios/projetos/#comercial", true],
-    ["Financeiro", "Lançamentos, contas a pagar, orçado × realizado e comissões.", "/vitalagroenegocios/projetos/#financeiro", soc],
-    ["Quadro de tarefas", "Demandas da equipe Vital (Business) e quadros dos clientes.", "/vitalagroenegocios/quadro/", (S.cq||[]).length>0],
-    ["Fechamento DFC", "Bases do Connectere, semáforo e apontamentos da Agro TNZ.", "/vitalagroenegocios/dfc/", (S.dfc||[]).length>0],
-    ["Painéis financeiros", "DRE, fluxo de caixa, balanço e análises dos clientes com BPO.", "#painel", (S.paineis||[]).length>0],
-    ["Entregáveis e pedidos", "Relatórios publicados e pedidos de cada cliente.", "#docs", adm],
-    ["Publicar entregável", "Enviar um relatório para a área de um cliente.", "#pub", adm],
-    ["Acessos", "Criar login de cliente, colaborador ou sócio.", "#acessos", adm],
-    ["Dabar · escritórios", "Escritórios contábeis licenciados: uso, clientes e suporte.", "#dabar", soc],
-    ["Mídias", "Fotos e vídeos para o Instagram e o site.", "#midias", true],
-    ["Papo de Porteira", "Perguntas e programação das lives.", "#papo", true],
-    ["Simulador tributário", "Regimes, Fator R mês a mês e transição da Reforma.", "/vitalagroenegocios/simulador/", adm||S.papel==="equipe"],
-    ["Teste DISC", "Perfis comportamentais das equipes dos clientes.", "/vitalagroenegocios/disc/", adm||S.papel==="equipe"],
-    ["Avaliação 5S", "Vistorias, fotos e evolução dos clientes.", "/vitalagroenegocios/5s/", adm||S.papel==="equipe"],
-    ["Vitrine do site", "Depoimentos e galeria de clientes.", "#vitrine", adm],
-    ["Minha conta", "Seus dados e troca de senha.", "#conta", true]].filter(c=>c[3]);
-  $("#v-inicio").innerHTML = `<div><div class="eyebrow">${adm?"Administração":soc?"Sócio(a)":"Equipe Vital"}</div><h2 style="font-size:1.35rem">Olá${nome?", "+esc(nome):""}! O que vamos fazer?</h2></div>
-    <div class="hub">${C.map(([t,d,h])=>h.startsWith("#") ? `<button class="hubc" type="button" data-tab="${h.slice(1)}"><b>${t}</b><span>${d}</span></button>` : `<a class="hubc" href="${h}"><b>${t}</b><span>${d}</span></a>`).join("")}</div>`;
+  const adm = S.papel==="admin", soc = adm || !!(S.perfil && S.perfil.socio), eq = adm || S.papel==="equipe", nome = (S.perfil.nome||"").split(" ")[0];
+  const G = [
+    ["Dia a dia", [
+      ["Quadro de tarefas", "Demandas da equipe, BPOs e quadros dos clientes. Placar do time.", "/vitalagroenegocios/quadro/", (S.cq||[]).length>0, "quadro"],
+      ["Projetos", "Trabalhos de cada cliente em cards ou lista, com ações em lote.", "/vitalagroenegocios/projetos/#lista", true]]],
+    ["Comercial", [
+      ["Funil de vendas", "Leads até virarem clientes.", "/vitalagroenegocios/projetos/#quadros", true],
+      ["Comercial e indicadores", "Leads por responsável, origem e serviço; prazos e rentabilidade.", "/vitalagroenegocios/projetos/#comercial", true]]],
+    ["Clientes", [
+      ["Painéis financeiros", "DRE, fluxo de caixa, balanço e análises dos clientes com BPO.", "#painel", (S.paineis||[]).length>0],
+      ["Entregas", "Relatórios publicados, pedidos de cada cliente e o botão Publicar.", "#docs", adm, "entregas"]]],
+    ["Ferramentas", [
+      ["Simulador tributário", "Regimes, Fator R mês a mês e transição da Reforma.", "/vitalagroenegocios/simulador/", eq],
+      ["Teste DISC", "Perfis comportamentais das equipes dos clientes.", "/vitalagroenegocios/disc/", eq],
+      ["Avaliação 5S", "Vistorias, fotos e evolução dos clientes.", "/vitalagroenegocios/5s/", eq],
+      ["Fechamento DFC · Agro TNZ", "Bases do Connectere, semáforo e apontamentos (uso exclusivo da TNZ).", "/vitalagroenegocios/dfc/", (S.dfc||[]).length>0]]],
+    ["Comunicação", [
+      ["Papo de Porteira", "Perguntas e programação das lives.", "#papo", true],
+      ["Mídias", "Fotos e vídeos para o Instagram e o site.", "#midias", true],
+      ["Vitrine do site", "Depoimentos e galeria de clientes.", "#vitrine", adm]]],
+    ["Gestão · sócios", [
+      ["Financeiro", "Lançamentos, contas a pagar, orçado × realizado e comissões.", "/vitalagroenegocios/projetos/#financeiro", soc],
+      ["Acessos", "Criar login de cliente, colaborador ou sócio.", "#acessos", adm],
+      ["Dabar · escritórios", "Escritórios contábeis licenciados: uso, clientes e suporte.", "#dabar", soc]]]
+  ].map(([t, cs]) => [t, cs.filter(c => c[3])]).filter(g => g[1].length);
+  const card = ([t,d,h,,k]) => { const b = k ? `<em class="hubn" data-cnt="${k}" hidden></em>` : "";
+    return h.startsWith("#") ? `<button class="hubc" type="button" data-tab="${h.slice(1)}"><b>${t}${b}</b><span>${d}</span></button>` : `<a class="hubc" href="${h}"><b>${t}${b}</b><span>${d}</span></a>`; };
+  $("#v-inicio").innerHTML = `<div class="row" style="justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap"><div><div class="eyebrow">${adm?"Administração":soc?"Sócio(a)":"Equipe Vital"}</div><h2 style="font-size:1.35rem">Olá${nome?", "+esc(nome):""}! O que vamos fazer?</h2></div>
+      <div class="hubbusca"><label class="sr" for="hBusca">Buscar cliente</label><input id="hBusca" type="search" placeholder="🔎 Buscar cliente, projeto ou painel…" autocomplete="off"><div id="hRes" class="hubres" hidden></div></div></div>
+    ${G.map(([t, cs]) => `<section class="hubg"><h3>${t}</h3><div class="hub">${cs.map(card).join("")}</div></section>`).join("")}`;
+  contadores(); buscaInicio();
+}
+async function contadores(){
+  const hoje = new Date().toISOString().slice(0,10);
+  const pos = (k, n, txt) => { const e = document.querySelector(`[data-cnt="${k}"]`); if (e && n) { e.textContent = n + " " + txt; e.hidden = false; } };
+  try { if ((S.cq||[]).length) { const r = await sb.from("cq_cartoes").select("id, prazo, cq_colunas(concluida, referencia)").eq("arquivado", false).lt("prazo", hoje).limit(500);
+      pos("quadro", (r.data||[]).filter(k => k.cq_colunas && !k.cq_colunas.concluida && !k.cq_colunas.referencia).length, "atrasada(s)"); } } catch {}
+  try { if (S.papel==="admin") { const r = await sb.from("ent_pedidos").select("id", {count:"exact", head:true}).eq("situacao","pedido"); pos("entregas", r.count, "pedido(s) novo(s)"); } } catch {}
+}
+let BX = null;
+async function buscaInicio(){
+  const inp = $("#hBusca"), res = $("#hRes"); if (!inp) return;
+  const fecha = () => { res.hidden = true; };
+  inp.oninput = async () => {
+    const q = inp.value.trim().toLowerCase(); if (q.length < 2) { fecha(); return; }
+    if (!BX) { BX = { proj: [] }; try { const r = await sb.from("proj_projetos").select("id, nome, cliente, status").order("criado_em", {ascending:false}).limit(1000); BX.proj = r.data || []; } catch {} }
+    const has = t => (t||"").toLowerCase().includes(q);
+    const L = [];
+    (S.paineis||[]).filter(p => has(p.empresa)).forEach(p => L.push(["📊", "Painel · " + p.empresa, `data-pemp="${esc(p.empresa)}"`]));
+    (S.papel==="admin" ? S.empresas : []).filter(has).forEach(e => L.push(["📁", "Entregas · " + e, `data-demp="${esc(e)}"`]));
+    BX.proj.filter(p => has(p.nome) || has(p.cliente)).slice(0, 8).forEach(p => L.push(["🗂️", "Projeto · " + (p.cliente ? p.cliente + " – " : "") + p.nome, `data-href="/vitalagroenegocios/projetos/#proj/${esc(p.id)}"`]));
+    res.innerHTML = L.length ? L.slice(0, 12).map(([i, t, a]) => `<button type="button" class="hubri" ${a}>${i} ${esc(t)}</button>`).join("") : `<p class="note" style="margin:6px">Nada encontrado.</p>`;
+    res.hidden = false;
+  };
+  inp.onkeydown = e => { if (e.key === "Escape") { inp.value = ""; fecha(); } };
+  res.onclick = e => { const b = e.target.closest(".hubri"); if (!b) return;
+    if (b.dataset.pemp) { P.emp = b.dataset.pemp; go("painel"); }
+    else if (b.dataset.demp) { S.emp = b.dataset.demp; go("docs"); }
+    else if (b.dataset.href) location.href = b.dataset.href; };
+  document.addEventListener("click", e => { if (!e.target.closest(".hubbusca")) fecha(); });
 }
 
 /* ===== Dabar: visão dos sócios sobre os escritórios licenciados ===== */
@@ -510,7 +566,7 @@ function renderDocs(){
   const lista = S.arqs.filter(a => (!S.emp||a.empresa===S.emp) && (!S.cat||a.categoria===S.cat) && (!S.ano||a.competencia.startsWith(S.ano)));
   const porMes = {}; for (const a of lista) (porMes[a.competencia.slice(0,7)] ||= []).push(a);
   const nome = (S.perfil.nome||"").split(" ")[0];
-  v.innerHTML = ((S.cq||[]).length && S.papel!=="admin" ? `<div class="pnbanner"><div><b>Quadro de tarefas</b><div class="note" style="margin:0">As tarefas do escritório: quem faz o quê, prazos e o que está atrasado.</div></div><a class="btn primary sm" href="/vitalagroenegocios/quadro/">Abrir quadro</a></div>` : "") + ((S.dfc||[]).length ? `<div class="pnbanner"><div><b>Fechamento DFC</b><div class="note" style="margin:0">Atualizar as bases do Connectere, com semáforo de uso e apontamentos da planilha de fluxo de caixa.</div></div><a class="btn primary sm" href="/vitalagroenegocios/dfc/">Abrir</a></div>` : "") + ((S.paineis||[]).length ? `<div class="pnbanner"><div><b>Painéis financeiros disponíveis</b><div class="note" style="margin:0">DRE, fluxo de caixa com conciliação, balanço e as análises pedidas.</div></div><button class="btn primary sm" type="button" data-tab="painel">Abrir painéis</button></div>` : "") + `<div class="row" style="justify-content:space-between"><div><div class="eyebrow">${S.papel==="admin"?"Equipe Vital":"Olá"+(nome?", "+esc(nome):"")}</div><h2 style="font-size:1.35rem">Entregáveis${S.emp?" · "+esc(S.emp):""}</h2></div>
+  v.innerHTML = ((S.cq||[]).length && S.papel!=="admin" ? `<div class="pnbanner"><div><b>Quadro de tarefas</b><div class="note" style="margin:0">As tarefas do escritório: quem faz o quê, prazos e o que está atrasado.</div></div><a class="btn primary sm" href="/vitalagroenegocios/quadro/">Abrir quadro</a></div>` : "") + ((S.dfc||[]).length && S.papel!=="admin" ? `<div class="pnbanner"><div><b>Fechamento DFC</b><div class="note" style="margin:0">Atualizar as bases do Connectere, com semáforo de uso e apontamentos da planilha de fluxo de caixa.</div></div><a class="btn primary sm" href="/vitalagroenegocios/dfc/">Abrir</a></div>` : "") + ((S.paineis||[]).length ? `<div class="pnbanner"><div><b>Painéis financeiros disponíveis</b><div class="note" style="margin:0">DRE, fluxo de caixa com conciliação, balanço e as análises pedidas.</div></div><button class="btn primary sm" type="button" data-tab="painel">Abrir painéis</button></div>` : "") + `<div class="row" style="justify-content:space-between"><div><div class="eyebrow">${S.papel==="admin"?"Equipe Vital":"Olá"+(nome?", "+esc(nome):"")}</div><h2 style="font-size:1.35rem">Entregas${S.emp?" · "+esc(S.emp):""}</h2></div>${S.papel==="admin" ? `<button class="btn primary sm" type="button" data-tab="pub">+ Publicar entrega</button>` : ""}
       <a class="btn sm" href="https://wa.me/${WA}?text=${encodeURIComponent("Olá! Sou cliente da Vital"+(S.emp?" ("+S.emp+")":"")+" e tenho uma dúvida sobre os entregáveis.")}" target="_blank" rel="noopener">Falar com a Vital</a></div>
     ${pedidosHtml()}
     <h3 style="margin:8px 0 0">Arquivos entregues</h3>
@@ -861,6 +917,8 @@ async function boot(){
   const {data:{session}} = await sb.auth.getSession();
   if (session && !/type=recovery/.test(location.hash)) {
     if (new URLSearchParams(location.search).get("volta")) { await entrar(session.user, false); return; }
+    let ativo = false; try { ativo = sessionStorage.getItem("vital_aba") === "1"; } catch {}
+    if (ativo) { S.alvo = location.hash.slice(1); await entrar(session.user, false); return; }
     const {data:p} = await sb.from("perfis").select("nome, login").eq("user_id", session.user.id).maybeSingle();
     S.sessUser = session.user; S.sessNome = (p && (p.nome || p.login)) || session.user.email || ""; go("login");
   } else go("login");

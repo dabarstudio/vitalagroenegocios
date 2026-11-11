@@ -266,6 +266,9 @@ dialog::backdrop{background:rgba(10,20,14,.45)}
 .hist{font-size:.8rem;color:var(--muted);display:grid;gap:3px;max-height:160px;overflow:auto}
 .side{display:grid;gap:12px;align-content:start}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
+.k.sel{border-color:var(--brand);box-shadow:inset 0 0 0 2px var(--brand);background:#eef6f0}.k.sel .t::before{content:"✓ ";color:var(--brand);font-weight:800}
+.ltab{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}.ltab th,.ltab td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:.9rem;vertical-align:middle}.ltab th{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}.ltab tr[data-lid]{cursor:pointer}.ltab tr[data-lid]:hover td{background:#f4f7f2}.ltab tr.sel td{background:#eef6f0}.ltab input{width:18px;height:18px}
+.lwrap{overflow-x:auto}.lote{position:fixed;left:12px;right:12px;bottom:56px;max-width:1100px;margin:0 auto;z-index:60;display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--surface);border:1px solid var(--brand);border-radius:12px;padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:10px}.lote select,.lote input{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
 .chipb{font-weight:600;font-size:.85rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;color:var(--fg)}
 .chipb[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
 .ck input[type=checkbox]{width:18px;height:18px;flex:none;margin-top:3px;padding:0}
@@ -315,7 +318,7 @@ let toastT; function toast(m) { const t = $("#toast"); t.textContent = m; t.hidd
 
 const CFG = window.VITAL_CONFIG || {};
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
-const S = { user: null, perfil: null, time: false, quadros: [], proprios: [], outros: [], marc: false, q: null, cols: [], colsAll: [], cards: [], mem: [], pessoas: [], coms: {}, filtro: "todas", busca: "", abertoId: null };
+const S = { sel: new Set(), modoSel: false, vis: (() => { try { return localStorage.getItem("cq.vis") || "quadro"; } catch { return "quadro"; } })(), user: null, perfil: null, time: false, quadros: [], proprios: [], outros: [], marc: false, q: null, cols: [], colsAll: [], cards: [], mem: [], pessoas: [], coms: {}, filtro: "todas", busca: "", abertoId: null };
 const MARC = "__marcadas";
 let pedidoInstalar = null;
 const ehApp = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
@@ -652,10 +655,11 @@ function render() {
     <select id="fCri" class="fsel" aria-label="Criado por"><option value="">Criado por: todos</option><option value="auto"${S.fCriado === "auto" ? " selected" : ""}>Criado por: rotina automática</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fCriado === m.user_id ? " selected" : ""}>Criado por: ${esc(m.nome)}</option>`).join("")}</select>
     <select id="fAtr" class="fsel" aria-label="Atribuído a"><option value="">Atribuído a: todos</option>${S.pessoas.map(m => `<option value="${m.user_id}"${S.fAtrib === m.user_id ? " selected" : ""}>Atribuído a: ${esc(m.nome)}</option>`).join("")}</select>
     <div class="chips">${F.map(([v, t]) => `<button class="chipb" type="button" data-f="${v}" aria-pressed="${S.filtro === v}">${t}</button>`).join("")}</div>
-    ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}</div>
+    ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}
+    <div class="chips" role="group" aria-label="Visualização"><button class="chipb" type="button" data-vis="quadro" aria-pressed="${S.vis !== "lista"}">▦ Quadro</button><button class="chipb" type="button" data-vis="lista" aria-pressed="${S.vis === "lista"}">☰ Lista</button>${S.vis === "lista" ? "" : `<button class="chipb" type="button" id="bSel" aria-pressed="${!!S.modoSel}" title="Marcar várias tarefas para mudar de uma vez">☑ Selecionar</button>`}</div></div>
   </div>
   ${S.q && S.q.geral && !S.marc ? placarHTML() : ""}
-  <div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
+  ${S.vis === "lista" ? listaHTML() : `<div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
     const ks = S.cards.filter(k => k._v === c.id).sort(S.ordem === "prazo" ? porPrazo : (a, b) => a.ordem - b.ordem);
     const vis = ks.filter(passa);
     return `<section class="col${c.referencia ? " ref" : ""}" data-col="${c.id}" aria-label="${esc(c.nome)}"${c.referencia ? ` title="Atribuições fixas e observações internas: não contam como tarefas em aberto"` : ""}>
@@ -663,7 +667,8 @@ function render() {
       ${vis.map(cardHTML).join("") || `<div class="vazio">${ks.length ? "Nada neste filtro." : "Nenhuma tarefa."}</div>`}
       ${c.concluida || S.marc ? "" : `<button class="add" type="button" data-add="${c.id}">+ Adicionar tarefa</button>`}
     </section>`;
-  }).join("")}</div>`;
+  }).join("")}</div>`}
+  ${S.sel.size ? loteHTML() : ""}`;
   $("#busca").oninput = (e) => { S.busca = e.target.value; const p = e.target.selectionStart; render(); const b = $("#busca"); b.focus(); b.setSelectionRange(p, p); };
   $$("[data-f]").forEach(b => b.onclick = () => { S.filtro = b.dataset.f; render(); });
   $$("[data-k]").forEach(b => b.onclick = () => { S.filtro = S.filtro === b.dataset.k ? "todas" : b.dataset.k; render(); });
@@ -681,8 +686,10 @@ function render() {
   $("#fOrd").onchange = (e) => { S.ordem = e.target.value; try { localStorage.setItem("cq.ordem", S.ordem); } catch {} render(); };
   $("#fAtr").onchange = (e) => { S.fAtrib = e.target.value; render(); };
   if ($("#bMem")) $("#bMem").onclick = abrirMembros;
+  ligarLote();
   $$(".k").forEach(b => {
-    b.onclick = () => abrir(b.dataset.id);
+    if (S.sel.has(b.dataset.id)) b.classList.add("sel");
+    b.onclick = () => { if (S.modoSel) { S.sel.has(b.dataset.id) ? S.sel.delete(b.dataset.id) : S.sel.add(b.dataset.id); render(); return; } abrir(b.dataset.id); };
     b.ondragstart = (e) => { e.dataTransfer.setData("text/plain", b.dataset.id); b.classList.add("drag"); };
     b.ondragend = () => b.classList.remove("drag");
   });
@@ -701,6 +708,89 @@ function render() {
     };
   });
   $$("[data-add]").forEach(b => b.onclick = () => novoForm(b));
+}
+/* ===== visão em lista e mudanças em lote ===== */
+function listaHTML() {
+  const ord = new Map(S.cols.map((c, i) => [c.id, i]));
+  const ks = S.cards.filter(passa).sort((a, b) => (ord.get(a._v) ?? 99) - (ord.get(b._v) ?? 99) || porPrazo(a, b));
+  const todos = ks.length && ks.every(k => S.sel.has(k.id));
+  if (!ks.length) return `<div class="card empty" style="margin-top:10px">Nada neste filtro.</div>`;
+  return `<div class="lwrap" style="margin-top:10px"><table class="ltab"><thead><tr><th style="width:36px"><input type="checkbox" id="lTodos" aria-label="Marcar todas" ${todos ? "checked" : ""}></th><th>Tarefa</th><th>Coluna</th><th>Responsável</th><th>Prazo</th><th>Prioridade</th>${S.marc ? "<th>Quadro</th>" : ""}</tr></thead><tbody>
+    ${ks.map(k => { const c = S.cols.find(x => x.id === k._v) || colDe(k.coluna), fim = colDe(k.coluna).concluida, atr = !fim && k.prazo && dias(k.prazo) < 0;
+      return `<tr data-lid="${k.id}" class="${S.sel.has(k.id) ? "sel" : ""}"><td><input type="checkbox" data-lsel="${k.id}" aria-label="Marcar ${esc(k.titulo)}" ${S.sel.has(k.id) ? "checked" : ""}></td>
+        <td><b>${esc(k.titulo)}</b>${k.recorrencia ? " 🔁" : ""}${k.aguardando ? ` <span class="pill prox">⏳ ${esc(k.aguardando)}</span>` : ""}</td><td>${esc(c.nome || "")}</td><td>${k.para_todos ? "Todos" : esc(nomeDe(k.responsavel) || "—")}</td>
+        <td style="${atr ? "color:var(--err,#b3261e);font-weight:700" : ""}">${k.prazo ? k.prazo.split("-").reverse().join("/") : "—"}</td><td>${k.prioridade ? esc(PRI[k.prioridade] || k.prioridade) : "—"}</td>${S.marc ? `<td>${esc(quadroNome(k.quadro))}</td>` : ""}</tr>`; }).join("")}
+  </tbody></table></div>`;
+}
+function loteHTML() {
+  const pess = S.pessoas || [];
+  return `<div class="lote" role="region" aria-label="Mudanças em lote"><b>${S.sel.size} marcada(s)</b>
+    <select id="lResp" aria-label="Responsável"><option value="">Responsável: manter</option><option value="__todos">Todos</option>${pess.map(m => `<option value="${m.user_id}">${esc(m.nome)}</option>`).join("")}<option value="__novo">+ Novo membro do time…</option></select>
+    ${S.marc ? "" : `<select id="lCol" aria-label="Mover para"><option value="">Coluna: manter</option>${S.cols.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join("")}</select>`}
+    <input id="lPrazo" type="date" aria-label="Prazo" title="Novo prazo">
+    <select id="lPri" aria-label="Prioridade"><option value="">Prioridade: manter</option>${Object.entries(PRI).map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}<option value="__sem">Sem prioridade</option></select>
+    <button class="btn primary sm" type="button" id="lApl">Aplicar</button><button class="btn sm" type="button" id="lLimpa">Limpar</button></div>`;
+}
+function ligarLote() {
+  $$("[data-vis]").forEach(b => b.onclick = () => { S.vis = b.dataset.vis; if (S.vis === "lista") S.modoSel = false; try { localStorage.setItem("cq.vis", S.vis); } catch {} render(); });
+  if ($("#bSel")) $("#bSel").onclick = () => { S.modoSel = !S.modoSel; if (!S.modoSel) S.sel.clear(); render(); };
+  if ($("#lTodos")) $("#lTodos").onclick = (e) => { const ks = S.cards.filter(passa); if (e.target.checked) ks.forEach(k => S.sel.add(k.id)); else S.sel.clear(); render(); };
+  $$("[data-lsel]").forEach(i => i.onclick = (e) => { e.stopPropagation(); i.checked ? S.sel.add(i.dataset.lsel) : S.sel.delete(i.dataset.lsel); render(); });
+  $$("[data-lid]").forEach(r => r.onclick = (e) => { if (e.target.closest("input")) return; abrir(r.dataset.lid); });
+  if ($("#lResp")) $("#lResp").onchange = async (e) => { if (e.target.value !== "__novo") return; e.target.value = ""; const id = await novoMembro(); if (id) { await carregar(true); const s = $("#lResp"); if (s) s.value = id; } };
+  if ($("#lLimpa")) $("#lLimpa").onclick = () => { S.sel.clear(); S.modoSel = false; render(); };
+  if ($("#lApl")) $("#lApl").onclick = aplicarLote;
+}
+async function aplicarLote() {
+  const resp = $("#lResp").value, col = $("#lCol") ? $("#lCol").value : "", prazo = $("#lPrazo").value, pri = $("#lPri").value;
+  if (!resp && !col && !prazo && !pri) return toast("Escolha o que mudar: responsável, coluna, prazo ou prioridade.");
+  const ks = S.cards.filter(k => S.sel.has(k.id)); if (!ks.length) return;
+  const patch = {};
+  if (resp === "__todos") { patch.para_todos = true; patch.responsavel = null; } else if (resp) { patch.responsavel = resp; patch.para_todos = false; }
+  if (prazo) patch.prazo = prazo; if (pri) patch.prioridade = pri === "__sem" ? null : pri;
+  $("#lApl").disabled = true;
+  if (Object.keys(patch).length) {
+    patch.atualizado_em = new Date().toISOString();
+    const { error } = await sb.from("cq_cartoes").update(patch).in("id", ks.map(k => k.id));
+    if (error) { toast("Não foi possível aplicar: " + error.message); return carregar(true); }
+    const oq = [resp ? "responsável → " + (resp === "__todos" ? "Todos" : nomeDe(resp)) : "", prazo ? "prazo → " + prazo.split("-").reverse().join("/") : "", pri ? "prioridade → " + (PRI[pri] || "sem") : ""].filter(Boolean).join(", ");
+    for (const k of ks) { Object.assign(k, patch); await evento("editou", "em lote: " + oq, k.id, k.quadro); }
+  }
+  if (col) { let n = 0; for (const k of ks) { if (k.coluna === col) continue; const r = await mover(k, col, (k.ordem || 0)); if (r !== false) n++; } }
+  toast(`${ks.length} tarefa(s) atualizada(s).`); S.sel.clear(); S.modoSel = false; await carregar(true);
+}
+async function novoMembro() {
+  const d = document.createElement("dialog"); d.className = "dlg";
+  d.innerHTML = `<form method="dialog" class="stack" style="min-width:min(420px,90vw);display:grid;gap:10px"><h3 style="margin:0">Novo membro do time</h3>
+    <p class="note" style="margin:0">Cria o login da pessoa. Ela recebe uma senha provisória e troca no primeiro acesso.</p>
+    <label>Nome<br><input id="nmN" required style="width:100%"></label><label>E-mail<br><input id="nmE" type="email" required style="width:100%"></label>
+    ${S.wl ? "" : `<label>Login<br><input id="nmL" required autocapitalize="none" placeholder="ex.: maria.vital" style="width:100%"></label><label>Tipo<br><select id="nmT" style="width:100%"><option value="colab">Colaborador(a)</option><option value="socio">Sócio(a)</option></select></label>`}
+    <p class="note" id="nmErr" role="alert" style="margin:0;color:#b3261e"></p><div id="nmOk"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" value="cancel" type="button" id="nmX">Fechar</button><button class="btn primary" type="button" id="nmC">Criar</button></div></form>`;
+  document.body.appendChild(d); d.showModal();
+  return await new Promise(res => {
+    let criado = null; const fim = () => { d.close(); d.remove(); res(criado); };
+    d.querySelector("#nmX").onclick = fim; d.addEventListener("cancel", fim);
+    d.querySelector("#nmC").onclick = async () => {
+      const nome = d.querySelector("#nmN").value.trim(), email = d.querySelector("#nmE").value.trim().toLowerCase(), err = d.querySelector("#nmErr");
+      const login = S.wl ? "" : d.querySelector("#nmL").value.trim().toLowerCase();
+      if (!nome || !email || (!S.wl && !login)) { err.textContent = "Preencha todos os campos."; return; }
+      const a = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"; let senha = [...crypto.getRandomValues(new Uint32Array(10))].map(n => a[n % a.length]).join(""); if (!/[0-9]/.test(senha)) senha = senha.slice(0, 9) + "7";
+      d.querySelector("#nmC").disabled = true; err.textContent = "";
+      try {
+        const corpo = S.wl ? { acao: "criar", escritorio: S.wl.id, nome, email, papel: "equipe", senha } : { acao: "criar", papel: "equipe", nome, email, login, senha, empresas: [] };
+        const { data, error } = await sb.functions.invoke(S.wl ? "wl-acessos" : "gestores", { body: corpo });
+        if (error) { let m = error.message; try { const j = await error.context.json(); m = j.erro || m; } catch {} throw new Error(m); }
+        if (data && data.erro) throw new Error(data.erro);
+        criado = data && data.id;
+        if (!S.wl && criado && d.querySelector("#nmT").value === "socio") await sb.rpc("proj_definir_socio", { p_user: criado, p_socio: true });
+        if (criado && S.q && !S.marc) await sb.from("cq_membros").insert({ quadro: S.q.id, user_id: criado, nome }).then(() => {}, () => {});
+        S.empP = null;
+        const msg = data && data.existente ? `Olá, ${nome}! Você foi incluído(a) no quadro de tarefas. Entre com o mesmo e-mail e senha de sempre.` : `Olá, ${nome}! Seu acesso ao quadro de tarefas foi criado.\nEndereço: ${location.origin + location.pathname}\nLogin: ${S.wl ? email : login}\nSenha provisória: ${senha}\nNo primeiro acesso, crie a sua senha.`;
+        d.querySelector("#nmOk").innerHTML = `<div class="card" style="padding:10px;display:grid;gap:6px"><b>Pronto! ${esc(nome)} já pode ser responsável.</b><span class="note">Envie a mensagem abaixo só para a pessoa, por um canal privado:</span><textarea readonly rows="5" style="width:100%">${esc(msg)}</textarea><a class="btn sm primary" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">Enviar pelo WhatsApp</a></div>`;
+      } catch (x) { err.textContent = "Não foi possível criar: " + (x.message || x); d.querySelector("#nmC").disabled = false; }
+    };
+  });
 }
 async function mover(k, colId, ordem) {
   let vis = colId;

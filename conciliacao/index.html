@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#00582F">
+<meta name="robots" content="noindex">
+<title>Conciliação bancária · Vital Agro & Negócios</title>
+<link rel="icon" href="/vitalagroenegocios/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+:root{color-scheme:light;
+--bg:#F3F6F1;--surface:#FFFFFF;--surface-2:#E8EFE4;--line:#D3DECD;--fg:#18241B;--muted:#57665A;--brand:#00582F;--brand-2:#007941;--leaf:#79C25B;--on-brand:#FFFFFF;
+--warn:#9A6200;--warn-bg:#FFF3D6;--bad:#B3261E;--bad-bg:#FBE4E1;--ok:#1F7A3F;--ok-bg:#E1F2E5;--info:#2F6FA6;--info-bg:#E3EDF6;
+--display:"Poppins","Segoe UI",system-ui,sans-serif;--body:"Source Sans 3","Segoe UI",system-ui,sans-serif;--r:12px}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.2;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+.wrap{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.logo{width:44px;height:44px;border-radius:10px;background:#fff;display:grid;place-items:center;border:1px solid var(--line);flex:none}
+.logo img{width:36px}
+.brandtxt b{font-family:var(--display);display:block;color:var(--brand)}
+.brandtxt span{font-size:.8rem;color:var(--muted)}
+.spacer{flex:1}
+.tab{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--muted);font-weight:600;text-decoration:none;white-space:nowrap}
+.tab:hover{background:var(--surface-2);color:var(--brand)}
+main{padding-block:20px 48px;display:grid;gap:16px}
+main>*,.grid2>*{min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.note{color:var(--muted);font-size:.9rem;margin:0}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:820px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.field{display:grid;gap:5px;min-width:0}
+.field label{font-weight:600;font-size:.88rem}
+.field input,.field select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 11px;width:100%;min-width:0}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 15px;border-radius:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--fg);text-decoration:none}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.sm{padding:5px 10px;font-size:.86rem}
+.btn.ghost{border-color:transparent;background:none;color:var(--brand)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.step{display:flex;gap:10px;align-items:center}
+.step i{font-style:normal;width:28px;height:28px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font:700 .9rem var(--display);flex:none}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;cursor:pointer;background:var(--surface-2);transition:border-color .15s}
+.drop:hover,.drop.on{border-color:var(--brand-2)}
+.drop b{display:block}
+.ok{color:var(--ok);font-weight:700}.err{color:var(--bad);font-weight:600}.warn{color:var(--warn);font-weight:600}
+.map{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}
+.mini{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:8px}
+.mini td,.mini th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.tw{overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface);text-align:left;cursor:pointer;display:grid;gap:2px}
+.kpi b{font:700 1.4rem var(--display)}.kpi span{font-size:.8rem;color:var(--muted)}.kpi em{font-style:normal;font-size:.78rem;font-weight:700}
+.kpi[aria-pressed="true"]{outline:2px solid var(--brand);background:var(--ok-bg)}
+table.res{width:100%;border-collapse:collapse;font-size:.88rem;background:var(--surface)}
+table.res th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2);text-align:left;padding:7px 8px;white-space:nowrap;position:sticky;top:0}
+table.res td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.st{display:inline-block;border-radius:999px;padding:1px 9px;font-weight:700;font-size:.74rem;white-space:nowrap}
+.st.c{background:var(--ok-bg);color:var(--ok)}.st.d{background:var(--info-bg);color:var(--info)}.st.s{background:var(--info-bg);color:var(--info)}
+.st.v{background:var(--warn-bg);color:var(--warn)}.st.b{background:var(--bad-bg);color:var(--bad)}.st.p{background:var(--bad-bg);color:var(--bad)}.st.f{background:var(--surface-2);color:var(--muted)}
+.obs{width:100%;min-width:140px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-size:.84rem}
+tr.res-ok td{opacity:.55}
+table.res td:nth-child(8){min-width:240px}table.res td:nth-child(3),table.res td:nth-child(6){min-width:160px}
+.hist{display:grid;gap:6px}
+.hist button{all:unset;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface);display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.hist button:hover{border-color:var(--brand-2)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.rodape{text-align:center;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));font-size:.78rem;color:var(--muted)}
+@media print{.top,.noprint,.rodape{display:none!important}body{background:#fff}.card{border:0;padding:0}table.res th{position:static}}
+</style>
+<script src="/vitalagroenegocios/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+<a class="logo" href="/vitalagroenegocios/" title="Página inicial da Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
+<div class="brandtxt"><b>Conciliação bancária</b><span>Extrato do banco × planilha da empresa</span></div>
+<div class="spacer"></div>
+<a class="tab" href="/vitalagroenegocios/cliente/">Área do cliente</a>
+</div></header>
+<main class="wrap" id="app"><div class="card"><p class="note">Carregando…</p></div></main>
+<footer class="rodape">By <b style="color:var(--brand)">Vital Agro&amp;Negócios</b> · os arquivos são lidos no seu navegador; só o resultado é salvo.</footer>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="fBanco" accept=".ofx,.OFX,.csv,.xlsx,.xls,.pdf,.txt" hidden>
+<input type="file" id="fBase" accept=".csv,.xlsx,.xls,.txt" hidden>
+<script>
+(() => {
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const brl = (v) => v == null || isNaN(v) ? "" : Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const dBR = (d) => d ? d.split("-").reverse().join("/") : "";
+const dias = (a, b) => Math.round((new Date(a + "T12:00") - new Date(b + "T12:00")) / 864e5);
+const addD = (d, n) => { const x = new Date(d + "T12:00"); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+let tT; const toast = (m) => { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(tT); tT = setTimeout(() => t.hidden = true, 4500); };
+const CFG = window.VITAL_CONFIG || {};
+const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const S = { user: null, nome: "", equipe: false, empresas: [], empresa: "", banco: null, base: null, tol: 3, res: null, filtro: "", salvoId: null, hist: [] };
+
+/* ================= leitura de números e datas ================= */
+function num(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return isFinite(v) ? v : null;
+  let s = String(v).trim(); if (!s) return null;
+  let neg = false;
+  if (/^\(.*\)$/.test(s)) { neg = true; s = s.slice(1, -1); }
+  if (/\s*[dD]$/.test(s)) { neg = true; s = s.replace(/\s*[dD]$/, ""); }
+  s = s.replace(/\s*[cC]$/, "");
+  s = s.replace(/R\$|\s/g, "");
+  if (/^-/.test(s) || /-$/.test(s)) { neg = !neg ? true : neg; s = s.replace(/-/g, ""); }
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+  if (!/^\d*\.?\d+$/.test(s)) return null;
+  const n = Number(s); if (!isFinite(n)) return null;
+  return Math.round((neg ? -n : n) * 100) / 100;
+}
+function data(v, anoPadrao) {
+  if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v)) return new Date(v.getTime() - v.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  if (typeof v === "number" && v > 20000 && v < 80000) { const d = new Date(Math.round((v - 25569) * 864e5)); return d.toISOString().slice(0, 10); }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?/);
+  if (m) { let a = m[3] ? +m[3] : anoPadrao; if (!a) return null; if (a < 100) a += 2000; const dd = +m[1], mm = +m[2]; if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null; return `${a}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`; }
+  m = s.match(/^(\d{4})(\d{2})(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+const normTxt = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function semelhanca(a, b) {
+  const tok = (s) => new Set(normTxt(s).split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !/^\d+$/.test(w)));
+  const A = tok(a), B = tok(b); if (!A.size || !B.size) return 0;
+  let i = 0; A.forEach((w) => { if (B.has(w)) i++; }); return i / Math.min(A.size, B.size);
+}
+
+/* ================= leitores de arquivo ================= */
+async function lerTexto(file) {
+  const buf = await file.arrayBuffer();
+  let t = new TextDecoder("utf-8").decode(buf);
+  if (t.includes("�")) t = new TextDecoder("windows-1252").decode(buf);
+  return t;
+}
+function lerOFX(t) {
+  const tag = (bloco, k) => { const m = bloco.match(new RegExp("<" + k + ">([^<\\r\\n]*)", "i")); return m ? m[1].trim() : ""; };
+  const itens = [];
+  const blocos = t.split(/<STMTTRN>/i).slice(1);
+  for (const b0 of blocos) {
+    const b = b0.split(/<\/STMTTRN>/i)[0];
+    const d = data(tag(b, "DTPOSTED")); const v0 = Number(tag(b, "TRNAMT").replace(",", ".")); const v = isFinite(v0) && tag(b, "TRNAMT") !== "" ? Math.round(v0 * 100) / 100 : null;
+    if (!d || v == null) continue;
+    const memo = [tag(b, "NAME"), tag(b, "MEMO")].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(" · ");
+    itens.push({ data: d, desc: memo || tag(b, "TRNTYPE"), valor: v, doc: tag(b, "CHECKNUM") || tag(b, "FITID") });
+  }
+  const saldo = num((t.match(/<LEDGERBAL>[\s\S]*?<BALAMT>([^<\r\n]*)/i) || [])[1]?.replace(",", "."));
+  const dtSaldo = data((t.match(/<LEDGERBAL>[\s\S]*?<DTASOF>([^<\r\n]*)/i) || [])[1]);
+  const ini = data((t.match(/<DTSTART>([^<\r\n]*)/i) || [])[1]), fim = data((t.match(/<DTEND>([^<\r\n]*)/i) || [])[1]);
+  const banco = (t.match(/<ORG>([^<\r\n]*)/i) || [])[1] || (t.match(/<BANKID>([^<\r\n]*)/i) || [])[1] || "";
+  const conta = (t.match(/<ACCTID>([^<\r\n]*)/i) || [])[1] || "";
+  return { itens, saldo, dtSaldo, ini, fim, banco: [banco, conta].filter(Boolean).join(" · conta ") };
+}
+async function lerPlanilha(file) {
+  if (/\.(csv|txt)$/i.test(file.name)) {
+    const t = await lerTexto(file);
+    const linhas = t.split(/\r?\n/).filter((l) => l.trim());
+    const sep = [";", "\t", ","].map((s) => [s, (linhas[0] || "").split(s).length]).sort((a, b) => b[1] - a[1])[0][0];
+    return linhas.map((l) => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === sep && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map((x) => x.trim()); });
+  }
+  const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+  let melhor = null;
+  for (const nm of wb.SheetNames) { const rows = XLSX.utils.sheet_to_json(wb.Sheets[nm], { header: 1, raw: true, defval: "" }); if (!melhor || rows.length > melhor.length) melhor = rows; }
+  return melhor || [];
+}
+async function lerPDF(file) {
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const linhas = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    const porY = new Map();
+    for (const it of tc.items) { if (!it.str.trim()) continue; const y = Math.round(it.transform[5] / 2); if (!porY.has(y)) porY.set(y, []); porY.get(y).push(it); }
+    [...porY.entries()].sort((a, b) => b[0] - a[0]).forEach(([, its]) => linhas.push(its.sort((a, b) => a.transform[4] - b.transform[4]).map((i) => i.str.trim()).join(" ")));
+  }
+  const txt = linhas.join("\n");
+  const anoM = txt.match(/\b(20\d{2})\b/); const ano = anoM ? +anoM[1] : new Date().getFullYear();
+  const DIN = /-?\s?(?:R\$\s?)?\d{1,3}(?:\.\d{3})*,\d{2}\s?[-DdCc]?(?![\d,])/g;
+  const itens = []; let ult = null;
+  for (const l of linhas) {
+    const md = l.match(/^\s*(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.*)$/);
+    const corpo = md ? md[2] : null;
+    if (md) ult = data(md[1], ano);
+    if (!corpo || !ult) continue;
+    if (/saldo\s+(anterior|do dia|final|em)|^saldo\b/i.test(corpo)) continue;
+    const vals = corpo.match(DIN); if (!vals) continue;
+    const v = num(vals[0].replace(/\s/g, "")); if (v == null || v === 0) continue;
+    const desc = corpo.slice(0, corpo.indexOf(vals[0])).trim();
+    itens.push({ data: ult, desc: desc || "(sem descrição)", valor: v, doc: "" });
+  }
+  return { itens, aviso: "Extrato lido de PDF: confira algumas linhas antes de conciliar (PDF não tem formato padrão)." };
+}
+
+/* ================= reconhecimento de colunas ================= */
+function acharCabecalho(rows) {
+  let best = 0, bi = 0;
+  rows.slice(0, 25).forEach((r, i) => { const s = r.map(normTxt).join("|"); const p = ["data", "valor", "descr", "hist", "lanc", "debito", "credito", "entrada", "saida", "status", "situa", "favorec", "categoria"].filter((k) => s.includes(k)).length; if (p > best) { best = p; bi = i; } });
+  return bi;
+}
+function sugerirMapa(cab) {
+  const n = cab.map(normTxt), idx = (re, ex) => n.findIndex((c, i) => re.test(c) && (!ex || !ex.test(c)));
+  return {
+    data: idx(/data|^dt|vencimento|pagamento|competencia/, /vencimento/) >= 0 ? idx(/data|^dt|pagamento/, /venc/) : idx(/venc/),
+    desc: idx(/descri|historico|hist|lancamento|memo|favorecido|fornecedor|cliente|nome|contato/),
+    valor: idx(/^valor|vlr|montante|amount|valor\s*(r\$)?$/, /saldo/),
+    entrada: idx(/entrada|credito|receita|recebido/),
+    saida: idx(/saida|debito|despesa|pago$/),
+    dc: idx(/^d\/c$|^dc$|^tipo$|natureza|^c\/d$/),
+    status: idx(/status|situacao|situa/),
+  };
+}
+function linhasDaTabela(rows, mapa, opts = {}) {
+  const hi = mapa.header; const out = [];
+  for (let i = hi + 1; i < rows.length; i++) {
+    const r = rows[i]; if (!r || !r.some((x) => String(x).trim())) continue;
+    const d = data(r[mapa.data]); if (!d) continue;
+    let v = null;
+    if (mapa.valor >= 0) v = num(r[mapa.valor]);
+    if ((v == null || mapa.valor < 0) && (mapa.entrada >= 0 || mapa.saida >= 0)) { const e = num(r[mapa.entrada]) || 0, s = num(r[mapa.saida]) || 0; v = Math.round((Math.abs(e) - Math.abs(s)) * 100) / 100; }
+    if (v == null || v === 0) continue;
+    if (mapa.dc >= 0) { const t = normTxt(r[mapa.dc]); if (/^d|debito|saida|despesa|pagar/.test(t)) v = -Math.abs(v); else if (/^c|credito|entrada|receita|receber/.test(t)) v = Math.abs(v); }
+    const st = mapa.status >= 0 ? String(r[mapa.status] ?? "").trim() : "";
+    if (opts.status && opts.status.size && !opts.status.has(st)) continue;
+    out.push({ data: d, desc: mapa.desc >= 0 ? String(r[mapa.desc] ?? "").trim() : "", valor: v, status: st, linha: i + 1 });
+  }
+  return out;
+}
+
+/* ================= motor de conciliação ================= */
+function conciliar(banco, base, tol, periodo) {
+  const B = banco.map((x, i) => ({ ...x, i, usado: false }));
+  const L0 = base.map((x, i) => ({ ...x, i, usado: false }));
+  const pIni = periodo.ini, pFim = periodo.fim;
+  const fora = L0.filter((x) => x.data < addD(pIni, -tol) || x.data > addD(pFim, tol));
+  const L = L0.filter((x) => !fora.includes(x));
+  const res = [];
+  const par = (b, l, tipo) => { b.usado = l.usado = true; res.push({ tipo, b, l: Array.isArray(l) ? l : [l], dif: 0, dd: Array.isArray(l) ? 0 : dias(l.data, b.data) }); };
+  const mesmoValor = (a, b) => Math.abs(a - b) < 0.005;
+  // 1) mesmo valor, mesma data
+  for (const b of B) { const c = L.filter((l) => !l.usado && mesmoValor(l.valor, b.valor) && l.data === b.data).sort((x, y) => semelhanca(y.desc, b.desc) - semelhanca(x.desc, b.desc))[0]; if (c) par(b, c, "c"); }
+  // 2) mesmo valor, data dentro da tolerância
+  for (const b of B.filter((x) => !x.usado)) { const c = L.filter((l) => !l.usado && mesmoValor(l.valor, b.valor) && Math.abs(dias(l.data, b.data)) <= tol).sort((x, y) => Math.abs(dias(x.data, b.data)) - Math.abs(dias(y.data, b.data)) || semelhanca(y.desc, b.desc) - semelhanca(x.desc, b.desc))[0]; if (c) par(b, c, "d"); }
+  // 3) um lançamento do banco = soma de vários da planilha (ou o contrário)
+  const combina = (alvo, cands) => { cands = cands.slice(0, 14); const n = cands.length;
+    for (let k = 2; k <= 4; k++) { const idx = []; const rec = (s, soma) => { if (idx.length === k) return mesmoValor(soma, alvo) ? idx.slice() : null; for (let j = s; j < n; j++) { idx.push(j); const r = rec(j + 1, soma + cands[j].valor); if (r) return r; idx.pop(); } return null; }; const r = rec(0, 0); if (r) return r.map((j) => cands[j]); } return null; };
+  for (const b of B.filter((x) => !x.usado)) { const cs = L.filter((l) => !l.usado && Math.sign(l.valor) === Math.sign(b.valor) && Math.abs(l.valor) < Math.abs(b.valor) && Math.abs(dias(l.data, b.data)) <= tol); const g = combina(b.valor, cs); if (g) { b.usado = true; g.forEach((l) => l.usado = true); res.push({ tipo: "s", b, l: g, dif: 0, dd: 0 }); } }
+  for (const l of L.filter((x) => !x.usado)) { const cs = B.filter((b) => !b.usado && Math.sign(l.valor) === Math.sign(b.valor) && Math.abs(b.valor) < Math.abs(l.valor) && Math.abs(dias(l.data, b.data)) <= tol); const g = combina(l.valor, cs); if (g) { l.usado = true; g.forEach((b) => { b.usado = true; res.push({ tipo: "s", b, l: [l], dif: 0, dd: 0, grupo: true }); }); } }
+  // 4) valor divergente: mesma data (±tol), mesmo sinal, descrição parecida
+  for (const b of B.filter((x) => !x.usado)) { const c = L.filter((l) => !l.usado && Math.sign(l.valor) === Math.sign(b.valor) && Math.abs(dias(l.data, b.data)) <= tol && semelhanca(l.desc, b.desc) >= 0.5).sort((x, y) => Math.abs(x.valor - b.valor) - Math.abs(y.valor - b.valor))[0]; if (c && Math.abs(c.valor - b.valor) <= Math.max(50, Math.abs(b.valor) * 0.2)) { b.usado = c.usado = true; res.push({ tipo: "v", b, l: [c], dif: Math.round((b.valor - c.valor) * 100) / 100, dd: dias(c.data, b.data) }); } }
+  // 5) sobras
+  for (const b of B.filter((x) => !x.usado)) res.push({ tipo: "b", b, l: [], dif: b.valor, dd: 0 });
+  for (const l of L.filter((x) => !x.usado)) res.push({ tipo: "p", b: null, l: [l], dif: -l.valor, dd: 0 });
+  for (const l of fora) res.push({ tipo: "f", b: null, l: [l], dif: 0, dd: 0 });
+  res.forEach((r) => r.ajuste = sugestao(r, periodo));
+  res.sort((a, b) => ((a.b || a.l[0]).data).localeCompare((b.b || b.l[0]).data));
+  return res;
+}
+function sugestao(r, periodo) {
+  const d = normTxt(r.b ? r.b.desc : "");
+  if (r.tipo === "c") return "OK";
+  if (r.tipo === "d") return `OK, mas a data na planilha está ${Math.abs(r.dd)} dia(s) ${r.dd > 0 ? "depois" : "antes"} do banco: ajustar a data para ${dBR(r.b.data)}.`;
+  if (r.tipo === "s") return r.grupo ? "Um lançamento da planilha foi pago/recebido em partes no banco: OK." : "Lançamento único no banco que soma vários da planilha (pagamento em lote): OK.";
+  if (r.tipo === "v") return `Valor diferente em ${brl(Math.abs(r.dif))}: ${Math.abs(r.b.valor) > Math.abs(r.l[0].valor) ? "o banco movimentou mais" : "o banco movimentou menos"} que a planilha. Conferir juros, multa, desconto ou tarifa e corrigir o valor.`;
+  if (r.tipo === "b") {
+    if (/tarifa|tar\b|pacote|cesta|manutencao/.test(d)) return "Tarifa bancária não lançada: lançar como despesa bancária.";
+    if (/iof/.test(d)) return "IOF não lançado: lançar como despesa financeira.";
+    if (/juros|mora|multa/.test(d)) return r.b.valor < 0 ? "Juros/multa não lançados: lançar como despesa financeira." : "Rendimento/juros recebidos: lançar como receita financeira.";
+    if (/rend|aplic|resgate|invest|cdb/.test(d)) return "Aplicação/resgate: lançar como transferência entre contas (não é receita nem despesa).";
+    if (/estorn|devol/.test(d)) return "Estorno/devolução: localizar o lançamento original e ajustar.";
+    if (/transf|ted|doc\b|mesma titularidade/.test(d) && !/receb/.test(d)) return "Transferência: confirmar se é entre contas da própria empresa e lançar como transferência.";
+    return r.b.valor > 0 ? "Entrada no banco sem lançamento na planilha: identificar o cliente/origem e lançar a receita." : "Saída no banco sem lançamento na planilha: identificar o pagamento e lançar a despesa.";
+  }
+  if (r.tipo === "p") return "Está na planilha mas não aparece no banco: verificar se foi pago/recebido, se saiu por outra conta ou se a data/valor estão errados.";
+  if (r.tipo === "f") return `Fora do período do extrato (${dBR(periodo.ini)} a ${dBR(periodo.fim)}): não entra na conciliação.`;
+  return "";
+}
+const NOME = { c: "Conciliado", d: "Data diferente", s: "Conciliado por soma", v: "Valor divergente", b: "Só no banco", p: "Só na planilha", f: "Fora do período" };
+
+/* ================= telas ================= */
+async function iniciar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = "/vitalagroenegocios/cliente/?volta=/vitalagroenegocios/conciliacao/"; return; }
+  S.user = session.user;
+  const { data: pf } = await sb.from("perfis").select("papel, nome").eq("user_id", S.user.id).maybeSingle();
+  S.nome = (pf && pf.nome) || S.user.email; S.equipe = !!pf && ["admin", "equipe"].includes(pf.papel);
+  const { data: em } = await sb.rpc("conc_minhas_empresas");
+  S.empresas = (em || []).map((x) => typeof x === "string" ? x : Object.values(x)[0]);
+  if (!S.empresas.length) { $("#app").innerHTML = `<div class="card"><h2 style="font-size:1.2rem">Conciliação bancária</h2><p>Esta ferramenta ainda não foi liberada para a sua empresa. Fale com a Vital.</p><p><a class="btn" href="/vitalagroenegocios/cliente/">Voltar</a></p></div>`; return; }
+  let sv = ""; try { sv = localStorage.getItem("conc.emp") || ""; } catch {}
+  S.empresa = S.empresas.includes(sv) ? sv : S.empresas[0];
+  await carregarHist(); render();
+}
+async function carregarHist() {
+  const { data } = await sb.from("conc_conciliacoes").select("id, banco, periodo_ini, periodo_fim, resumo, criado_nome, criado_em").eq("empresa", S.empresa).order("criado_em", { ascending: false }).limit(20);
+  S.hist = data || [];
+}
+function blocoArquivo(qual) {
+  const a = S[qual], titulo = qual === "banco" ? "Extrato do banco" : "Planilha da empresa (base)";
+  const dica = qual === "banco" ? "OFX (melhor), Excel/CSV ou PDF do internet banking" : "Excel ou CSV com data, descrição e valor (ou entrada/saída)";
+  let corpo = `<div class="drop" data-drop="${qual}" tabindex="0" role="button"><b>📎 Escolher ou arrastar o arquivo</b><span class="note">${dica}</span></div>`;
+  if (a) {
+    const it = a.itens || [];
+    const ent = it.filter((x) => x.valor > 0).reduce((s, x) => s + x.valor, 0), sai = it.filter((x) => x.valor < 0).reduce((s, x) => s + x.valor, 0);
+    corpo = `<div class="row" style="justify-content:space-between"><div><b>${esc(a.nome)}</b><div class="note">${it.length} lançamento(s) · entradas ${brl(ent)} · saídas ${brl(sai)}${it.length ? ` · ${dBR(it.reduce((m, x) => x.data < m ? x.data : m, it[0].data))} a ${dBR(it.reduce((m, x) => x.data > m ? x.data : m, it[0].data))}` : ""}</div></div><button class="btn sm" data-trocar="${qual}" type="button">Trocar arquivo</button></div>
+      ${a.aviso ? `<p class="warn" style="margin:8px 0 0">⚠️ ${esc(a.aviso)}</p>` : ""}
+      ${a.rows ? mapaHTML(qual) : ""}
+      ${it.length ? `<div class="tw"><table class="mini"><thead><tr><th>Data</th><th>Descrição</th><th class="n">Valor</th>${qual === "base" && a.mapa && a.mapa.status >= 0 ? "<th>Status</th>" : ""}</tr></thead><tbody>${it.slice(0, 5).map((x) => `<tr><td>${dBR(x.data)}</td><td>${esc(x.desc)}</td><td class="n">${brl(x.valor)}</td>${qual === "base" && a.mapa && a.mapa.status >= 0 ? `<td>${esc(x.status)}</td>` : ""}</tr>`).join("")}</tbody></table></div><p class="note" style="margin-top:4px">Mostrando as 5 primeiras linhas para conferência.</p>` : `<p class="err" style="margin:8px 0 0">Não encontrei lançamentos. Ajuste as colunas acima.</p>`}`;
+  }
+  return `<div class="card"><div class="step"><i>${qual === "banco" ? 1 : 2}</i><h3 style="font-size:1.05rem">${titulo}</h3></div><div style="margin-top:12px">${corpo}</div></div>`;
+}
+function mapaHTML(qual) {
+  const a = S[qual], cab = (a.rows[a.mapa.header] || []).map((c, i) => String(c || `Coluna ${i + 1}`));
+  const sel = (k, rot, opc) => `<div class="field"><label>${rot}</label><select data-mapa="${qual}" data-k="${k}"><option value="-1">${opc ? "— não tem —" : "— escolher —"}</option>${cab.map((c, i) => `<option value="${i}" ${a.mapa[k] === i ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>`;
+  let st = "";
+  if (qual === "base" && a.mapa.status >= 0) {
+    const vals = [...new Set(a.rows.slice(a.mapa.header + 1).map((r) => String(r[a.mapa.status] ?? "").trim()).filter(Boolean))].slice(0, 15);
+    st = `<div class="field" style="grid-column:1/-1"><label>Considerar só os lançamentos com status</label><div class="row">${vals.map((v) => `<label style="font-weight:400;display:flex;gap:4px;align-items:center"><input type="checkbox" data-st="${esc(v)}" ${a.status.has(v) ? "checked" : ""}> ${esc(v)}</label>`).join("")}</div></div>`;
+  }
+  return `<details ${a.itens && a.itens.length ? "" : "open"} style="margin-top:10px"><summary class="note" style="cursor:pointer">Colunas reconhecidas (clique para ajustar)</summary><div class="map">
+    ${sel("data", "Data", false)}${sel("desc", "Descrição", true)}${sel("valor", "Valor (com sinal)", true)}${sel("entrada", "Entrada / crédito", true)}${sel("saida", "Saída / débito", true)}${sel("dc", "Tipo (D/C)", true)}${qual === "base" ? sel("status", "Status", true) : ""}${st}</div></details>`;
+}
+function render() {
+  const pronto = S.banco && S.base && S.banco.itens.length && S.base.itens.length;
+  $("#app").innerHTML = `
+  <div class="card noprint"><div class="row" style="justify-content:space-between;align-items:end">
+    <div><div class="eyebrow">Ferramenta Vital</div><h2 style="font-size:1.35rem">Conciliação bancária</h2><p class="note">Suba o extrato do banco e a planilha da empresa. O sistema confere lançamento por lançamento e aponta o que falta, o que diverge e o ajuste sugerido.</p></div>
+    <div class="row"><div class="field"><label for="selEmp">Empresa</label><select id="selEmp">${S.empresas.map((e) => `<option ${e === S.empresa ? "selected" : ""}>${esc(e)}</option>`).join("")}</select></div>
+    <div class="field" style="width:120px"><label for="tol">Tolerância (dias)</label><input id="tol" type="number" min="0" max="10" value="${S.tol}"></div></div></div></div>
+  <div class="grid2 noprint">${blocoArquivo("banco")}${blocoArquivo("base")}</div>
+  <div class="row noprint"><button class="btn primary" id="btnConc" type="button" ${pronto ? "" : "disabled"}>🔎 Conciliar</button>${pronto ? "" : '<span class="note">Envie os dois arquivos para liberar.</span>'}</div>
+  <div id="res">${S.res ? resultadoHTML() : ""}</div>
+  ${S.hist.length ? `<div class="card noprint"><h3 style="font-size:1.05rem;margin-bottom:8px">Conciliações salvas · ${esc(S.empresa)}</h3><div class="hist">${S.hist.map((h) => `<button type="button" data-hist="${h.id}"><span><b>${esc(h.banco || "Conta")}</b> · ${dBR(h.periodo_ini)} a ${dBR(h.periodo_fim)}</span><span class="note">${(h.resumo && h.resumo.pend) || 0} pendência(s) · ${esc(h.criado_nome || "")} · ${new Date(h.criado_em).toLocaleDateString("pt-BR")}</span></button>`).join("")}</div></div>` : ""}`;
+  ligar();
+}
+function resultadoHTML() {
+  const R = S.res, it = R.itens;
+  const cnt = (t) => it.filter((r) => r.tipo === t).length;
+  const sm = (t, f) => it.filter((r) => r.tipo === t).reduce((s, r) => s + f(r), 0);
+  const ks = [["c", "Conciliados", ""], ["d", "Data diferente", ""], ["s", "Conciliados por soma", ""], ["v", "Valor divergente", brl(sm("v", (r) => Math.abs(r.dif)))], ["b", "Só no banco", brl(sm("b", (r) => r.b.valor))], ["p", "Só na planilha", brl(sm("p", (r) => r.l[0].valor))], ["f", "Fora do período", ""]];
+  const pend = it.filter((r) => ["d", "v", "b", "p"].includes(r.tipo) && !r.ok).length;
+  const vis = it.filter((r) => !S.filtro ? r.tipo !== "f" : S.filtro === "pend" ? ["d", "v", "b", "p"].includes(r.tipo) : r.tipo === S.filtro);
+  const totB = R.banco.reduce((s, x) => s + x.valor, 0), totL = it.filter((r) => r.tipo !== "f").flatMap((r) => r.l).reduce((s, x) => s + x.valor, 0);
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:start">
+      <div><div class="eyebrow">Resultado</div><h2 style="font-size:1.2rem">${esc(R.empresa)} · ${esc(R.bancoNome || "Conta")}</h2><p class="note">Período do extrato: ${dBR(R.periodo.ini)} a ${dBR(R.periodo.fim)} · tolerância de ${R.tol} dia(s) · ${pend ? `<b class="err">${pend} pendência(s) para ajustar</b>` : '<b class="ok">tudo conciliado ✓</b>'}</p></div>
+      <div class="row noprint"><button class="btn primary sm" id="btnSalvar" type="button">💾 ${S.salvoId ? "Salvar alterações" : "Salvar conciliação"}</button><button class="btn sm" id="btnXls" type="button">⬇️ Excel</button><button class="btn sm" id="btnPdf" type="button">📄 PDF</button></div>
+    </div>
+    <div class="kpis noprint" style="margin:12px 0">${ks.map(([k, l, v]) => `<button class="kpi" type="button" data-f="${k}" aria-pressed="${S.filtro === k}"><b>${cnt(k)}</b><span>${l}</span>${v ? `<em>${v}</em>` : ""}</button>`).join("")}<button class="kpi" type="button" data-f="pend" aria-pressed="${S.filtro === "pend"}"><b class="${pend ? "err" : "ok"}">${pend}</b><span>Pendências</span></button></div>
+    <p class="note" style="margin-bottom:8px">Movimento do banco no período: <b>${brl(totB)}</b> · movimento da planilha no período: <b>${brl(totL)}</b> · diferença: <b class="${Math.abs(totB - totL) < 0.01 ? "ok" : "err"}">${brl(totB - totL)}</b>${R.saldo != null ? ` · saldo final no banco (${dBR(R.dtSaldo)}): <b>${brl(R.saldo)}</b>` : ""}${S.filtro ? ` · <a href="#" data-f="">mostrar tudo</a>` : ""}</p>
+    <div class="tw" style="max-height:70vh"><table class="res"><thead><tr><th>Situação</th><th>Data banco</th><th>Descrição no banco</th><th class="n">Valor banco</th><th>Data planilha</th><th>Descrição na planilha</th><th class="n">Valor planilha</th><th>Ajuste sugerido</th><th class="noprint">Resolvido / observação</th></tr></thead><tbody>
+    ${vis.map((r) => { const idx = it.indexOf(r); const l = r.l; return `<tr class="${r.ok ? "res-ok" : ""}"><td><span class="st ${r.tipo}">${NOME[r.tipo]}</span></td><td>${r.b ? dBR(r.b.data) : ""}</td><td>${r.b ? esc(r.b.desc) : ""}</td><td class="n">${r.b ? brl(r.b.valor) : ""}</td>
+      <td>${l.map((x) => dBR(x.data)).join("<br>")}</td><td>${l.map((x) => esc(x.desc) + (x.linha ? ` <span class="note">(linha ${x.linha})</span>` : "")).join("<br>")}</td><td class="n">${l.map((x) => brl(x.valor)).join("<br>")}</td>
+      <td>${esc(r.ajuste)}</td><td class="noprint">${["c", "s", "f"].includes(r.tipo) ? "" : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-ok="${idx}" ${r.ok ? "checked" : ""}> feito</label><input class="obs" data-obs="${idx}" value="${esc(r.obs || "")}" placeholder="observação">`}</td></tr>`; }).join("") || `<tr><td colspan="9" class="note">Nada nesta situação.</td></tr>`}
+    </tbody></table></div></div>`;
+}
+
+/* ================= arquivos ================= */
+let alvoArq = null;
+function abrirArquivo(qual) { alvoArq = qual; const inp = qual === "banco" ? $("#fBanco") : $("#fBase"); inp.value = ""; inp.click(); }
+$("#fBanco").onchange = (e) => e.target.files[0] && carregarArquivo("banco", e.target.files[0]);
+$("#fBase").onchange = (e) => e.target.files[0] && carregarArquivo("base", e.target.files[0]);
+async function carregarArquivo(qual, file) {
+  toast("Lendo " + file.name + "…");
+  try {
+    const nome = file.name;
+    if (qual === "banco" && /\.ofx$/i.test(nome)) { const o = lerOFX(await lerTexto(file)); S.banco = { nome, itens: o.itens, ini: o.ini, fim: o.fim, saldo: o.saldo, dtSaldo: o.dtSaldo, bancoNome: o.banco }; }
+    else if (qual === "banco" && /\.pdf$/i.test(nome)) { const p = await lerPDF(file); S.banco = { nome, itens: p.itens, aviso: p.aviso }; }
+    else if (/\.(xlsx|xls|csv|txt)$/i.test(nome)) {
+      const rows = await lerPlanilha(file); const header = acharCabecalho(rows); const mapa = { header, ...sugerirMapa(rows[header] || []) };
+      const obj = { nome, rows, mapa, status: new Set() };
+      if (qual === "base" && mapa.status >= 0) { const vals = [...new Set(rows.slice(header + 1).map((r) => String(r[mapa.status] ?? "").trim()).filter(Boolean))]; vals.filter((v) => /confirm|pago|recebid|realiz|concil|quitad|baixad|liquid/i.test(normTxt(v))).forEach((v) => obj.status.add(v)); }
+      obj.itens = linhasDaTabela(rows, mapa, { status: obj.status });
+      S[qual] = obj;
+    } else { toast("Formato não aceito. Use " + (qual === "banco" ? "OFX, Excel, CSV ou PDF." : "Excel ou CSV.")); return; }
+    S.res = null; S.salvoId = null; render();
+    if (!S[qual].itens.length) toast("Não encontrei lançamentos no arquivo. Confira as colunas.");
+  } catch (err) { console.error(err); toast("Não consegui ler o arquivo: " + (err.message || err)); }
+}
+function remapear(qual) { const a = S[qual]; a.itens = linhasDaTabela(a.rows, a.mapa, { status: a.status }); S.res = null; render(); }
+
+/* ================= ações ================= */
+function ligar() {
+  const app = $("#app");
+  $("#selEmp").onchange = async (e) => { S.empresa = e.target.value; try { localStorage.setItem("conc.emp", S.empresa); } catch {} S.res = null; S.salvoId = null; await carregarHist(); render(); };
+  $("#tol").onchange = (e) => { S.tol = Math.max(0, Math.min(10, +e.target.value || 0)); };
+  app.querySelectorAll("[data-drop]").forEach((d) => {
+    d.onclick = () => abrirArquivo(d.dataset.drop);
+    d.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirArquivo(d.dataset.drop); } };
+    d.ondragover = (e) => { e.preventDefault(); d.classList.add("on"); }; d.ondragleave = () => d.classList.remove("on");
+    d.ondrop = (e) => { e.preventDefault(); d.classList.remove("on"); const f = e.dataTransfer.files[0]; if (f) carregarArquivo(d.dataset.drop, f); };
+  });
+  app.querySelectorAll("[data-trocar]").forEach((b) => b.onclick = () => abrirArquivo(b.dataset.trocar));
+  app.querySelectorAll("[data-mapa]").forEach((s) => s.onchange = () => { const a = S[s.dataset.mapa]; a.mapa[s.dataset.k] = +s.value; if (s.dataset.k === "status") a.status = new Set(); remapear(s.dataset.mapa); });
+  app.querySelectorAll("[data-st]").forEach((c) => c.onchange = () => { const a = S.base; if (c.checked) a.status.add(c.dataset.st); else a.status.delete(c.dataset.st); remapear("base"); });
+  const bc = $("#btnConc"); if (bc) bc.onclick = () => {
+    const it = S.banco.itens; const ini = S.banco.ini || it.reduce((m, x) => x.data < m ? x.data : m, it[0].data), fim = S.banco.fim || it.reduce((m, x) => x.data > m ? x.data : m, it[0].data);
+    S.res = { empresa: S.empresa, bancoNome: S.banco.bancoNome || S.banco.nome.replace(/\.[^.]+$/, ""), periodo: { ini, fim }, tol: S.tol, saldo: S.banco.saldo ?? null, dtSaldo: S.banco.dtSaldo || fim, banco: it, itens: conciliar(it, S.base.itens, S.tol, { ini, fim }), arqB: S.banco.nome, arqL: S.base.nome };
+    S.filtro = "pend"; S.salvoId = null; render(); $("#res").scrollIntoView({ behavior: "smooth" });
+  };
+  app.querySelectorAll("[data-f]").forEach((b) => b.onclick = (e) => { e.preventDefault(); S.filtro = S.filtro === b.dataset.f ? "" : b.dataset.f; render(); });
+  app.querySelectorAll("[data-ok]").forEach((c) => c.onchange = () => { S.res.itens[+c.dataset.ok].ok = c.checked; render(); });
+  app.querySelectorAll("[data-obs]").forEach((i) => i.onchange = () => { S.res.itens[+i.dataset.obs].obs = i.value; });
+  const bs = $("#btnSalvar"); if (bs) bs.onclick = salvar;
+  const bx = $("#btnXls"); if (bx) bx.onclick = exportarExcel;
+  const bp = $("#btnPdf"); if (bp) bp.onclick = () => { const f = S.filtro; S.filtro = ""; render(); setTimeout(() => { window.print(); S.filtro = f; render(); }, 200); };
+  app.querySelectorAll("[data-hist]").forEach((b) => b.onclick = () => abrirHist(+b.dataset.hist));
+}
+const enxuto = (x) => x && { data: x.data, desc: x.desc, valor: x.valor, linha: x.linha || null };
+async function salvar() {
+  const R = S.res, it = R.itens;
+  const resumo = { conc: it.filter((r) => ["c", "s"].includes(r.tipo)).length, data: it.filter((r) => r.tipo === "d").length, valor: it.filter((r) => r.tipo === "v").length, banco: it.filter((r) => r.tipo === "b").length, planilha: it.filter((r) => r.tipo === "p").length, pend: it.filter((r) => ["d", "v", "b", "p"].includes(r.tipo) && !r.ok).length, tol: R.tol, saldo: R.saldo, dtSaldo: R.dtSaldo };
+  const row = { empresa: R.empresa, banco: R.bancoNome, periodo_ini: R.periodo.ini, periodo_fim: R.periodo.fim, arquivo_banco: R.arqB, arquivo_base: R.arqL, resumo, criado_nome: S.nome,
+    itens: it.map((r) => ({ tipo: r.tipo, b: enxuto(r.b), l: r.l.map(enxuto), dif: r.dif, dd: r.dd, grupo: !!r.grupo, ajuste: r.ajuste, ok: !!r.ok, obs: r.obs || "" })), atualizado_em: new Date().toISOString() };
+  const q = S.salvoId ? sb.from("conc_conciliacoes").update(row).eq("id", S.salvoId).select("id").single() : sb.from("conc_conciliacoes").insert(row).select("id").single();
+  const { data, error } = await q;
+  if (error) { toast("Não foi possível salvar: " + error.message); return; }
+  S.salvoId = data.id; toast("Conciliação salva ✓"); await carregarHist(); render();
+}
+async function abrirHist(id) {
+  const { data: h, error } = await sb.from("conc_conciliacoes").select("*").eq("id", id).single();
+  if (error || !h) { toast("Não consegui abrir."); return; }
+  const itens = (h.itens || []).map((r) => ({ ...r, l: r.l || [] }));
+  S.res = { empresa: h.empresa, bancoNome: h.banco, periodo: { ini: h.periodo_ini, fim: h.periodo_fim }, tol: (h.resumo || {}).tol ?? 3, saldo: (h.resumo || {}).saldo ?? null, dtSaldo: (h.resumo || {}).dtSaldo, banco: itens.filter((r) => r.b).map((r) => r.b), itens, arqB: h.arquivo_banco, arqL: h.arquivo_base };
+  S.salvoId = h.id; S.filtro = "pend"; render(); $("#res").scrollIntoView({ behavior: "smooth" });
+}
+function exportarExcel() {
+  const R = S.res;
+  const linhas = R.itens.map((r) => ({ "Situação": NOME[r.tipo], "Data banco": r.b ? dBR(r.b.data) : "", "Descrição banco": r.b ? r.b.desc : "", "Valor banco": r.b ? r.b.valor : "",
+    "Data planilha": r.l.map((x) => dBR(x.data)).join(" | "), "Descrição planilha": r.l.map((x) => x.desc).join(" | "), "Valor planilha": r.l.length === 1 ? r.l[0].valor : r.l.map((x) => x.valor).join(" | "),
+    "Linha na planilha": r.l.map((x) => x.linha || "").join(" | "), "Diferença": ["v", "b", "p"].includes(r.tipo) ? r.dif : "", "Ajuste sugerido": r.ajuste, "Resolvido": r.ok ? "Sim" : "", "Observação": r.obs || "" }));
+  const wb = XLSX.utils.book_new();
+  const pend = linhas.filter((x, i) => ["d", "v", "b", "p"].includes(R.itens[i].tipo));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pend.length ? pend : [{ "Situação": "Sem pendências" }]), "Pendências");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "Tudo");
+  XLSX.writeFile(wb, `Conciliacao_${R.empresa.replace(/[^\w]+/g, "_")}_${R.periodo.ini}_${R.periodo.fim}.xlsx`);
+}
+iniciar().catch((e) => { console.error(e); $("#app").innerHTML = `<div class="card"><p class="err">Erro ao abrir: ${esc(e.message || e)}</p></div>`; });
+})();
+</script>
+</body>
+</html>

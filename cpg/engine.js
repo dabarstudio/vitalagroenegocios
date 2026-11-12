@@ -210,24 +210,32 @@ const VCPG = (() => {
     return { tipo, dataISO, cols, linhas, totais: cols.map((c) => soma(itens, c)), total: itens.reduce((s, x) => s + x.saldo, 0), excluidos: [...excluir], incluidos: incluir };
   }
   const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-  function pdf(jsPDF, rel) {
-    const cfg = CFG[rel.tipo];
+  const SIGLA = { cpg: "CPG", crc: "CRC" };
+  /* marca (opcional): { empresa, logo:{data,w,h}, vital:{data,w,h}, rodape } — cabeçalho com a logo do cliente e rodapé da Vital */
+  function pdf(jsPDF, rel, marca) {
+    const cfg = CFG[rel.tipo], M = marca || {};
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    doc.setProperties({ title: `${cfg.titulo} ${brData(rel.dataISO).replace(/\//g, "-")}` });
+    const titulo = `${SIGLA[rel.tipo] || cfg.titulo} ${brData(rel.dataISO)}${M.empresa ? " · " + M.empresa : ""}`;
+    doc.setProperties({ title: titulo, author: "Vital Agro & Negócios" });
     const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
     const L = 32, R = W - 32, FS = 6.6, RH = 9.2, ncol = rel.cols.length + 1, colw = Math.min(66, (R - L - 230) / ncol);
     const xcol = Array.from({ length: ncol }, (_, i) => R - colw * (ncol - i));
-    const azul = [47, 85, 151], linha = [180, 198, 231];
+    const azul = [47, 85, 151], linha = [180, 198, 231], verde = [29, 92, 47], cinza = [90, 104, 94], tinta = [31, 42, 34];
+    const TOPO = 78, BASE = H - 44;
     const txt = (s, x, y, dir) => doc.text(String(s), x, y, dir ? { align: "right" } : undefined);
-    const header = (y, primeira) => {
-      doc.setFontSize(FS); doc.setFont("helvetica", "normal"); doc.setTextColor(0);
-      if (primeira) {
-        cfg.filtrosTopo.forEach(([a, b], i) => { const yy = y + i * RH; txt(a, L + 2, yy); txt(b, L + 200, yy); doc.setDrawColor(...linha); doc.setLineWidth(0.4); doc.line(L, yy + 2.5, L + 260, yy + 2.5); });
-        txt("BALANÇO", L + 300, y); txt(brData(rel.dataISO), L + 300, y + RH);
-        y += cfg.filtrosTopo.length * RH + 12;
-      }
-      doc.setFillColor(...azul); doc.rect(L, y - 7, R - L, 3 * RH, "F");
-      doc.setTextColor(255); doc.setFont("helvetica", "bold"); txt("Soma de SALDO A PAGAR", L + 2, y); txt("VENCIMENTO", xcol[0] + 2, y);
+    const img = (o, x, y, h) => { if (!o || !o.data) return 0; const w = h * o.w / o.h; doc.addImage(o.data, o.fmt || "PNG", x, y, w, h); return w; };
+    const topo = () => {
+      const lw = img(M.logo, L, 18, 46);
+      const x = L + (lw ? lw + 14 : 0);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(17); doc.setTextColor(...azul);
+      doc.text(`${SIGLA[rel.tipo] || cfg.titulo} ${brData(rel.dataISO)}`, x, 38);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(...tinta);
+      doc.text(`${M.empresa ? M.empresa + " · " : ""}${cfg.titulo} · saldo por pessoa e vencimento · balanço de ${brData(rel.dataISO)}`, x, 54);
+      doc.setDrawColor(...verde); doc.setLineWidth(1.2); doc.line(L, 70, R, 70);
+    };
+    const header = (y) => {
+      doc.setFontSize(FS); doc.setFillColor(...azul); doc.rect(L, y - 7, R - L, 3 * RH, "F");
+      doc.setTextColor(255); doc.setFont("helvetica", "bold"); txt(rel.tipo === "crc" ? "Soma de SALDO A RECEBER" : "Soma de SALDO A PAGAR", L + 2, y); txt("VENCIMENTO", xcol[0] + 2, y);
       doc.setFont("helvetica", "normal");
       let prev = null;
       rel.cols.forEach((c, i) => {
@@ -237,20 +245,30 @@ const VCPG = (() => {
         else txt(c.a, xr, y + RH, true);
         prev = c.a;
       });
-      txt("Total Geral", R - 2, y + RH, true); txt("Rótulos de Linha", L + 2, y + 2 * RH);
+      txt("Total Geral", R - 2, y + RH, true); txt("Pessoa", L + 2, y + 2 * RH);
       doc.setTextColor(0);
       return y + 3 * RH;
     };
     const row = (y, nome, vals, neg) => {
-      doc.setFont("helvetica", neg ? "bold" : "normal");
+      doc.setFontSize(FS); doc.setFont("helvetica", neg ? "bold" : "normal");
       txt(nome.trim().slice(0, 62), L + 2, y);
       vals.forEach((q, i) => txt(brl(q), xcol[i] + colw - 2, y, true));
       doc.setDrawColor(...linha); doc.setLineWidth(0.4); doc.line(L, y + 2.5, R, y + 2.5);
     };
-    let y = header(40, true);
-    for (const l of rel.linhas) { if (y > H - 40) { doc.addPage(); y = header(40, false); } row(y, l.nome, [...l.vals, l.total]); y += RH; }
-    if (y > H - 40) { doc.addPage(); y = header(40, false); }
+    const pagina = () => { topo(); return header(TOPO + 14); };
+    let y = pagina();
+    for (const l of rel.linhas) { if (y > BASE - 6) { doc.addPage(); y = pagina(); } row(y, l.nome, [...l.vals, l.total]); y += RH; }
+    if (y > BASE - 6) { doc.addPage(); y = pagina(); }
     row(y, "Total Geral", [...rel.totais, rel.total], true);
+    const n = doc.getNumberOfPages();
+    for (let p = 1; p <= n; p++) {
+      doc.setPage(p);
+      doc.setDrawColor(...verde); doc.setLineWidth(0.8); doc.line(L, H - 34, R, H - 34);
+      const vw = img(M.vital, L, H - 30, 22);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(...cinza);
+      doc.text(M.rodape || "Vital Agro & Negócios LTDA · CNPJ 54.146.859/0001-32 · CRC-GO GO-005215/O-1 · Alexânia/GO · @vital_consultoria", L + (vw ? vw + 8 : 0), H - 16);
+      doc.text(`Página ${p} de ${n}`, R, H - 16, { align: "right" });
+    }
     return new Uint8Array(doc.output("arraybuffer"));
   }
   /* Últimos dias de mês entre dois meses (AAAA-MM), inclusive. */

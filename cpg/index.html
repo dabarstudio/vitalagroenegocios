@@ -130,7 +130,7 @@ td.nw{white-space:nowrap}
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="/vitalagroenegocios/cpg/engine.js?v=2"></script>
+<script src="/vitalagroenegocios/cpg/engine.js?v=3"></script>
 </head>
 <body>
 <header class="top">
@@ -496,30 +496,46 @@ async function renderAcesso() {
 function renderBal() {
   const el = $("#balCard"); if (!el) return;
   const uf = ultimoFechamento(), meses = VCPG.fechamentos("2024-01", uf.slice(0, 7)).reverse();
-  const B = S.bal || (S.bal = { de: "2025-12-31", ate: uf, cpg: true, crc: true });
+  const B = S.bal || (S.bal = { modo: "mes", mes: uf, de: "2025-12-31", ate: uf, cpg: true, crc: true });
+  const opt = (v) => meses.map((d) => `<option value="${d}"${v === d ? " selected" : ""}>${br(d)}</option>`).join("");
   el.innerHTML = `<div><div class="eyebrow">Balancetes</div><h2 style="font-size:1.15rem">Gerar os PDFs de fim de mês</h2></div>
-    <p class="note">Usa a última versão da planilha e os filtros acima, no mesmo formato da tabela dinâmica (saldo a pagar/receber por pessoa e vencimento). Sai um arquivo .zip com um PDF por mês, pronto para enviar à contabilidade.</p>
+    <p class="note">Usa a última versão da planilha e os filtros acima, no mesmo formato da tabela dinâmica (saldo a pagar/receber por pessoa e vencimento). Um mês com um relatório sai direto em PDF; mais de um PDF sai num arquivo .zip, pronto para enviar à contabilidade.</p>
+    <div class="row" role="radiogroup" aria-label="Tipo de data"><label class="row" style="gap:6px"><input type="radio" name="bModo" value="mes" ${B.modo === "mes" ? "checked" : ""}> Um mês</label><label class="row" style="gap:6px"><input type="radio" name="bModo" value="per" ${B.modo === "per" ? "checked" : ""}> Período</label></div>
     <div class="grid3">
-      <div class="field"><label for="bDe">De</label><select id="bDe">${meses.map((d) => `<option value="${d}"${B.de === d ? " selected" : ""}>${br(d)}</option>`).join("")}</select></div>
-      <div class="field"><label for="bAte">Até</label><select id="bAte">${meses.map((d) => `<option value="${d}"${B.ate === d ? " selected" : ""}>${br(d)}</option>`).join("")}</select></div>
+      ${B.modo === "mes" ? `<div class="field"><label for="bMes">Balanço</label><select id="bMes">${opt(B.mes)}</select></div>`
+      : `<div class="field"><label for="bDe">De</label><select id="bDe">${opt(B.de)}</select></div>
+      <div class="field"><label for="bAte">Até</label><select id="bAte">${opt(B.ate)}</select></div>`}
       <div class="field"><span style="font-weight:600;font-size:.92rem">Relatórios</span><div class="row" style="min-height:46px"><label class="row" style="gap:6px"><input type="checkbox" id="bCpg" ${B.cpg ? "checked" : ""}> Contas a pagar</label><label class="row" style="gap:6px"><input type="checkbox" id="bCrc" ${B.crc ? "checked" : ""}> Contas a receber</label></div></div>
     </div>
-    <div class="row"><button class="btn primary" id="bGerar" ${S.versoes.length ? "" : "disabled"}>Gerar balancetes (.zip)</button><button class="btn" id="bPrevia" ${S.versoes.length ? "" : "disabled"}>Ver totais</button><span class="note" id="balMsg" role="status"></span></div>
+    <div class="row"><button class="btn primary" id="bGerar" ${S.versoes.length ? "" : "disabled"}>${rotuloGerar(B)}</button><button class="btn" id="bPrevia" ${S.versoes.length ? "" : "disabled"}>Ver totais</button><span class="note" id="balMsg" role="status"></span></div>
     <div id="balTab"></div>`;
-  const guarda = () => { B.de = $("#bDe").value; B.ate = $("#bAte").value; B.cpg = $("#bCpg").checked; B.crc = $("#bCrc").checked; };
-  ["bDe", "bAte", "bCpg", "bCrc"].forEach((id) => $("#" + id).onchange = guarda);
+  const guarda = () => { if (B.modo === "mes") B.mes = $("#bMes").value; else { B.de = $("#bDe").value; B.ate = $("#bAte").value; } B.cpg = $("#bCpg").checked; B.crc = $("#bCrc").checked; $("#bGerar").textContent = rotuloGerar(B); };
+  ["bMes", "bDe", "bAte", "bCpg", "bCrc"].forEach((id) => { const e = $("#" + id); if (e) e.onchange = guarda; });
+  el.querySelectorAll('input[name="bModo"]').forEach((r) => r.onchange = () => { guarda(); B.modo = r.value; if (B.modo === "mes") B.mes = B.ate; renderBal(); });
   $("#bPrevia").onclick = () => balancetes(false);
   $("#bGerar").onclick = () => balancetes(true);
 }
+const datasBal = (B) => B.modo === "mes" ? [B.mes] : VCPG.fechamentos((B.de < B.ate ? B.de : B.ate).slice(0, 7), (B.de < B.ate ? B.ate : B.de).slice(0, 7));
+const rotuloGerar = (B) => datasBal(B).length * ((B.cpg ? 1 : 0) + (B.crc ? 1 : 0)) === 1 ? "Baixar PDF" : "Gerar balancetes (.zip)";
+/* Identidade visual do PDF: logo do cliente no topo, Vital no rodapé */
+let MARCA = null;
+async function marcaPdf() {
+  const carrega = (src) => new Promise((ok) => { const i = new Image(); i.onload = () => { const c = document.createElement("canvas"); c.width = i.naturalWidth; c.height = i.naturalHeight; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(i, 0, 0); ok({ data: c.toDataURL("image/png"), w: c.width, h: c.height }); }; i.onerror = () => ok(null); i.src = src; });
+  if (!MARCA) MARCA = { vital: await carrega("/vitalagroenegocios/logo.png"), logos: {} };
+  const e = S.emp.empresa, nome = /tnz/i.test(e) ? "Agro TNZ" : e;
+  if (!(e in MARCA.logos)) MARCA.logos[e] = /tnz/i.test(e) ? await carrega("/vitalagroenegocios/clientes/agro-tnz.png") : null;
+  return { empresa: nome, logo: MARCA.logos[e], vital: MARCA.vital };
+}
 async function balancetes(gerar) {
   const B = S.bal, msg = $("#balMsg");
-  const datas = VCPG.fechamentos(B.de < B.ate ? B.de.slice(0, 7) : B.ate.slice(0, 7), B.de < B.ate ? B.ate.slice(0, 7) : B.de.slice(0, 7));
+  const datas = datasBal(B);
   const tipos = [B.cpg && "cpg", B.crc && "crc"].filter(Boolean);
   if (!tipos.length) { msg.textContent = "Marque ao menos um relatório."; return; }
   const bt = [$("#bGerar"), $("#bPrevia")]; bt.forEach((b) => b.disabled = true);
   try {
     msg.textContent = S.base ? "Calculando…" : "Abrindo a última versão da planilha…";
     const b = await base();
+    const mk = gerar ? await marcaPdf() : null, pdfs = [];
     const zip = new JSZip(), linhas = [];
     for (const d of datas) {
       const l = { d };
@@ -527,7 +543,7 @@ async function balancetes(gerar) {
         msg.textContent = `${gerar ? "Gerando" : "Calculando"} ${VCPG.CFG[t].titulo.toLowerCase()} de ${br(d)}…`; await espera(0);
         const r = VCPG.relatorio(b[t], t, d, S.filtros);
         l[t] = r;
-        if (gerar) zip.file(VCPG.nomePdf(t, d), VCPG.pdf(window.jspdf.jsPDF, r));
+        if (gerar) { const nm = `${t.toUpperCase()} ${br(d).replace(/\//g, "-")} ${mk.empresa}.pdf`, bytes = VCPG.pdf(window.jspdf.jsPDF, r, mk); zip.file(nm, bytes); pdfs.push([nm, bytes]); }
       }
       linhas.push(l);
     }
@@ -536,11 +552,12 @@ async function balancetes(gerar) {
       ${linhas.map((l) => `<tr><td class="mono">${br(l.d)}</td>${tipos.map((t) => `<td class="num">${fmt(l[t].total)}</td><td class="num">${l[t].linhas.length}</td>`).join("")}<td class="note">${tipos.map((t) => { const r = l[t]; const p = []; if (r.excluidos.length) p.push(`${r.excluidos.length} excluída${r.excluidos.length > 1 ? "s" : ""}`); if (r.incluidos.length) p.push(`só ${r.incluidos.length} pessoa${r.incluidos.length > 1 ? "s" : ""}`); return p.length ? `${t.toUpperCase()}: ${p.join(", ")}` : ""; }).filter(Boolean).join(" · ") || "–"}</td></tr>`).join("")}
     </tbody></table></div>`;
     if (gerar) {
-      msg.textContent = "Compactando…";
-      const blob = await zip.generateAsync({ type: "blob" });
-      const nome = `Balancetes ${S.emp.empresa} ${br(datas[0]).replace(/\//g, "-")} a ${br(datas[datas.length - 1]).replace(/\//g, "-")}.zip`;
+      const unico = pdfs.length === 1;
+      if (!unico) msg.textContent = "Compactando…";
+      const blob = unico ? new Blob([pdfs[0][1]], { type: "application/pdf" }) : await zip.generateAsync({ type: "blob" });
+      const nome = unico ? pdfs[0][0] : `Balancetes ${mk.empresa} ${br(datas[0]).replace(/\//g, "-")} a ${br(datas[datas.length - 1]).replace(/\//g, "-")}.zip`;
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
-      msg.textContent = `${datas.length * tipos.length} PDFs em ${nome}.`;
+      msg.textContent = unico ? `Baixado: ${nome}` : `${pdfs.length} PDFs em ${nome}.`;
       sb.rpc("cpg_registrar_balancetes", { p_empresa: S.emp.empresa, p_detalhe: `${br(datas[0])} a ${br(datas[datas.length - 1])} · ${tipos.join(" e ").toUpperCase()}` }).then(() => {});
     } else msg.textContent = "";
   } catch (e) { msg.textContent = e.message; msg.classList.add("err"); }

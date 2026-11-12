@@ -798,7 +798,7 @@ function loteHTML() {
     ${S.marc ? "" : `<select id="lCol" aria-label="Mover para"><option value="">Coluna: manter</option>${S.cols.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join("")}</select>`}
     <input id="lPrazo" type="date" aria-label="Prazo" title="Novo prazo">
     <select id="lPri" aria-label="Prioridade"><option value="">Prioridade: manter</option>${Object.entries(PRI).map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}<option value="__sem">Sem prioridade</option></select>
-    <button class="btn primary sm" type="button" id="lApl">Aplicar</button><button class="btn sm" type="button" id="lLimpa">Limpar</button></div>`;
+    <button class="btn primary sm" type="button" id="lApl">Aplicar</button><button class="btn sm" type="button" id="lExc" title="Tirar do quadro (vai para o arquivo)">🗑 Excluir</button>${S.cards.some(k => S.sel.has(k.id) && k.origem === "bpo" && k.origem_ref) ? `<button class="btn sm" type="button" id="lSpam" title="Excluir e não criar mais cartões desse e-mail/remetente">🚫 É spam</button>` : ""}<button class="btn sm" type="button" id="lLimpa">Limpar</button></div>`;
 }
 function ligarLote() {
   $$("[data-vis]").forEach(b => b.onclick = () => { S.vis = b.dataset.vis; if (S.vis === "lista") S.modoSel = false; try { localStorage.setItem("cq.vis", S.vis); } catch {} render(); });
@@ -809,6 +809,21 @@ function ligarLote() {
   if ($("#lResp")) $("#lResp").onchange = async (e) => { if (e.target.value !== "__novo") return; e.target.value = ""; const id = await novoMembro(); if (id) { await carregar(true); const s = $("#lResp"); if (s) s.value = id; } };
   if ($("#lLimpa")) $("#lLimpa").onclick = () => { S.sel.clear(); S.modoSel = false; render(); };
   if ($("#lApl")) $("#lApl").onclick = aplicarLote;
+  if ($("#lExc")) $("#lExc").onclick = async () => {
+    const ks = S.cards.filter(k => S.sel.has(k.id)); if (!ks.length) return;
+    if (!confirm(`Excluir ${ks.length} tarefa(s)? Elas saem do quadro e vão para o arquivo.`)) return;
+    const { error } = await sb.from("cq_cartoes").update({ arquivado: true, atualizado_em: new Date().toISOString() }).in("id", ks.map(k => k.id));
+    if (error) return toast("Não foi possível excluir: " + error.message);
+    for (const k of ks) await evento("arquivou", "excluída em lote", k.id, k.quadro);
+    toast(`🗑 ${ks.length} tarefa(s) excluída(s).`); S.sel.clear(); S.modoSel = false; await carregar(true);
+  };
+  if ($("#lSpam")) $("#lSpam").onclick = async () => {
+    const ks = S.cards.filter(k => S.sel.has(k.id) && k.origem === "bpo" && k.origem_ref); if (!ks.length) return;
+    if (!confirm(`Marcar ${ks.length} cartão(ões) de e-mail como spam? Eles saem do quadro e as rotinas não criam mais cartões desse e-mail nem desse remetente.`)) return;
+    const { data, error } = await sb.rpc("cq_marcar_spam", { p_ids: ks.map(k => k.id) });
+    if (error) return toast("Não foi possível marcar: " + error.message);
+    toast(`🚫 ${data || 0} cartão(ões) marcado(s) como spam. Esse remetente não volta para o quadro.`); S.sel.clear(); S.modoSel = false; await carregar(true);
+  };
 }
 async function aplicarLote() {
   const resp = $("#lResp").value, col = $("#lCol") ? $("#lCol").value : "", prazo = $("#lPrazo").value, pri = $("#lPri").value;

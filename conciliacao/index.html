@@ -72,7 +72,7 @@ td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 tr.res-ok td{opacity:.55}
 .vp{color:var(--ok);font-weight:600}.vn{color:var(--bad);font-weight:600}
 .ext{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
-.st.m{background:var(--ok-bg);color:var(--ok)}.st.l{background:var(--ok-bg);color:var(--ok)}
+.st.m{background:var(--ok-bg);color:var(--ok)}.st.i{background:var(--info-bg);color:var(--info)}.st.l{background:var(--ok-bg);color:var(--ok)}
 tr.dneg td:nth-child(2){box-shadow:inset 4px 0 0 var(--bad)}tr.dpos td:nth-child(2){box-shadow:inset 4px 0 0 var(--ok)}
 .cbusca{margin-bottom:6px}
 .mais summary{cursor:pointer;font-size:.85rem;color:var(--brand);font-weight:600;padding:4px 2px}
@@ -250,44 +250,79 @@ function acharCabecalho(rows) {
   return bi;
 }
 function sugerirMapa(cab) {
-  const n = cab.map(normTxt), idx = (re, ex) => n.findIndex((c, i) => re.test(c) && (!ex || !ex.test(c)));
+  const n = cab.map((c) => normTxt(c).trim()), idx = (re, ex) => n.findIndex((c) => c && re.test(c) && (!ex || !ex.test(c)));
+  const pri = (lista, ex) => { for (const re of lista) { const k = idx(re, ex); if (k >= 0) return k; } return -1; };
   return {
-    data: idx(/data|^dt|vencimento|pagamento|competencia/, /vencimento/) >= 0 ? idx(/data|^dt|pagamento/, /venc/) : idx(/venc/),
-    desc: idx(/descri|historico|hist|lancamento|memo|favorecido|fornecedor|cliente|nome|contato/),
-    valor: idx(/^valor|vlr|montante|amount|valor\s*(r\$)?$/, /saldo/),
-    entrada: idx(/entrada|credito|receita|recebido/),
-    saida: idx(/saida|debito|despesa|pago$/),
-    dc: idx(/^d\/c$|^dc$|^tipo$|natureza|^c\/d$/),
+    data: pri([/^data$|^dt$|^data mov|^data lanc|^data pag/, /data|^dt|pagamento/], /venc|balancete/),
+    desc: pri([/^historico$|^descricao$|^lancamento$|^historico do lancamento/, /historico|descri|lancamento|memo|favorecido|fornecedor|cliente|nome|contato/], /^cod|codigo|conta$|plano/),
+    comp: idx(/detalhamento|complement|informac/),
+    doc: pri([/^documento$|^dcto\.?$|^doc\.?$|numero documento|n.? ?documento/]),
+    valor: idx(/^valor|vlr|montante|amount/, /saldo/),
+    entrada: idx(/entrada|credito|receita|recebido/, /saldo/),
+    saida: idx(/saida|debito|despesa|pago$/, /saldo/),
+    dc: idx(/^d\/c$|^dc$|^c\/d$|^inf\.?$|^tipo$|natureza|^sinal$|^deb\/cred|^cred\/deb/),
     status: idx(/status|situacao|situa/),
-    banco: idx(/banco|conta corrente|^conta$|conta banc|portador/),
+    banco: idx(/banco|conta corrente|conta banc|portador/, /^cod|historico/),
     lote: idx(/lote|id pag|remessa|agrupador|n.? ?do ?pagamento/),
   };
 }
+const RX_SALDO = /^\s*(saldo|s a l d o)\b|saldo do dia|saldo anterior|saldo final|saldo disponivel|saldo bloqueado|^\s*total\b/;
 function linhasDaTabela(rows, mapa, opts = {}) {
   const hi = mapa.header; const out = [];
   for (let i = hi + 1; i < rows.length; i++) {
-    const r = rows[i]; if (!r || !r.some((x) => String(x).trim())) continue;
+    const r = rows[i]; if (!r || !r.some((x) => String(x ?? "").trim())) continue;
     const d = data(r[mapa.data]); if (!d) continue;
+    const desc0 = mapa.desc >= 0 ? String(r[mapa.desc] ?? "").replace(/\s+/g, " ").trim() : "";
+    if (RX_SALDO.test(normTxt(desc0))) continue;
     let v = null;
     if (mapa.valor >= 0) v = num(r[mapa.valor]);
     if ((v == null || mapa.valor < 0) && (mapa.entrada >= 0 || mapa.saida >= 0)) { const e = num(r[mapa.entrada]) || 0, s = num(r[mapa.saida]) || 0; v = Math.round((Math.abs(e) - Math.abs(s)) * 100) / 100; }
     if (v == null || v === 0) continue;
-    if (mapa.dc >= 0) { const t = normTxt(r[mapa.dc]); if (/^d|debito|saida|despesa|pagar/.test(t)) v = -Math.abs(v); else if (/^c|credito|entrada|receita|receber/.test(t)) v = Math.abs(v); }
+    if (mapa.dc >= 0) { const t = normTxt(r[mapa.dc]).trim(); if (/^d\b|^d$|debito|saida|despesa|pagar|^-/.test(t)) v = -Math.abs(v); else if (/^c\b|^c$|credito|entrada|receita|receber|^\+/.test(t)) v = Math.abs(v); }
     const st = mapa.status >= 0 ? String(r[mapa.status] ?? "").trim() : "";
     if (opts.status && opts.status.size && !opts.status.has(st)) continue;
-    out.push({ data: d, desc: mapa.desc >= 0 ? String(r[mapa.desc] ?? "").trim() : "", valor: v, status: st, banco: mapa.banco >= 0 ? String(r[mapa.banco] ?? "").trim() : "", lote: mapa.lote >= 0 ? String(r[mapa.lote] ?? "").trim() : "", linha: i + 1 });
+    const comp = mapa.comp >= 0 ? String(r[mapa.comp] ?? "").replace(/\s+/g, " ").trim() : "";
+    const doc = mapa.doc >= 0 ? String(r[mapa.doc] ?? "").trim().replace(/^0+(?=\d)/, "") : "";
+    out.push({ data: d, desc: [desc0, comp].filter(Boolean).join(" · "), valor: v, status: st, banco: mapa.banco >= 0 ? String(r[mapa.banco] ?? "").trim() : "", lote: mapa.lote >= 0 ? String(r[mapa.lote] ?? "").trim() : "", doc, linha: i + 1 });
   }
   return out;
+}
+/* Relatório de caixa do GDoor: as linhas "Recebimento pelo banco X" / "Saída do banco X" são o movimento real do banco
+   (valor líquido, com o sinal do caixa invertido); Rec.Doc / Pag.Doc / acréscimos / descontos são o detalhe. */
+const RX_MK = /^(recebimento pelo banco|sa[ií]da do banco|pagamento pelo banco|dep[oó]sito no banco)\s+(.+)$/i;
+const RX_NAO_BANCO = /numer[aá]rio|tr[aâ]nsito|^caixa$|dinheiro/i;
+const RX_EH_BANCO = /banco|bradesco|sicoob|sicredi|caixa econ|\bcef\b|ita[uú]|santander|\binter\b|nubank|\bcora\b|stone|mercado ?pago|pagbank|pagseguro|\bc6\b|safra|btg|unicred|cresol|asaas|gerencianet|sofisa|neon|original/i;
+function gdoor(itens) {
+  const ehMk = (x) => RX_MK.test(x.desc);
+  const nMk = itens.filter(ehMk).length; if (nMk < 3) return null;
+  const usados = new Set(), out = []; let naoBanco = 0, semDetalhe = 0;
+  itens.forEach((x, i) => {
+    const m = x.desc.match(RX_MK); if (!m) return;
+    const nome = m[2].trim();
+    if (RX_NAO_BANCO.test(nome)) { naoBanco++; return; }
+    const alvo = -x.valor; let det = null;
+    const livre = (k) => k >= 0 && k < itens.length && !usados.has(k) && !ehMk(itens[k]) && itens[k].data === x.data;
+    busca: for (let tot = 1; tot <= 6; tot++) for (let nb = 0; nb <= tot; nb++) { const na = tot - nb; const ks = [];
+      let ok = true; for (let a = 1; a <= nb; a++) { if (!livre(i - a)) { ok = false; break; } ks.push(i - a); } if (!ok) continue;
+      for (let a = 1; a <= na; a++) { if (!livre(i + a)) { ok = false; break; } ks.push(i + a); } if (!ok) continue;
+      if (Math.abs(ks.reduce((s, k) => s + itens[k].valor, 0) - alvo) < 0.005) { det = ks.sort((p, q) => p - q); break busca; } }
+    if (det) det.forEach((k) => usados.add(k)); else semDetalhe++;
+    const principais = det ? det.map((k) => itens[k].desc).filter((d) => !/^(acr[eé]scimos|descontos|diferen[cç]a)/i.test(d)) : [];
+    out.push({ ...x, valor: Math.round(-x.valor * 100) / 100, desc: (principais.length ? principais : det ? det.map((k) => itens[k].desc) : [x.desc]).join(" + "), banco: RX_EH_BANCO.test(nome) ? nome : "", origem: x.desc, linhas: det ? det.map((k) => itens[k].linha) : [] });
+  });
+  const caixa = itens.filter((x, i) => !ehMk(x) && !usados.has(i)).length;
+  return { itens: out, caixa, naoBanco, marcas: nMk, semDetalhe };
 }
 
 /* ================= motor de conciliação ================= */
 const compat = (b, l) => !b.ch || !l.banco || normTxt(l.banco) === normTxt(b.ch);
 const mesmoValor = (a, b) => Math.abs(a - b) < 0.005;
 const soma = (arr) => Math.round(arr.reduce((s, x) => s + x.valor, 0) * 100) / 100;
-function conciliar(banco, base, tol, periodo) {
+function conciliar(banco, base, tol, periodo, porBanco = []) {
   const B = banco.map((x) => ({ ...x, usado: false }));
   const L0 = base.map((x, i) => ({ ...x, uid: "l" + i, usado: false }));
-  const fora = L0.filter((x) => x.data < addD(periodo.ini, -tol) || x.data > addD(periodo.fim, tol));
+  const perDe = (l) => porBanco.find((p) => p.ch && l.banco && normTxt(p.ch) === normTxt(l.banco)) || periodo;
+  const fora = L0.filter((x) => { const P = perDe(x); return x.data < addD(P.ini, -tol) || x.data > addD(P.fim, tol); });
   const L = L0.filter((x) => !fora.includes(x));
   const res = [];
   const add = (tipo, bx, l, extra = {}) => { bx.forEach((x) => x.usado = true); l.forEach((x) => x.usado = true); res.push({ tipo, bx, l, dif: Math.round((soma(bx) - soma(l)) * 100) / 100, dd: bx.length === 1 && l.length === 1 ? dias(l[0].data, bx[0].data) : 0, ...extra }); };
@@ -295,6 +330,8 @@ function conciliar(banco, base, tol, periodo) {
   for (const b of B) { const c = L.filter((l) => !l.usado && compat(b, l) && mesmoValor(l.valor, b.valor) && l.data === b.data).sort((x, y) => semelhanca(y.desc, b.desc) - semelhanca(x.desc, b.desc))[0]; if (c) add("c", [b], [c]); }
   // 2) mesmo valor, data dentro da tolerância
   for (const b of B.filter((x) => !x.usado)) { const c = L.filter((l) => !l.usado && compat(b, l) && mesmoValor(l.valor, b.valor) && Math.abs(dias(l.data, b.data)) <= tol).sort((x, y) => Math.abs(dias(x.data, b.data)) - Math.abs(dias(y.data, b.data)) || semelhanca(y.desc, b.desc) - semelhanca(x.desc, b.desc))[0]; if (c) add("d", [b], [c]); }
+  // 2b) aplicações/resgates automáticos (BB Rende Fácil, CDB…): não entram nos lotes nem viram pendência
+  for (const b of B.filter((x) => !x.usado && RX_APLIC.test(normTxt(x.desc)))) { b.usado = true; res.push({ tipo: "i", bx: [b], l: [], dif: 0, dd: 0 }); }
   // 3) LOTES — 1 linha no banco = vários lançamentos da planilha
   const ehLote = (b) => RX_LOTE.test(normTxt(b.desc));
   const fila = B.filter((x) => !x.usado).sort((a, b) => (ehLote(b) - ehLote(a)) || Math.abs(b.valor) - Math.abs(a.valor));
@@ -324,11 +361,12 @@ function conciliar(banco, base, tol, periodo) {
   for (const b of B.filter((x) => !x.usado)) { const c = L.filter((l) => !l.usado && compat(b, l) && Math.sign(l.valor) === Math.sign(b.valor) && Math.abs(dias(l.data, b.data)) <= tol && semelhanca(l.desc, b.desc) >= 0.5).sort((x, y) => Math.abs(x.valor - b.valor) - Math.abs(y.valor - b.valor))[0]; if (c && Math.abs(c.valor - b.valor) <= Math.max(50, Math.abs(b.valor) * 0.2)) add("v", [b], [c]); }
   // 5) sobras
   for (const b of B.filter((x) => !x.usado)) res.push({ tipo: "b", bx: [b], l: [], dif: b.valor, dd: 0 });
-  for (const l of L.filter((x) => !x.usado)) res.push({ tipo: "p", bx: [], l: [l], dif: -l.valor, dd: 0 });
+  for (const l of L.filter((x) => !x.usado)) { const P = perDe(l); res.push(l.data < P.ini || l.data > P.fim ? { tipo: "f", bx: [], l: [l], dif: 0, dd: 0 } : { tipo: "p", bx: [], l: [l], dif: -l.valor, dd: 0 }); }
   for (const l of fora) res.push({ tipo: "f", bx: [], l: [l], dif: 0, dd: 0 });
   res.forEach((r) => r.ajuste = sugestao(r, periodo));
   ordenar(res); return res;
 }
+const RX_APLIC = /rende facil|aplic(acao|\.)? ?(automatica|aut|financ)|resg(ate)?\.? ?(automatico|aut|aplic)|resg\/vencto|invest ?facil|poupanca (automatica|aut)|\bcdb\b|\blci\b|\blca\b|fundo de invest|cta investimento|conta investimento|aplicacao|resgate/;
 const RX_LOTE = /\blote\b|sispag|folha|salario|multipag|pag(to|amento)? ?(de )?fornec|liq(uidacao)?\.? ?(de )?cobr|cobranca|cielo|\brede\b|redecard|stone|getnet|pagseguro|pagbank|safrapay|sumup|zucchetti|gdoor|repasse|credito ?em ?lote|pix ?lote|ted ?lote/;
 function subconjunto(alvo, cands) {
   const T = Math.round(Math.abs(alvo) * 100), vs = cands.map((c) => Math.round(Math.abs(c.valor) * 100));
@@ -362,10 +400,11 @@ function sugestao(r, periodo) {
     return b.valor > 0 ? "Entrada no banco sem lançamento na planilha: identificar o cliente/origem e lançar a receita." : "Saída no banco sem lançamento na planilha: identificar o pagamento e lançar a despesa.";
   }
   if (r.tipo === "p") return "Está na planilha mas não aparece no banco: verificar se foi pago/recebido, se saiu por outra conta ou se a data/valor estão errados.";
+  if (r.tipo === "i") return "Aplicação/resgate automático do banco (ex.: Rende Fácil, CDB). Não é receita nem despesa: confira só o saldo aplicado.";
   if (r.tipo === "f") return `Fora do período dos extratos (${dBR(periodo.ini)} a ${dBR(periodo.fim)}): não entra na conciliação.`;
   return "";
 }
-const NOME = { c: "Conciliado", d: "Data diferente", l: "Lote conciliado", s: "Conciliado por soma", m: "Composição manual", v: "Valor divergente", b: "Só no banco", p: "Só na planilha", f: "Fora do período" };
+const NOME = { i: "Aplicação automática", c: "Conciliado", d: "Data diferente", l: "Lote conciliado", s: "Conciliado por soma", m: "Composição manual", v: "Valor divergente", b: "Só no banco", p: "Só na planilha", f: "Fora do período" };
 const PEND = ["d", "v", "b", "p"];
 const din = (v) => v == null || v === "" || isNaN(v) ? "" : `<span class="${v < 0 ? "vn" : "vp"}">${brl(v)}</span>`;
 const dc = (v) => v == null || v === "" ? "" : v < 0 ? '<span class="vn">D</span>' : '<span class="vp">C</span>';
@@ -392,7 +431,7 @@ const resumoArq = (it) => { if (!it.length) return "nenhum lançamento"; const e
   return `${it.length} lançamento(s) · entradas ${din(ent)} · saídas ${din(sai)} · ${dBR(it.reduce((m, x) => x.data < m ? x.data : m, it[0].data))} a ${dBR(it.reduce((m, x) => x.data > m ? x.data : m, it[0].data))}`; };
 const previa = (it, comStatus) => it.length ? `<div class="tw"><table class="mini"><thead><tr><th>Data</th><th>Descrição</th><th>D/C</th><th class="n">Valor</th>${comStatus ? "<th>Status</th><th>Banco</th>" : ""}</tr></thead><tbody>${it.slice(0, 5).map((x) => `<tr><td>${dBR(x.data)}</td><td>${esc(x.desc)}</td><td>${dc(x.valor)}</td><td class="n">${din(x.valor)}</td>${comStatus ? `<td>${esc(x.status || "")}</td><td>${esc(x.banco || "")}</td>` : ""}</tr>`).join("")}</tbody></table></div><p class="note" style="margin-top:4px">Primeiras 5 linhas, para conferência.</p>` : `<p class="err" style="margin:8px 0 0">Não encontrei lançamentos. Ajuste as colunas.</p>`;
 function blocoBancos() {
-  const bancosPlan = S.base && S.base.mapa && S.base.mapa.banco >= 0 ? [...new Set(S.base.itens.map((x) => x.banco).filter(Boolean))] : [];
+  const bancosPlan = S.base ? [...new Set(S.base.itens.map((x) => x.banco).filter(Boolean))] : [];
   const lista = S.bancos.map((E, k) => `<div class="ext"><div class="row" style="justify-content:space-between;align-items:start">
       <div style="min-width:0;flex:1"><div class="field" style="max-width:340px"><label>Banco / conta</label><input data-rot="${k}" value="${esc(E.rotulo)}"></div>
       <div class="note" style="margin-top:4px">📄 ${esc(E.nome)} · ${resumoArq(E.itens)}</div></div>
@@ -406,7 +445,7 @@ function blocoBancos() {
 function blocoBase() {
   const a = S.base;
   const corpo = !a ? `<div class="drop" data-drop="base" tabindex="0" role="button"><b>📎 Escolher ou arrastar a planilha</b><span class="note">Excel ou CSV com data, descrição e valor (ou entrada/saída); se tiver coluna de banco, melhor</span></div>`
-    : `<div class="row" style="justify-content:space-between"><div><b>${esc(a.nome)}</b><div class="note">${resumoArq(a.itens)}</div></div><button class="btn sm" data-trocar="base" type="button">Trocar arquivo</button></div>${mapaHTML(a, "base")}${previa(a.itens, true)}`;
+    : `<div class="row" style="justify-content:space-between"><div><b>${esc(a.nome)}</b><div class="note">${resumoArq(a.itens)}</div></div><button class="btn sm" data-trocar="base" type="button">Trocar arquivo</button></div>${a.gdoor ? `<p class="ok" style="margin:8px 0 0;font-weight:600">✔ Relatório de caixa do GDoor reconhecido: usei as ${a.gdoor.itens.length} linhas de banco ("Recebimento pelo banco" / "Saída do banco"), já com o sinal do ponto de vista do banco e a descrição do documento.</p><p class="note">Ficaram de fora ${a.gdoor.caixa} lançamento(s) que não passaram por banco (dinheiro/caixa)${a.gdoor.naoBanco ? ` e ${a.gdoor.naoBanco} de numerários em trânsito` : ""}. Bancos encontrados: ${[...new Set(a.itens.map((x) => x.banco).filter(Boolean))].map(esc).join(", ") || "—"}.</p>` : ""}${mapaHTML(a, "base")}${previa(a.itens, true)}`;
   return `<div class="card"><div class="step"><i>2</i><h3 style="font-size:1.05rem">Planilha da empresa (base)</h3></div><div style="margin-top:12px">${corpo}</div></div>`;
 }
 function mapaHTML(a, chave) {
@@ -437,7 +476,7 @@ function resultadoHTML() {
   const R = S.res, it = R.itens;
   const cnt = (t) => it.filter((r) => r.tipo === t).length;
   const sm = (t, f) => it.filter((r) => r.tipo === t).reduce((s, r) => s + f(r), 0);
-  const ks = [["c", "Conciliados", ""], ["d", "Data diferente", ""], ["l", "Lotes conciliados", ""], ["s", "Conciliados por soma", ""], ["m", "Composição manual", ""], ["v", "Valor divergente", brl(sm("v", (r) => Math.abs(r.dif)))], ["b", "Só no banco", din(sm("b", (r) => soma(r.bx)))], ["p", "Só na planilha", din(sm("p", (r) => soma(r.l)))], ["f", "Fora do período", ""]];
+  const ks = [["c", "Conciliados", ""], ["d", "Data diferente", ""], ["l", "Lotes conciliados", ""], ["s", "Conciliados por soma", ""], ["m", "Composição manual", ""], ["v", "Valor divergente", brl(sm("v", (r) => Math.abs(r.dif)))], ["b", "Só no banco", din(sm("b", (r) => soma(r.bx)))], ["p", "Só na planilha", din(sm("p", (r) => soma(r.l)))], ["i", "Aplicações automáticas", din(sm("i", (r) => soma(r.bx)))], ["f", "Fora do período", ""]];
   const pend = it.filter((r) => pendente(r) && !r.ok).length;
   const vis = it.filter((r) => !S.filtro ? r.tipo !== "f" : S.filtro === "pend" ? pendente(r) : r.tipo === S.filtro);
   const totB = soma(it.flatMap((r) => r.bx)), totL = soma(it.filter((r) => r.tipo !== "f").flatMap((r) => r.l));
@@ -453,7 +492,7 @@ function resultadoHTML() {
     ${S.selRes.size ? `<div class="row noprint lotebar"><b>${S.selRes.size} selecionada(s)</b><button class="btn sm" id="desfVarios" type="button">↩ Desfazer as selecionadas</button><button class="btn ghost sm" id="limpaSelRes" type="button">Limpar seleção</button></div>` : ""}
     <div class="row noprint" style="justify-content:space-between;margin-bottom:8px"><div class="vis" role="group" aria-label="Visualização"><button class="btn sm" type="button" data-vis="lado" aria-pressed="${S.vis === "lado"}">◧ Banco × Sistema</button><button class="btn sm" type="button" data-vis="tabela" aria-pressed="${S.vis === "tabela"}">☰ Tabela</button></div>${S.vis === "lado" ? `<label class="note" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="selTodosRes"> marcar todos os conciliados</label>` : ""}</div>
     ${S.vis === "lado" ? ladoHTML(vis, it) : `<div class="tw" style="max-height:70vh"><table class="res"><thead><tr><th class="noprint"><input type="checkbox" id="selTodosRes" title="Marcar todos os conciliados"></th><th>Situação</th><th>Banco</th><th>Data banco</th><th>Descrição no banco</th><th>D/C</th><th class="n">Valor banco</th><th>Data planilha</th><th>Descrição na planilha</th><th class="n">Valor planilha</th><th>Ajuste sugerido</th><th class="noprint">Resolvido / observação</th></tr></thead><tbody>
-    ${vis.map((r) => { const idx = it.indexOf(r), b = r.bx, l = r.l, v0 = (b[0] || l[0] || {}).valor; const casado = !["b", "p", "f", "v"].includes(r.tipo); return `<tr class="${r.ok ? "res-ok" : ""} ${v0 < 0 ? "dneg" : "dpos"}"><td class="noprint">${casado ? `<input type="checkbox" data-sx="${idx}" ${S.selRes.has(idx) ? "checked" : ""}>` : ""}</td><td><span class="st ${r.tipo}">${NOME[r.tipo]}</span>${casado ? `<br><button class="btn ghost sm noprint" data-desf="${idx}" type="button">↩ desfazer</button>` : ""}${r.tipo === "b" ? `<br><button class="btn ghost sm noprint" data-montar="${idx}" type="button">🧩 compor</button>` : ""}</td>
+    ${vis.map((r) => { const idx = it.indexOf(r), b = r.bx, l = r.l, v0 = (b[0] || l[0] || {}).valor; const casado = !["b", "p", "f", "v", "i"].includes(r.tipo); return `<tr class="${r.ok ? "res-ok" : ""} ${v0 < 0 ? "dneg" : "dpos"}"><td class="noprint">${casado ? `<input type="checkbox" data-sx="${idx}" ${S.selRes.has(idx) ? "checked" : ""}>` : ""}</td><td><span class="st ${r.tipo}">${NOME[r.tipo]}</span>${casado ? `<br><button class="btn ghost sm noprint" data-desf="${idx}" type="button">↩ desfazer</button>` : ""}${r.tipo === "b" ? `<br><button class="btn ghost sm noprint" data-montar="${idx}" type="button">🧩 compor</button>` : ""}</td>
       <td>${[...new Set(b.map((x) => x.banco))].map(esc).join("<br>") || esc(l.map((x) => x.banco).filter(Boolean)[0] || "")}</td><td>${b.map((x) => dBR(x.data)).join("<br>")}</td><td>${b.map((x) => esc(x.desc) + (x.doc && String(x.doc).length <= 20 ? ` <span class="note">Doc: ${esc(x.doc)}</span>` : "")).join("<br>")}</td><td>${dc(v0)}</td><td class="n">${b.map((x) => din(x.valor)).join("<br>")}</td>
       <td>${l.map((x) => dBR(x.data)).join("<br>")}</td><td>${l.map((x) => esc(x.desc) + (x.linha ? ` <span class="note">(linha ${x.linha})</span>` : "")).join("<br>")}</td><td class="n">${l.map((x) => din(x.valor)).join("<br>")}</td>
       <td>${esc(r.ajuste)}</td><td class="noprint">${!pendente(r) ? "" : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-ok="${idx}" ${r.ok ? "checked" : ""}> feito</label><input class="obs" data-obs="${idx}" value="${esc(r.obs || "")}" placeholder="observação">`}</td></tr>`; }).join("") || `<tr><td colspan="12" class="note">Nada nesta situação.</td></tr>`}
@@ -462,10 +501,10 @@ function resultadoHTML() {
 /* composição manual: arrastar ou marcar lançamentos pendentes dos dois lados */
 function ladoHTML(vis, it) {
   const cartB = (x) => `<div class="cx ${x.valor < 0 ? "neg" : "pos"}"><div class="cxh"><span>${dBR(x.data)}</span><b class="n">${din(x.valor)}</b></div><div class="cxd">${esc(x.desc)}</div><div class="note">${esc(x.banco || "")}${x.doc && String(x.doc).length <= 20 ? ` · Doc: ${esc(x.doc)}` : ""}</div></div>`;
-  const cartL = (x) => `<div class="cx ${x.valor < 0 ? "neg" : "pos"}"><div class="cxh"><span>${dBR(x.data)}</span><b class="n">${din(x.valor)}</b></div><div class="cxd">${esc(x.desc)}</div><div class="note">${x.linha ? "linha " + x.linha : ""}${x.lote ? " · lote " + esc(x.lote) : ""}${x.banco ? " · " + esc(x.banco) : ""}</div></div>`;
+  const cartL = (x) => `<div class="cx ${x.valor < 0 ? "neg" : "pos"}"><div class="cxh"><span>${dBR(x.data)}</span><b class="n">${din(x.valor)}</b></div><div class="cxd">${esc(x.desc)}</div><div class="note">${x.linhas && x.linhas.length ? "linhas " + x.linhas.join(", ") : x.linha ? "linha " + x.linha : ""}${x.lote ? " · lote " + esc(x.lote) : ""}${x.banco ? " · " + esc(x.banco) : ""}</div></div>`;
   const vazio = (t) => `<div class="cx vazio">${t}</div>`;
   return `<div class="lado"><div class="ladoh"><span>🏦 Extrato do banco</span><span></span><span>📋 Sistema / planilha</span></div>
-    ${vis.map((r) => { const idx = it.indexOf(r), casado = !["b", "p", "f", "v"].includes(r.tipo), pd = pendente(r);
+    ${vis.map((r) => { const idx = it.indexOf(r), casado = !["b", "p", "f", "v", "i"].includes(r.tipo), pd = pendente(r);
       return `<div class="par ${r.ok ? "res-ok" : ""}"><div class="pb">${r.bx.map(cartB).join("") || vazio("— não está no banco —")}</div>
         <div class="pm">${casado ? `<input type="checkbox" data-sx="${idx}" ${S.selRes.has(idx) ? "checked" : ""} title="Selecionar">` : ""}<span class="st ${r.tipo}">${NOME[r.tipo]}</span>${["v", "b", "p", "l", "m"].includes(r.tipo) && Math.abs(r.dif) >= 0.005 && r.tipo !== "b" && r.tipo !== "p" ? `<span class="note">dif. ${brl(r.dif)}</span>` : ""}
           ${casado ? `<button class="btn ghost sm" data-desf="${idx}" type="button">↩ desfazer</button>` : ""}${r.tipo === "b" ? `<button class="btn ghost sm" data-montar="${idx}" type="button">🧩 compor</button>` : ""}</div>
@@ -554,18 +593,22 @@ async function carregarBase(file) {
   try {
     const t = await lerTabela(file); const obj = { nome: file.name, ...t };
     if (obj.mapa.status >= 0) { const vals = [...new Set(obj.rows.slice(obj.mapa.header + 1).map((r) => String(r[obj.mapa.status] ?? "").trim()).filter(Boolean))]; vals.filter((v) => /confirm|pago|recebid|realiz|concil|quitad|baixad|liquid/i.test(normTxt(v))).forEach((v) => obj.status.add(v)); }
-    obj.itens = linhasDaTabela(obj.rows, obj.mapa, { status: obj.status });
+    obj.itens = linhasDaTabela(obj.rows, obj.mapa, { status: obj.status }); aplicarGdoor(obj);
     S.base = obj; S.res = null; S.salvoId = null; autoChaves(); render();
     if (!obj.itens.length) toast("Não encontrei lançamentos na planilha. Confira as colunas.");
   } catch (err) { console.error(err); toast("Não consegui ler a planilha: " + (err.message || err)); }
 }
+function aplicarGdoor(obj) {
+  const g = gdoor(obj.itens); obj.gdoor = null; if (!g) return;
+  obj.gdoor = g; obj.itens = g.itens;
+}
 function autoChaves() {
-  if (!S.base || S.base.mapa.banco < 0) return;
-  const vals = [...new Set(S.base.itens.map((x) => x.banco).filter(Boolean))];
+  if (!S.base) return;
+  const vals = [...new Set(S.base.itens.map((x) => x.banco).filter(Boolean))]; if (!vals.length) return;
   S.bancos.forEach((E) => { if (E.chave) return; const r = vals.map((v) => [v, semelhanca(v, E.rotulo + " " + E.nome)]).sort((a, b) => b[1] - a[1])[0]; if (r && r[1] >= 0.5) E.chave = r[0]; });
 }
 function remapear(chave) {
-  if (chave === "base") { const a = S.base; a.itens = linhasDaTabela(a.rows, a.mapa, { status: a.status }); autoChaves(); }
+  if (chave === "base") { const a = S.base; a.itens = linhasDaTabela(a.rows, a.mapa, { status: a.status }); aplicarGdoor(a); autoChaves(); }
   else { const E = S.bancos[+chave.slice(1)]; E.itens = linhasDaTabela(E.rows, E.mapa); }
   S.res = null; render();
 }
@@ -591,7 +634,7 @@ function ligar() {
     let n = 0; const itens = [];
     S.bancos.forEach((E) => E.itens.forEach((x) => itens.push({ ...x, banco: E.rotulo, ch: E.chave || "", uid: "b" + (n++) })));
     const ini = S.bancos.map((E) => E.ini).filter(Boolean).concat(itens.map((x) => x.data)).reduce((m, x) => x < m ? x : m), fim = S.bancos.map((E) => E.fim).filter(Boolean).concat(itens.map((x) => x.data)).reduce((m, x) => x > m ? x : m);
-    S.res = { empresa: S.empresa, bancoNome: S.bancos.map((E) => E.rotulo).join(" + "), periodo: { ini, fim }, tol: S.tol, saldos: S.bancos.map((E) => ({ rotulo: E.rotulo, saldo: E.saldo ?? null, dt: E.dtSaldo || fim })), itens: conciliar(itens, S.base.itens, S.tol, { ini, fim }), arqB: S.bancos.map((E) => E.nome).join(", "), arqL: S.base.nome };
+    S.res = { empresa: S.empresa, bancoNome: S.bancos.map((E) => E.rotulo).join(" + "), periodo: { ini, fim }, tol: S.tol, saldos: S.bancos.map((E) => ({ rotulo: E.rotulo, saldo: E.saldo ?? null, dt: E.dtSaldo || fim })), itens: conciliar(itens, S.base.itens, S.tol, { ini, fim }, S.bancos.filter((E) => E.chave && E.itens.length).map((E) => { const ds = E.itens.map((x) => x.data); return { ch: E.chave, ini: E.ini || ds.reduce((m, x) => x < m ? x : m), fim: E.fim || ds.reduce((m, x) => x > m ? x : m) }; })), arqB: S.bancos.map((E) => E.nome).join(", "), arqL: S.base.nome };
     S.filtro = "pend"; S.salvoId = null; S.sel.clear(); S.selRes.clear(); render(); $("#res").scrollIntoView({ behavior: "smooth" });
   };
   app.querySelectorAll("[data-f]").forEach((b) => b.onclick = (e) => { e.preventDefault(); S.filtro = S.filtro === b.dataset.f ? "" : b.dataset.f; render(); });
@@ -618,7 +661,7 @@ function ligar() {
   const bp = $("#btnPdf"); if (bp) bp.onclick = () => { const f = S.filtro, c = S.compor; S.filtro = ""; S.compor = false; render(); setTimeout(() => { window.print(); S.filtro = f; S.compor = c; render(); }, 200); };
   app.querySelectorAll("[data-hist]").forEach((b) => b.onclick = () => abrirHist(+b.dataset.hist));
 }
-const enxuto = (x) => x && { data: x.data, desc: x.desc, valor: x.valor, banco: x.banco || "", doc: x.doc || "", lote: x.lote || "", linha: x.linha || null, uid: x.uid };
+const enxuto = (x) => x && { data: x.data, desc: x.desc, valor: x.valor, banco: x.banco || "", doc: x.doc || "", lote: x.lote || "", linha: x.linha || null, linhas: x.linhas || null, uid: x.uid };
 async function salvar() {
   const R = S.res, it = R.itens;
   const resumo = { conc: it.filter((r) => ["c", "s", "m", "l"].includes(r.tipo)).length, data: it.filter((r) => r.tipo === "d").length, valor: it.filter((r) => r.tipo === "v").length, banco: it.filter((r) => r.tipo === "b").length, planilha: it.filter((r) => r.tipo === "p").length, pend: it.filter((r) => pendente(r) && !r.ok).length, tol: R.tol, saldos: R.saldos };

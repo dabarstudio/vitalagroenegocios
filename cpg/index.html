@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#00582F">
+<meta name="robots" content="noindex">
+<title>Contas a Pagar &amp; Receber · Vital Agro &amp; Negócios</title>
+<link rel="icon" href="/vitalagroenegocios/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+
+/* Mesma base visual do Fechamento DFC */
+:root{
+  color-scheme:light;
+  --bg:#F3F6F1; --surface:#FFFFFF; --surface-2:#E8EFE4; --line:#D3DECD;
+  --fg:#18241B; --muted:#57665A; --brand:#00582F; --brand-2:#007941; --leaf:#79C25B; --on-brand:#FFFFFF;
+  --warn:#9A6200; --warn-bg:#FFF3D6; --bad:#B3261E; --bad-bg:#FBE4E1; --ok:#1F7A3F; --ok-bg:#E1F2E5; --info:#2F6FA6; --info-bg:#E3EDF6;
+  --lamp-off:#C9D3C6; --red:#D93A2B; --green:#2FA352;
+  --display:"Poppins","Segoe UI",system-ui,sans-serif; --body:"Source Sans 3","Segoe UI",system-ui,sans-serif; --mono:ui-monospace,Consolas,monospace; --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522; --info:#8DB9E3; --info-bg:#1B2A38;
+  --lamp-off:#2E4034; --red:#F0604F; --green:#4CC66F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522; --info:#8DB9E3; --info-bg:#1B2A38;
+  --lamp-off:#2E4034; --red:#F0604F; --green:#4CC66F; color-scheme:dark}
+html{padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+img{max-width:100%}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+.wrap{max-width:1020px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.logo{width:44px;height:44px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none;border:1px solid var(--line);text-decoration:none}
+.logo img{width:36px}
+.brandtxt{min-width:0}
+.brandtxt b{font-family:var(--display);display:block;color:var(--brand)}
+.brandtxt span{font-size:.8rem;color:var(--muted)}
+.spacer{flex:1}
+.top a.tab{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--muted);font-weight:600;white-space:nowrap;text-decoration:none}
+.top a.tab:hover{background:var(--surface-2);color:var(--brand)}
+main{padding-block:20px 48px;display:grid;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.stack{display:grid;gap:14px;align-content:start}
+.muted,.note{color:var(--muted)} .note{font-size:.88rem;margin:0}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.btn{border:1px solid var(--line);background:var(--surface);padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center;color:var(--fg)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.ghost{border-color:transparent;background:none;color:var(--brand)}
+.btn.sm{padding:6px 10px;font-size:.88rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.field{display:grid;gap:6px;min-width:0}
+.field label{font-weight:600;font-size:.92rem}
+.field input,.field select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.callout{background:var(--surface-2);border-radius:var(--r);padding:14px 16px;font-size:.93rem}
+.err{color:var(--bad);font-weight:600}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface-2);white-space:nowrap}
+td.num,th.num{text-align:right;white-space:nowrap}
+.mono{font-family:var(--mono);font-size:.85em;white-space:nowrap}
+
+/* ===== semáforo ===== */
+.topo{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px}
+@media (max-width:820px){.topo{grid-template-columns:minmax(0,1fr)}}
+.sem{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center}
+.poste{background:#1E2A22;border-radius:18px;padding:10px;display:grid;gap:10px;width:62px}
+.lamp{width:42px;height:42px;border-radius:50%;background:var(--lamp-off);opacity:.35;transition:opacity .2s,box-shadow .2s}
+.lamp.r.on{background:var(--red);opacity:1;box-shadow:0 0 18px var(--red)}
+.lamp.g.on{background:var(--green);opacity:1;box-shadow:0 0 18px var(--green)}
+.sem h2{font-size:1.25rem}
+.sem .q{color:var(--muted);font-size:.95rem}
+.ver b{font-family:var(--display)}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;font-size:.93rem}
+.kv span:nth-child(odd){color:var(--muted)}
+
+/* ===== etapas da atualização ===== */
+.passos{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.passos li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:.95rem}
+.passos .ic{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.7rem;font-weight:700}
+.passos li[data-s="rodando"] .ic{border-color:var(--brand-2);border-top-color:transparent;animation:gira 1s linear infinite}
+.passos li[data-s="ok"] .ic{background:var(--ok);border-color:var(--ok);color:#fff}
+.passos li[data-s="ok"] .ic::after{content:"✓"}
+.passos li[data-s="erro"] .ic{background:var(--bad);border-color:var(--bad);color:#fff}
+.passos li[data-s="erro"] .ic::after{content:"!"}
+.passos .st{color:var(--muted);font-size:.85rem;text-align:right}
+@keyframes gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.passos li[data-s="rodando"] .ic{animation:none}}
+
+.tag{display:inline-block;border-radius:999px;padding:2px 9px;font-size:.75rem;font-weight:700;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.tag.at{background:var(--ok-bg);color:var(--ok)}
+.tag.ex{background:var(--bad-bg);color:var(--bad)}
+.tag.in{background:var(--info-bg);color:var(--info)}
+.field textarea{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%;min-width:0;min-height:84px;resize:vertical}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.grid3{grid-template-columns:minmax(0,1fr)}}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 12px;font-size:.88rem;max-width:100%}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:1rem;line-height:1;padding:2px 6px;border-radius:999px}
+.chip button:hover{background:var(--line);color:var(--bad)}
+.obs{max-width:46ch;white-space:pre-wrap;font-size:.88rem}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:8px 14px;font-weight:600;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
+td.nw{white-space:nowrap}
+</style>
+<script src="/vitalagroenegocios/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/vitalagroenegocios/cpg/engine.js?v=1"></script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/vitalagroenegocios/" title="Página inicial da Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
+    <div class="brandtxt"><b>Contas a Pagar &amp; Receber</b><span id="subEmp">CPG &amp; CRC · Área do cliente</span></div>
+    <div class="spacer"></div>
+    <select id="selEmp" aria-label="Fazenda" hidden></select>
+    <a class="tab" href="/vitalagroenegocios/cliente/#docs">Entregáveis</a>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <div class="card"><p class="note">Carregando…</p></div>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const hora = (iso) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const dataHora = (iso) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+const tam = (n) => n == null ? "" : n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toFixed(1).replace(".", ",") + " MB";
+const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const br = (iso) => iso ? iso.split("-").reverse().join("/") : "";
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+const mesNome = (iso) => `${MESES[+iso.slice(5, 7) - 1]}/${iso.slice(0, 4)}`;
+const ultimoFechamento = () => { const h = hojeISO(); const a = +h.slice(0, 4), m = +h.slice(5, 7); return VCPG.fimDoMes(m === 1 ? a - 1 : a, m === 1 ? 12 : m - 1); };
+const nomePessoa = (p) => String(p).replace(/\t/g, " ").trim();
+let toastT; function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 4000); }
+
+const CFG = window.VITAL_CONFIG || {};
+const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+const S = { user: null, perfil: null, empresas: [], emp: null, sem: null, pode: false, versoes: [], eventos: [], filtros: [], removidos: [], rodando: false, cx: null,
+  base: null, baseDe: null, novo: { relatorio: "cpg", acao: "excluir", pessoas: [], data: "" }, rel: "cpg" };
+
+async function fn(corpo) {
+  const { data, error } = await sb.functions.invoke("cpg-connectere", { body: corpo });
+  if (error) { let m = error.message, cod = 0; try { cod = error.context.status; const j = await error.context.json(); m = j.erro || m; } catch {} const e = new Error(m); e.codigo = cod; throw e; }
+  if (data && data.erro) throw new Error(data.erro);
+  return data;
+}
+const rpc = async (nome, args) => { const { data, error } = await sb.rpc(nome, args); if (error) throw new Error(error.message); return data; };
+
+/* ---------- início ---------- */
+async function iniciar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = "/vitalagroenegocios/cliente/?volta=/vitalagroenegocios/cpg/"; return; }
+  S.user = session.user;
+  const { data: perfil } = await sb.from("perfis").select("papel, nome, email, login").eq("user_id", S.user.id).maybeSingle();
+  S.perfil = perfil || { papel: "", nome: S.user.email };
+  const { data: emps, error } = await sb.rpc("cpg_empresas");
+  if (error) return falhaGeral("Não foi possível abrir: " + error.message);
+  S.empresas = emps || [];
+  if (!S.empresas.length) return falhaGeral("Seu acesso ainda não inclui o Contas a Pagar & Receber. Fale com a Vital.");
+  let salvo = null; try { salvo = localStorage.getItem("cpg.emp"); } catch {}
+  const pedida = new URLSearchParams(location.search).get("empresa");
+  S.emp = S.empresas.find((e) => e.empresa === pedida) || S.empresas.find((e) => e.empresa === salvo) || S.empresas[0];
+  const sel = $("#selEmp");
+  if (S.empresas.length > 1) {
+    sel.hidden = false;
+    sel.innerHTML = S.empresas.map((e) => `<option${e.empresa === S.emp.empresa ? " selected" : ""}>${esc(e.empresa)}</option>`).join("");
+    sel.onchange = () => { if (S.rodando) { sel.value = S.emp.empresa; return; } S.emp = S.empresas.find((e) => e.empresa === sel.value); try { localStorage.setItem("cpg.emp", S.emp.empresa); } catch {} S.cx = null; S.base = null; carregar(); };
+  }
+  await carregar();
+  setInterval(() => { if (!S.rodando && document.visibilityState === "visible") atualizarSemaforo(); }, 30000);
+}
+function falhaGeral(msg) { $("#app").innerHTML = `<div class="card stack"><h2 style="font-size:1.2rem">Contas a Pagar &amp; Receber</h2><p>${esc(msg)}</p><div><a class="btn" href="/vitalagroenegocios/cliente/">Voltar para a Área do cliente</a></div></div>`; }
+
+async function carregar() {
+  $("#subEmp").textContent = S.emp.empresa + " · CPG & CRC";
+  const E = S.emp.empresa;
+  const [sem, vers, evs, fil] = await Promise.all([
+    sb.from("cpg_semaforo").select("*").eq("empresa", E).maybeSingle(),
+    sb.from("cpg_versoes").select("id, caminho, nome_arquivo, tamanho, origem, resumo, criado_por_nome, criado_em").eq("empresa", E).order("criado_em", { ascending: false }).limit(20),
+    sb.from("cpg_eventos").select("nome, acao, detalhe, em").eq("empresa", E).order("em", { ascending: false }).limit(15),
+    sb.from("cpg_filtros").select("*").eq("empresa", E).order("criado_em", { ascending: false })]);
+  S.sem = sem.data; S.pode = !!S.emp.edita; S.filtra = !!S.emp.filtra; S.contabil = !!S.emp.contabil; S.versoes = vers.data || []; S.eventos = evs.data || [];
+  const fs = fil.data || []; S.filtros = fs.filter((f) => !f.removido_em); S.removidos = fs.filter((f) => f.removido_em);
+  if (S.base && S.baseDe !== (S.versoes[0] && S.versoes[0].id)) S.base = null;
+  render();
+}
+async function atualizarSemaforo() {
+  const { data } = await sb.from("cpg_semaforo").select("*").eq("empresa", S.emp.empresa).maybeSingle();
+  const antes = JSON.stringify(S.sem); S.sem = data;
+  if (antes !== JSON.stringify(data)) carregar();
+}
+const ativo = (s) => s && s.user_id && new Date(s.expira) > new Date();
+const meu = () => ativo(S.sem) && S.sem.user_id === S.user.id;
+
+/* ---------- tela ---------- */
+function render() {
+  const s = S.sem, eu = meu(), outro = ativo(s) && !eu, admin = S.perfil.papel === "admin";
+  const v = S.versoes[0], uf = ultimoFechamento();
+  $("#app").innerHTML = `
+  <div class="topo">
+    <section class="card sem" aria-live="polite">
+      <div class="poste" aria-hidden="true"><div class="lamp r${outro ? " on" : ""}"></div><div class="lamp g${!outro ? " on" : ""}"></div></div>
+      <div class="stack" style="gap:8px">
+        <div class="eyebrow">Semáforo da planilha CPG &amp; CRC</div>
+        <h2>${eu ? "A planilha está com você" : outro ? `Em uso por ${esc(s.nome)}` : "Planilha livre"}</h2>
+        <p class="q" style="margin:0">${eu ? `Desde ${hora(s.desde)} · vale até ${hora(s.expira)}. Só você pode atualizar as bases e enviar versões agora. Ao terminar, libere a planilha.`
+          : outro ? `Desde ${dataHora(s.desde)}, com reserva até ${hora(s.expira)}. Ninguém mais altera a planilha até ${esc(s.nome.split(" ")[0])} liberar. Os filtros e os balancetes continuam disponíveis.`
+          : S.pode ? "Pegue a planilha para atualizar as bases pelo Connectere ou enviar uma versão. Filtros e balancetes não precisam do semáforo." : S.contabil ? "As bases são atualizadas pela Vital direto do Connectere. Aqui você filtra fornecedores e clientes, gera os balancetes de cada fechamento e baixa a planilha." : "Você pode consultar, baixar a planilha e gerar os balancetes. A atualização é feita pela Vital e por quem ela autorizar."}</p>
+        <div class="row">
+          ${eu ? `<button class="btn" id="bRenovar">Renovar reserva</button><button class="btn primary" id="bLiberar">Liberar a planilha</button>`
+            : outro ? (admin ? `<button class="btn danger" id="bForcar">Forçar liberação</button>` : "")
+            : S.pode ? `<button class="btn primary" id="bPegar">Pegar a planilha</button>` : ""}
+        </div>
+        <div id="confForcar" class="callout stack" hidden><span>Liberar a planilha que está com ${esc(s && s.nome)}? Se a pessoa estiver no meio de uma atualização, ela perde o que não salvou.</span><div class="row"><button class="btn danger sm" id="bForcarSim">Liberar mesmo assim</button><button class="btn sm" id="bForcarNao">Cancelar</button></div></div>
+        <p class="note err" id="semErr" role="alert"></p>
+      </div>
+    </section>
+    <section class="card stack ver">
+      <div class="eyebrow">Última versão da planilha</div>
+      ${v ? `<div><b>${esc(v.nome_arquivo)}</b></div>
+        <div class="kv"><span>Salva em</span><span>${dataHora(v.criado_em)}</span><span>Por</span><span>${esc(v.criado_por_nome)}</span>
+          <span>Origem</span><span>${v.origem === "atualizacao" ? '<span class="tag at">Bases atualizadas pelo Connectere</span>' : '<span class="tag">Versão enviada</span>'}</span>
+          ${v.resumo && v.resumo.dbcpg != null ? `<span>Bases</span><span>DBCPG ${v.resumo.dbcpg.toLocaleString("pt-BR")} linhas · DBCRC ${v.resumo.dbcrc.toLocaleString("pt-BR")} linhas${v.resumo.periodo ? ` · emissão de ${br(v.resumo.periodo[0])} a ${br(v.resumo.periodo[1])}` : ""}</span>` : ""}
+          <span>Tamanho</span><span>${tam(v.tamanho)}</span></div>
+        <div class="row"><button class="btn primary" data-baixar="${v.id}">Baixar planilha</button>${S.pode ? `<button class="btn" id="bEscolher" ${outro ? "disabled" : ""}>Enviar versão mais recente</button>` : ""}</div>`
+      : `<p class="note">Nenhuma versão no portal ainda. ${S.pode ? "Envie a planilha CPG_&amp;CRC atual para começar." : "A Vital vai enviar a primeira."}</p>${S.pode ? `<div class="row"><button class="btn primary" id="bEscolher" ${outro ? "disabled" : ""}>Enviar a planilha atual</button></div>` : ""}`}
+      ${S.pode ? `<input type="file" id="fEnvio" accept=".xlsm,.xlsx" hidden>
+      <p class="note" id="envMsg" role="status">${outro ? `Para enviar, espere ${esc(s.nome.split(" ")[0])} liberar a planilha.` : "Mexeu na planilha no Excel? Envie aqui para ela virar a última versão. Parta sempre da versão baixada deste portal."}</p>` : ""}
+    </section>
+  </div>
+
+  ${eu ? `<section class="card stack" id="cxCard">
+    <div><div class="eyebrow">Com a planilha</div><h2 style="font-size:1.15rem">Atualizar as bases DBCPG e DBCRC pelo Connectere</h2></div>
+    <p class="note">O portal entra no Connectere com o seu login, exporta as Notas Fiscais de compra (DBCPG) e de venda (DBCRC) do período de emissão, com as parcelas (vencimento, pagamento, valor e valor pago), divide o período para não passar de 1.000 notas por exportação e salva uma nova versão da planilha. A senha vai direto para o Connectere e não fica guardada.</p>
+    <div class="grid3">
+      <div class="field"><label for="cxIni">Emissão a partir de</label><input id="cxIni" type="date" value="2020-01-01"></div>
+      <div class="field"><label for="cxFim">Emissão até</label><input id="cxFim" type="date" value="${hojeISO()}"></div>
+      <div class="field"><label for="cxBal">Data do balanço na planilha</label><input id="cxBal" type="date" value="${uf}"></div>
+    </div>
+    <form id="fCx" class="grid2" novalidate ${S.cx ? "hidden" : ""}>
+      <div class="field"><label for="cxEmail">E-mail do Connectere</label><input id="cxEmail" type="email" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+      <div class="field"><label for="cxSenha">Senha do Connectere</label><input id="cxSenha" type="password" autocomplete="current-password"></div>
+      <div class="row" style="grid-column:1/-1"><button class="btn primary" type="submit" id="bAtualizar" ${v ? "" : "disabled"}>Entrar e atualizar as bases</button>${v ? "" : '<span class="note">Envie a planilha atual primeiro.</span>'}</div>
+    </form>
+    ${S.cx ? `<div class="row"><button class="btn primary" id="bAtualizar2" ${S.rodando ? "disabled" : ""}>Atualizar as bases de novo</button><span class="note">Conectado ao Connectere nesta página.</span></div>` : ""}
+    <ol class="passos" id="passos" hidden></ol>
+    <p class="note err" id="cxErr" role="alert"></p>
+    <div id="cxOk"></div>
+  </section>` : ""}
+
+  <section class="card stack" id="filCard"></section>
+  <section class="card stack" id="balCard"></section>
+  ${admin ? `<section class="card stack" id="accCard"></section>` : ""}
+
+  <section class="card stack">
+    <div class="eyebrow">Histórico</div>
+    ${S.versoes.length ? `<div class="tablewrap"><table><thead><tr><th>Versão</th><th>Quando</th><th>Por</th><th>Origem</th><th class="num"></th></tr></thead><tbody>
+      ${S.versoes.map((x) => `<tr><td>${esc(x.nome_arquivo)}</td><td class="mono">${dataHora(x.criado_em)}</td><td>${esc(x.criado_por_nome)}</td><td>${x.origem === "atualizacao" ? "Atualização" : "Envio"}</td><td class="num"><button class="btn sm" data-baixar="${x.id}">Baixar</button></td></tr>`).join("")}
+    </tbody></table></div>` : `<p class="note">Sem versões ainda.</p>`}
+    ${S.eventos.length ? `<details><summary class="note" style="cursor:pointer;font-weight:600">Movimentação</summary><div class="tablewrap" style="margin-top:8px"><table><tbody>
+      ${S.eventos.map((e) => `<tr><td class="mono">${dataHora(e.em)}</td><td>${esc(e.nome)}</td><td>${({ pegou: "pegou a planilha", renovou: "renovou a reserva", liberou: "liberou a planilha", liberou_forcado: "forçou a liberação", versao: "salvou uma versão", filtro_incluido: "incluiu filtros", filtro_removido: "removeu um filtro", balancetes: "gerou balancetes" })[e.acao] || esc(e.acao)}${e.detalhe ? " · " + esc(e.detalhe) : ""}</td></tr>`).join("")}
+    </tbody></table></div></details>` : ""}
+  </section>`;
+  ligar();
+  renderFiltros();
+  renderBal();
+  if (admin) renderAcesso();
+}
+
+function ligar() {
+  const on = (id, f) => { const el = $("#" + id); if (el) el.onclick = f; };
+  on("bPegar", () => semaforo(() => rpc("cpg_pegar", { p_empresa: S.emp.empresa }), "A planilha está com você."));
+  on("bRenovar", () => semaforo(() => rpc("cpg_pegar", { p_empresa: S.emp.empresa }), "Reserva renovada."));
+  on("bLiberar", () => { if (S.rodando) { toast("Espere a atualização terminar."); return; } S.cx = null; semaforo(() => rpc("cpg_liberar", { p_empresa: S.emp.empresa, p_forcar: false }), "Planilha liberada. Obrigado!"); });
+  on("bForcar", () => { $("#confForcar").hidden = false; });
+  on("bForcarNao", () => { $("#confForcar").hidden = true; });
+  on("bForcarSim", () => semaforo(() => rpc("cpg_liberar", { p_empresa: S.emp.empresa, p_forcar: true }), "Planilha liberada."));
+  document.querySelectorAll("[data-baixar]").forEach((b) => b.onclick = () => baixarVersao(+b.dataset.baixar, b));
+  const f = $("#fCx"); if (f) f.addEventListener("submit", (e) => { e.preventDefault(); atualizar(); });
+  on("bAtualizar2", () => atualizar());
+  on("bEscolher", () => $("#fEnvio").click());
+  const fe = $("#fEnvio"); if (fe) fe.onchange = enviarVersao;
+}
+async function semaforo(acao, msg) {
+  try { await acao(); toast(msg); } catch (e) { $("#semErr").textContent = e.message; return; }
+  await carregar();
+}
+async function baixarVersao(id, btn) {
+  const v = S.versoes.find((x) => x.id === id); if (!v) return;
+  btn.disabled = true;
+  const { data, error } = await sb.storage.from("cpg").createSignedUrl(v.caminho, 120, { download: v.nome_arquivo });
+  btn.disabled = false;
+  if (error) { toast("Não foi possível baixar: " + error.message); return; }
+  location.href = data.signedUrl;
+}
+
+/* ---------- base da última versão (para filtros e balancetes) ---------- */
+async function base() {
+  const v = S.versoes[0]; if (!v) throw new Error("Ainda não há planilha no portal.");
+  if (S.base && S.baseDe === v.id) return S.base;
+  const { data: blob, error } = await sb.storage.from("cpg").download(v.caminho);
+  if (error) throw new Error("Não consegui abrir a última versão: " + error.message);
+  const ctx = await VCPG.abrir(await JSZip.loadAsync(await blob.arrayBuffer()));
+  const b = { cpg: (await VCPG.lerBase(ctx, "cpg")).dados, crc: (await VCPG.lerBase(ctx, "crc")).dados };
+  b.nomes = { cpg: [...new Set(b.cpg.map((r) => String(r[1] ?? "")).filter(Boolean))].sort((x, y) => x.localeCompare(y, "pt-BR")), crc: [...new Set(b.crc.map((r) => String(r[1] ?? "")).filter(Boolean))].sort((x, y) => x.localeCompare(y, "pt-BR")) };
+  S.base = b; S.baseDe = v.id;
+  return b;
+}
+
+/* ---------- filtros da contabilidade ---------- */
+const RELN = { cpg: "Contas a pagar", crc: "Contas a receber" };
+function renderFiltros() {
+  const el = $("#filCard"); if (!el) return;
+  const N = S.novo, lista = S.filtros.filter((f) => f.relatorio === S.rel);
+  const datas = VCPG.fechamentos("2025-01", ultimoFechamento().slice(0, 7)).reverse();
+  el.innerHTML = `
+    <div class="row" style="justify-content:space-between"><div><div class="eyebrow">Filtros pedidos pela contabilidade</div><h2 style="font-size:1.15rem">${S.contabil ? "Filtre fornecedores e clientes para o fechamento" : "Quem sai (ou entra) nos balancetes"}</h2></div>
+      <div class="seg" role="group" aria-label="Relatório">${["cpg", "crc"].map((k) => `<button data-rel="${k}" aria-pressed="${S.rel === k}">${RELN[k]} · ${S.filtros.filter((f) => f.relatorio === k).length}</button>`).join("")}</div></div>
+    <p class="note">${S.contabil ? "Marque aqui quem sai (ou quem entra) em cada relatório, com a observação do motivo. A Vital acompanha tudo o que for registrado." : "Registre aqui cada pedido da Tática Contabilidade (Driele), com a observação."} Os balancetes gerados nesta página aplicam estes filtros. Um filtro pode valer para todos os balanços ou só para o balanço de um mês.${S.rel === "crc" ? " No Contas a receber, quando há pessoas em “Mostrar somente”, o relatório traz só elas." : ""}</p>
+    <div class="tablewrap"><table><thead><tr><th>Pessoa</th><th>Ação</th><th>Vale para</th><th>Observação</th><th>Registro</th>${S.filtra ? '<th class="num"></th>' : ""}</tr></thead><tbody>
+      ${lista.map((f) => `<tr><td>${esc(nomePessoa(f.pessoa))}</td><td>${f.acao === "excluir" ? '<span class="tag ex">Excluir</span>' : '<span class="tag in">Mostrar somente</span>'}</td>
+        <td class="nw">${f.data_balanco ? "Balanço de " + br(f.data_balanco) : "Todos os balanços"}</td>
+        <td><div class="obs">${esc(f.observacao)}</div>${f.solicitado_por ? `<div class="note">Pedido por ${esc(f.solicitado_por)}</div>` : ""}</td>
+        <td class="note nw">${esc(f.criado_por_nome || "")}<br>${dataHora(f.criado_em)}</td>
+        ${S.filtra ? `<td class="num"><button class="btn sm danger" data-rem="${f.id}">Remover</button></td>` : ""}</tr>
+        <tr data-remf="${f.id}" hidden><td colspan="6"><div class="callout stack"><div class="field"><label for="mot${f.id}">Por que remover o filtro de ${esc(nomePessoa(f.pessoa))}?</label><input id="mot${f.id}" placeholder="Ex.: Driele pediu para voltar a considerar em 05/11"></div>
+          <div class="row"><button class="btn danger sm" data-remok="${f.id}">Remover filtro</button><button class="btn sm" data-remno="${f.id}">Cancelar</button></div></div></td></tr>`).join("") || `<tr><td colspan="6" class="note">Nenhum filtro neste relatório.</td></tr>`}
+    </tbody></table></div>
+    ${S.filtra ? `<details id="novoF" ${N.aberto ? "open" : ""}><summary class="btn" style="width:max-content">+ ${S.contabil ? "Incluir filtro" : "Registrar pedido de filtro"}</summary>
+      <div class="stack" style="margin-top:14px">
+        <div class="grid3">
+          <div class="field"><label for="nfRel">Relatório</label><select id="nfRel">${["cpg", "crc"].map((k) => `<option value="${k}"${N.relatorio === k ? " selected" : ""}>${RELN[k]}</option>`).join("")}</select></div>
+          <div class="field"><label for="nfAcao">O que fazer</label><select id="nfAcao"><option value="excluir"${N.acao === "excluir" ? " selected" : ""}>Excluir do relatório</option><option value="incluir"${N.acao === "incluir" ? " selected" : ""}>Mostrar somente estas pessoas</option></select></div>
+          <div class="field"><label for="nfData">Vale para</label><select id="nfData"><option value="">Todos os balanços</option>${datas.map((d) => `<option value="${d}"${N.data === d ? " selected" : ""}>Só o balanço de ${br(d)}</option>`).join("")}</select></div>
+        </div>
+        <div class="field"><label for="nfPes">Pessoas (como aparecem no Connectere)</label>
+          <div class="row" style="flex-wrap:nowrap"><input id="nfPes" list="dlPes" placeholder="${S.base ? "Comece a digitar e escolha da lista" : "Carregando a lista de pessoas…"}" style="flex:1"><button class="btn" id="nfAdd" type="button">Adicionar</button></div>
+          <datalist id="dlPes">${S.base ? S.base.nomes[N.relatorio].map((n) => `<option value="${esc(nomePessoa(n))}">`).join("") : ""}</datalist>
+          <div class="chips" id="nfChips">${N.pessoas.map((p, i) => `<span class="chip"><span>${esc(nomePessoa(p))}</span><button type="button" data-tira="${i}" aria-label="Tirar ${esc(nomePessoa(p))}">×</button></span>`).join("")}</div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="nfSol">Pedido por</label><input id="nfSol" value="${esc(N.sol ?? (S.contabil ? (S.perfil.nome || "") + " · Contabilidade" : "Driele · Tática Contabilidade"))}"></div>
+          <div></div>
+        </div>
+        <div class="field"><label for="nfObs">Observação</label><textarea id="nfObs" placeholder="Cole aqui o pedido da Driele ou descreva o motivo. Ex.: 28/10 – excluir do contas a pagar de 28/02/2026 por já estarem quitados fora do sistema.">${esc(N.obs || "")}</textarea></div>
+        <div class="row"><button class="btn primary" id="nfSalvar">Registrar filtro</button><span class="note err" id="nfErr" role="alert"></span></div>
+      </div></details>` : ""}
+    ${S.removidos.length ? `<details><summary class="note" style="cursor:pointer;font-weight:600">Filtros removidos (${S.removidos.length})</summary><div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>Relatório</th><th>Pessoa</th><th>Vale para</th><th>Observação</th><th>Removido</th></tr></thead><tbody>
+      ${S.removidos.map((f) => `<tr><td>${RELN[f.relatorio]}</td><td>${esc(nomePessoa(f.pessoa))} · ${f.acao === "excluir" ? "excluir" : "mostrar somente"}</td><td class="nw">${f.data_balanco ? br(f.data_balanco) : "Todos"}</td><td><div class="obs">${esc(f.observacao)}</div></td><td class="note"><b>${esc(f.motivo_remocao || "")}</b><br>${esc(f.removido_por_nome || "")} · ${dataHora(f.removido_em)}</td></tr>`).join("")}
+    </tbody></table></div></details>` : ""}`;
+  el.querySelectorAll("[data-rel]").forEach((b) => b.onclick = () => { S.rel = b.dataset.rel; renderFiltros(); });
+  el.querySelectorAll("[data-rem]").forEach((b) => b.onclick = () => { el.querySelector(`[data-remf="${b.dataset.rem}"]`).hidden = false; $("#mot" + b.dataset.rem).focus(); });
+  el.querySelectorAll("[data-remno]").forEach((b) => b.onclick = () => { el.querySelector(`[data-remf="${b.dataset.remno}"]`).hidden = true; });
+  el.querySelectorAll("[data-remok]").forEach((b) => b.onclick = async () => {
+    const id = +b.dataset.remok, mot = $("#mot" + id).value.trim();
+    if (!mot) { $("#mot" + id).focus(); toast("Escreva o motivo da remoção."); return; }
+    b.disabled = true;
+    try { await rpc("cpg_filtro_remover", { p_id: id, p_motivo: mot }); toast("Filtro removido."); await carregar(); } catch (e) { toast(e.message); b.disabled = false; }
+  });
+  const det = $("#novoF");
+  if (det) {
+    det.ontoggle = () => { N.aberto = det.open; if (!det.open) return; if (S.base) { if (!$("#dlPes").options.length) renderFiltros(); return; } base().then(renderFiltros).catch((e) => { const x = $("#nfErr"); if (x) x.textContent = e.message; }); };
+    const guarda = () => { N.relatorio = $("#nfRel").value; N.acao = $("#nfAcao").value; N.data = $("#nfData").value; N.sol = $("#nfSol").value; N.obs = $("#nfObs").value; };
+    ["nfAcao", "nfData", "nfSol", "nfObs"].forEach((id) => $("#" + id).addEventListener("input", guarda));
+    $("#nfRel").onchange = () => { guarda(); N.pessoas = []; renderFiltros(); };
+    const add = () => {
+      const t = $("#nfPes").value.trim(); if (!t) return;
+      const lst = S.base ? S.base.nomes[N.relatorio] : [];
+      const real = lst.find((n) => nomePessoa(n) === t) || lst.find((n) => nomePessoa(n).toLowerCase() === t.toLowerCase());
+      if (!real && S.base) { $("#nfErr").textContent = `“${t}” não aparece na base de ${RELN[N.relatorio].toLowerCase()}. Escolha o nome exatamente como está na lista.`; return; }
+      const nome = real || t;
+      if (!N.pessoas.includes(nome)) N.pessoas.push(nome);
+      guarda(); renderFiltros(); $("#nfPes").focus();
+    };
+    $("#nfAdd").onclick = add;
+    $("#nfPes").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } });
+    el.querySelectorAll("[data-tira]").forEach((b) => b.onclick = () => { N.pessoas.splice(+b.dataset.tira, 1); guarda(); renderFiltros(); });
+    $("#nfSalvar").onclick = async () => {
+      guarda(); const err = $("#nfErr"); err.textContent = "";
+      if (!N.pessoas.length) { err.textContent = "Adicione ao menos uma pessoa."; return; }
+      if (!N.obs || !N.obs.trim()) { err.textContent = "Escreva a observação (o que foi pedido e por quem)."; $("#nfObs").focus(); return; }
+      $("#nfSalvar").disabled = true;
+      try {
+        const n = await rpc("cpg_filtro_incluir", { p_empresa: S.emp.empresa, p_relatorio: N.relatorio, p_acao: N.acao, p_pessoas: N.pessoas, p_data: N.data || null, p_observacao: N.obs, p_solicitado_por: N.sol || null });
+        toast(`${n} filtro${n > 1 ? "s" : ""} registrado${n > 1 ? "s" : ""}.`);
+        S.rel = N.relatorio; S.novo = { relatorio: N.relatorio, acao: "excluir", pessoas: [], data: "" };
+        await carregar();
+      } catch (e) { err.textContent = e.message; $("#nfSalvar").disabled = false; }
+    };
+  }
+}
+
+/* ---------- acesso da contabilidade (só Vital) ---------- */
+async function renderAcesso() {
+  const el = $("#accCard"); if (!el) return;
+  const E = S.emp.empresa;
+  const { data: L, error } = await sb.rpc("cpg_contabil_listar", { p_empresa: E });
+  const lista = error ? [] : (L || []);
+  el.innerHTML = `
+    <div><div class="eyebrow">Só a equipe Vital vê</div><h2 style="font-size:1.15rem">Acesso da contabilidade</h2></div>
+    <p class="note">Quem entra por aqui vê só esta página da ${esc(E)}: filtra fornecedores e clientes, gera os balancetes e baixa a planilha. Não vê painéis nem entregáveis e não atualiza as bases.</p>
+    ${lista.length ? `<div class="tablewrap"><table><thead><tr><th>Nome</th><th>Login</th><th>E-mail</th><th class="num"></th></tr></thead><tbody>
+      ${lista.map((x) => `<tr><td><b>${esc(x.nome)}</b></td><td class="mono">${esc(x.login)}</td><td>${esc(x.email)}</td><td class="num"><button class="btn sm danger" data-accrem="${x.user_id}">Remover acesso</button></td></tr>
+        <tr data-accconf="${x.user_id}" hidden><td colspan="4"><div class="callout row"><span>Remover o acesso de ${esc(x.nome)}? O login deixa de funcionar.</span><button class="btn danger sm" data-accsim="${x.user_id}">Remover</button><button class="btn sm" data-accnao="${x.user_id}">Cancelar</button></div></td></tr>`).join("")}
+    </tbody></table></div>` : `<p class="note">Ninguém da contabilidade tem acesso ainda.</p>`}
+    <form id="fAcc" class="stack" novalidate>
+      <div class="grid2">
+        <div class="field"><label for="acNome">Nome</label><input id="acNome" placeholder="Ex.: Driele · Tática Contabilidade"></div>
+        <div class="field"><label for="acEmail">E-mail</label><input id="acEmail" type="email" autocapitalize="none" spellcheck="false"></div>
+        <div class="field"><label for="acLogin">Login</label><input id="acLogin" autocapitalize="none" spellcheck="false" placeholder="ex.: driele.tatica"></div>
+        <div class="field"><label for="acSenha">Senha inicial</label><input id="acSenha" placeholder="8 caracteres, com letras e números"></div>
+      </div>
+      <div class="row"><button class="btn primary" type="submit">Criar acesso</button><span class="note err" id="acErr" role="alert"></span></div>
+    </form>
+    <div id="acOk"></div>`;
+  const gest = async (corpo) => { const { data, error } = await sb.functions.invoke("gestores", { body: corpo }); if (error) { let m = error.message; try { const j = await error.context.json(); m = j.erro || m; } catch {} throw new Error(m); } if (data && data.erro) throw new Error(data.erro); return data; };
+  $("#acNome").addEventListener("input", () => { const l = $("#acLogin"); if (!l.dataset.mexeu) l.value = $("#acNome").value.split(/[·\-]/)[0].trim().toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, ".").replace(/^\.|\.$/g, ""); });
+  $("#acLogin").addEventListener("input", (e) => e.target.dataset.mexeu = "1");
+  $("#fAcc").onsubmit = async (e) => {
+    e.preventDefault(); const err = $("#acErr"); err.textContent = "";
+    const corpo = { acao: "criar", papel: "contabil", nome: $("#acNome").value.trim(), email: $("#acEmail").value.trim(), login: $("#acLogin").value.trim().toLowerCase(), senha: $("#acSenha").value, empresas: [E] };
+    if (!corpo.nome || !corpo.email || !corpo.login || !corpo.senha) { err.textContent = "Preencha nome, e-mail, login e senha."; return; }
+    const b = e.target.querySelector("button[type=submit]"); b.disabled = true;
+    try {
+      await gest(corpo);
+      const link = location.origin + "/vitalagroenegocios/cpg/";
+      const msg = `Olá, ${corpo.nome.split(/[ ·]/)[0]}! Seu acesso ao Contas a Pagar & Receber da ${E} no portal da Vital está pronto.\n\nLink: ${link}\nLogin: ${corpo.login}\nSenha: ${corpo.senha}\n\nNo primeiro acesso, troque a senha. Lá você filtra fornecedores e clientes e gera os balancetes de cada fechamento.`;
+      await renderAcesso();
+      $("#acOk").innerHTML = `<div class="callout stack"><b>Acesso criado.</b><span class="note">Mensagem para enviar:</span><textarea readonly rows="7" id="acMsg">${esc(msg)}</textarea><div class="row"><button class="btn sm" id="acCopia">Copiar mensagem</button></div></div>`;
+      $("#acCopia").onclick = async () => { try { await navigator.clipboard.writeText(msg); toast("Mensagem copiada."); } catch { $("#acMsg").select(); } };
+    } catch (x) { err.textContent = x.message; b.disabled = false; }
+  };
+  el.querySelectorAll("[data-accrem]").forEach((b) => b.onclick = () => { el.querySelector(`[data-accconf="${b.dataset.accrem}"]`).hidden = false; });
+  el.querySelectorAll("[data-accnao]").forEach((b) => b.onclick = () => { el.querySelector(`[data-accconf="${b.dataset.accnao}"]`).hidden = true; });
+  el.querySelectorAll("[data-accsim]").forEach((b) => b.onclick = async () => { b.disabled = true; try { await gest({ acao: "remover", id: b.dataset.accsim }); toast("Acesso removido."); renderAcesso(); } catch (x) { toast(x.message); b.disabled = false; } });
+}
+
+/* ---------- balancetes ---------- */
+function renderBal() {
+  const el = $("#balCard"); if (!el) return;
+  const uf = ultimoFechamento(), meses = VCPG.fechamentos("2024-01", uf.slice(0, 7)).reverse();
+  const B = S.bal || (S.bal = { de: "2025-12-31", ate: uf, cpg: true, crc: true });
+  el.innerHTML = `<div><div class="eyebrow">Balancetes</div><h2 style="font-size:1.15rem">Gerar os PDFs de fim de mês</h2></div>
+    <p class="note">Usa a última versão da planilha e os filtros acima, no mesmo formato da tabela dinâmica (saldo a pagar/receber por pessoa e vencimento). Sai um arquivo .zip com um PDF por mês, pronto para enviar à contabilidade.</p>
+    <div class="grid3">
+      <div class="field"><label for="bDe">De</label><select id="bDe">${meses.map((d) => `<option value="${d}"${B.de === d ? " selected" : ""}>${br(d)}</option>`).join("")}</select></div>
+      <div class="field"><label for="bAte">Até</label><select id="bAte">${meses.map((d) => `<option value="${d}"${B.ate === d ? " selected" : ""}>${br(d)}</option>`).join("")}</select></div>
+      <div class="field"><span style="font-weight:600;font-size:.92rem">Relatórios</span><div class="row" style="min-height:46px"><label class="row" style="gap:6px"><input type="checkbox" id="bCpg" ${B.cpg ? "checked" : ""}> Contas a pagar</label><label class="row" style="gap:6px"><input type="checkbox" id="bCrc" ${B.crc ? "checked" : ""}> Contas a receber</label></div></div>
+    </div>
+    <div class="row"><button class="btn primary" id="bGerar" ${S.versoes.length ? "" : "disabled"}>Gerar balancetes (.zip)</button><button class="btn" id="bPrevia" ${S.versoes.length ? "" : "disabled"}>Ver totais</button><span class="note" id="balMsg" role="status"></span></div>
+    <div id="balTab"></div>`;
+  const guarda = () => { B.de = $("#bDe").value; B.ate = $("#bAte").value; B.cpg = $("#bCpg").checked; B.crc = $("#bCrc").checked; };
+  ["bDe", "bAte", "bCpg", "bCrc"].forEach((id) => $("#" + id).onchange = guarda);
+  $("#bPrevia").onclick = () => balancetes(false);
+  $("#bGerar").onclick = () => balancetes(true);
+}
+async function balancetes(gerar) {
+  const B = S.bal, msg = $("#balMsg");
+  const datas = VCPG.fechamentos(B.de < B.ate ? B.de.slice(0, 7) : B.ate.slice(0, 7), B.de < B.ate ? B.ate.slice(0, 7) : B.de.slice(0, 7));
+  const tipos = [B.cpg && "cpg", B.crc && "crc"].filter(Boolean);
+  if (!tipos.length) { msg.textContent = "Marque ao menos um relatório."; return; }
+  const bt = [$("#bGerar"), $("#bPrevia")]; bt.forEach((b) => b.disabled = true);
+  try {
+    msg.textContent = S.base ? "Calculando…" : "Abrindo a última versão da planilha…";
+    const b = await base();
+    const zip = new JSZip(), linhas = [];
+    for (const d of datas) {
+      const l = { d };
+      for (const t of tipos) {
+        msg.textContent = `${gerar ? "Gerando" : "Calculando"} ${VCPG.CFG[t].titulo.toLowerCase()} de ${br(d)}…`; await espera(0);
+        const r = VCPG.relatorio(b[t], t, d, S.filtros);
+        l[t] = r;
+        if (gerar) zip.file(VCPG.nomePdf(t, d), VCPG.pdf(window.jspdf.jsPDF, r));
+      }
+      linhas.push(l);
+    }
+    const fmt = (n) => "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    $("#balTab").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Balanço</th>${tipos.map((t) => `<th class="num">${VCPG.CFG[t].titulo}</th><th class="num">Pessoas</th>`).join("")}<th>Filtros aplicados</th></tr></thead><tbody>
+      ${linhas.map((l) => `<tr><td class="mono">${br(l.d)}</td>${tipos.map((t) => `<td class="num">${fmt(l[t].total)}</td><td class="num">${l[t].linhas.length}</td>`).join("")}<td class="note">${tipos.map((t) => { const r = l[t]; const p = []; if (r.excluidos.length) p.push(`${r.excluidos.length} excluída${r.excluidos.length > 1 ? "s" : ""}`); if (r.incluidos.length) p.push(`só ${r.incluidos.length} pessoa${r.incluidos.length > 1 ? "s" : ""}`); return p.length ? `${t.toUpperCase()}: ${p.join(", ")}` : ""; }).filter(Boolean).join(" · ") || "–"}</td></tr>`).join("")}
+    </tbody></table></div>`;
+    if (gerar) {
+      msg.textContent = "Compactando…";
+      const blob = await zip.generateAsync({ type: "blob" });
+      const nome = `Balancetes ${S.emp.empresa} ${br(datas[0]).replace(/\//g, "-")} a ${br(datas[datas.length - 1]).replace(/\//g, "-")}.zip`;
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      msg.textContent = `${datas.length * tipos.length} PDFs em ${nome}.`;
+      sb.rpc("cpg_registrar_balancetes", { p_empresa: S.emp.empresa, p_detalhe: `${br(datas[0])} a ${br(datas[datas.length - 1])} · ${tipos.join(" e ").toUpperCase()}` }).then(() => {});
+    } else msg.textContent = "";
+  } catch (e) { msg.textContent = e.message; msg.classList.add("err"); }
+  finally { bt.forEach((b) => b.disabled = false); }
+}
+
+/* ---------- atualização pelo Connectere ---------- */
+const PASSOS = [["cx", "Entrar no Connectere"], ["plan", "Contar as notas por período"], ["compras", "Notas de compra (DBCPG)"], ["vendas", "Notas de venda (DBCRC)"], ["pl", "Atualizar a planilha"], ["sv", "Salvar a nova versão"]];
+function passo(k, s, txt = "") { const li = $(`#passos li[data-k="${k}"]`); if (!li) return; li.dataset.s = s; $(".st", li).textContent = txt; }
+const addDia = (d, n) => new Date(new Date(d + "T12:00:00Z").getTime() + n * 864e5).toISOString().slice(0, 10);
+const meio = (a, b) => { const x = new Date(a + "T12:00:00Z").getTime(), y = new Date(b + "T12:00:00Z").getTime(); return new Date((x + y) / 2).toISOString().slice(0, 10); };
+function trimestres(ini, fim) {
+  const out = []; let a = ini;
+  while (a <= fim) { const [y, m] = a.split("-").map(Number); const q = Math.floor((m - 1) / 3); let b = VCPG.fimDoMes(y, q * 3 + 3); if (b > fim) b = fim; out.push([a, b]); a = addDia(b, 1); }
+  return out;
+}
+async function chamar(corpo) { const r = await fn({ ...corpo, empresa: S.emp.empresa, sessao: S.cx }); S.cx = r.sessao; return r; }
+/* Divide o período em faixas de até ~900 notas (contando pela listagem do Connectere). */
+async function planejar(lado, ini, fim, rotulo) {
+  const faixas = [], fila = trimestres(ini, fim);
+  while (fila.length) {
+    const [a, b] = fila.shift();
+    passo("plan", "rodando", `${rotulo} · ${br(a)} a ${br(b)}`);
+    const n = (await chamar({ acao: "contar", lado, ini: a, fim: b })).total;
+    if (n <= VCPG.CFG.seguro || a === b) { if (n) faixas.push([a, b, n]); continue; }
+    const m = meio(a, b); fila.unshift([a, m], [addDia(m, 1), b]);
+  }
+  // junta faixas vizinhas pequenas
+  const juntas = [];
+  for (const f of faixas) { const u = juntas[juntas.length - 1]; if (u && u[2] + f[2] <= VCPG.CFG.seguro && addDia(u[1], 1) === f[0]) { u[1] = f[1]; u[2] += f[2]; } else juntas.push([...f]); }
+  return juntas;
+}
+async function exportar(lado, a, b, k, rotulo) {
+  let r = await chamar({ acao: "iniciar", lado, ini: a, fim: b });
+  const tarefa = r.tarefa, t0 = Date.now();
+  for (;;) {
+    await espera(3500);
+    if (Date.now() - t0 > 30 * 60e3) throw new Error(`O Connectere demorou demais para gerar ${rotulo}. Tente de novo mais tarde.`);
+    r = await chamar({ acao: "consultar", tarefa });
+    if (r.status === "pronta") break;
+    passo(k, "rodando", `${br(a)} a ${br(b)} · na fila do Connectere`);
+  }
+  for (let i = 0; ; i++) {
+    try { r = await chamar({ acao: "baixar", link: r.link }); break; }
+    catch (e) { if (i >= 5 || !/pronto/.test(e.message)) throw e; await espera(3000); }
+  }
+  const buf = Uint8Array.from(atob(r.arquivo), (c) => c.charCodeAt(0)).buffer;
+  return VCPG.lerExportacao(XLSX, buf);
+}
+async function baseCompleta(lado, ini, fim, k, rotulo) {
+  const faixas = await planejar(lado, ini, fim, rotulo), rows = [];
+  const fila = faixas.map((f) => [f[0], f[1]]); let lote = 0, feitas = 0;
+  while (fila.length) {
+    const [a, b] = fila.shift();
+    passo(k, "rodando", `exportação ${feitas + 1} de ${feitas + fila.length + 1} · ${br(a)} a ${br(b)}`);
+    const e = await exportar(lado, a, b, k, rotulo);
+    if (VCPG.notas(e.rows) >= VCPG.CFG.limite && a !== b) { const m = meio(a, b); fila.unshift([a, m], [addDia(m, 1), b]); continue; }
+    lote++; feitas++; e.rows.forEach((v) => rows.push({ v, lote }));
+  }
+  return { rows, exportacoes: feitas };
+}
+async function atualizar() {
+  if (S.rodando) return;
+  const err = $("#cxErr"); err.textContent = ""; $("#cxOk").innerHTML = "";
+  const v = S.versoes[0]; if (!v) { err.textContent = "Envie a planilha atual primeiro."; return; }
+  const ini = $("#cxIni").value, fim = $("#cxFim").value, bal = $("#cxBal").value;
+  if (!ini || !fim || ini > fim) { err.textContent = "Confira o período de emissão."; return; }
+  if (!bal) { err.textContent = "Informe a data do balanço."; return; }
+  S.rodando = true;
+  const btns = [$("#bAtualizar"), $("#bAtualizar2"), $("#bLiberar")].filter(Boolean); btns.forEach((b) => b.disabled = true);
+  const lista = $("#passos"); lista.hidden = false;
+  lista.innerHTML = PASSOS.map(([k, t]) => `<li data-k="${k}" data-s=""><span class="ic"></span><span>${t}</span><span class="st"></span></li>`).join("");
+  let atual = "cx";
+  try {
+    await rpc("cpg_pegar", { p_empresa: S.emp.empresa });
+    if (!S.cx) {
+      passo("cx", "rodando");
+      const email = $("#cxEmail").value.trim(), senha = $("#cxSenha").value;
+      if (!email || !senha) throw new Error("Informe e-mail e senha do Connectere.");
+      S.cx = (await fn({ acao: "entrar", empresa: S.emp.empresa, email, senha })).sessao;
+      $("#cxSenha").value = "";
+    }
+    passo("cx", "ok", "conectado");
+    atual = "compras";
+    const c = await baseCompleta("compras", ini, fim, "compras", "compras");
+    passo("plan", "ok", "períodos definidos");
+    passo("compras", "ok", `${c.rows.length.toLocaleString("pt-BR")} linhas em ${c.exportacoes} exportações`);
+    atual = "vendas"; passo("plan", "rodando", "vendas");
+    const ve = await baseCompleta("vendas", ini, fim, "vendas", "vendas");
+    passo("plan", "ok", "períodos definidos");
+    passo("vendas", "ok", `${ve.rows.length.toLocaleString("pt-BR")} linhas em ${ve.exportacoes} exportaç${ve.exportacoes > 1 ? "ões" : "ão"}`);
+    atual = "pl"; passo("pl", "rodando", "baixando a última versão");
+    const { data: blob, error } = await sb.storage.from("cpg").download(v.caminho);
+    if (error) throw new Error("Não consegui abrir a última versão: " + error.message);
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer()), ctx = await VCPG.abrir(zip), D = VCPG.serialISO(bal);
+    passo("pl", "rodando", "substituindo DBCPG"); await espera(0);
+    await VCPG.substituir(ctx, "cpg", c.rows, D);
+    passo("pl", "rodando", "substituindo DBCRC"); await espera(0);
+    await VCPG.substituir(ctx, "crc", ve.rows, D);
+    await VCPG.finalizar(ctx);
+    passo("pl", "rodando", "compactando");
+    const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE", compressionOptions: { level: 6 } });
+    passo("pl", "ok", `balanço em ${br(bal)}`);
+    atual = "sv"; passo("sv", "rodando", tam(bytes.length));
+    const nome = nomeVersao(v.nome_arquivo);
+    const caminho = await subir(bytes, nome);
+    const resumo = { dbcpg: c.rows.length, dbcrc: ve.rows.length, periodo: [ini, fim], balanco: bal, exportacoes: c.exportacoes + ve.exportacoes };
+    await rpc("cpg_registrar_versao", { p_empresa: S.emp.empresa, p_caminho: caminho, p_nome: nome, p_tamanho: bytes.length, p_origem: "atualizacao", p_resumo: resumo });
+    passo("sv", "ok", nome);
+    S.base = { cpg: c.rows.map((o) => o.v), crc: ve.rows.map((o) => o.v) };
+    S.base.nomes = { cpg: [...new Set(S.base.cpg.map((r) => String(r[1] ?? "")).filter(Boolean))].sort(), crc: [...new Set(S.base.crc.map((r) => String(r[1] ?? "")).filter(Boolean))].sort() };
+    S.rodando = false;
+    await carregar(); S.baseDe = S.versoes[0] && S.versoes[0].id;
+    $("#cxOk").innerHTML = `<div class="callout stack"><b>Bases atualizadas e nova versão salva.</b><span>DBCPG: ${resumo.dbcpg.toLocaleString("pt-BR")} linhas · DBCRC: ${resumo.dbcrc.toLocaleString("pt-BR")} linhas · emissão de ${br(ini)} a ${br(fim)}. Ao abrir no Excel, a planilha recalcula e atualiza as tabelas dinâmicas com o balanço de ${br(bal)}. Agora é só gerar os balancetes logo abaixo. Ao terminar, libere a planilha.</span></div>`;
+    toast("Nova versão salva.");
+  } catch (e) {
+    passo(atual, "erro", "");
+    if (e.codigo === 401 && /Connectere/.test(e.message)) S.cx = null;
+    S.rodando = false;
+    const f = $("#fCx"); if (f && !S.cx) f.hidden = false;
+    err.textContent = e.message || String(e);
+  } finally {
+    S.rodando = false;
+    btns.forEach((b) => { if (document.body.contains(b)) b.disabled = false; });
+  }
+}
+function nomeVersao(anterior) {
+  const b = String(anterior || "CPG_&CRC.xlsm").replace(/\.(xlsm|xlsx)$/i, "").replace(/[_ -]+(bases[ _-]+)?\d{2,4}-\d{2}-\d{2,4}(_\d{4})?$/i, "");
+  const d = new Date(), p = (n) => String(n).padStart(2, "0");
+  return `${b}_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.xlsm`;
+}
+async function subir(bytes, nome) {
+  const caminho = `${S.emp.pasta}/${Date.now()}_${nome.normalize("NFD").replace(/[^\w.\-]+/g, "_")}`;
+  const { error } = await sb.storage.from("cpg").upload(caminho, new Blob([bytes], { type: "application/vnd.ms-excel.sheet.macroEnabled.12" }), { contentType: "application/vnd.ms-excel.sheet.macroEnabled.12", upsert: false });
+  if (error) throw new Error("Não consegui salvar a planilha no portal: " + error.message);
+  return caminho;
+}
+async function conferirEstrutura(bytes) {
+  const falta = [];
+  try {
+    const ctx = await VCPG.abrir(await JSZip.loadAsync(bytes));
+    for (const t of ["cpg", "crc"]) {
+      const c = VCPG.CFG[t];
+      if (!ctx.abas[c.aba]) { falta.push(`aba "${c.aba}"`); continue; }
+      const b = await VCPG.lerBase(ctx, t);
+      if (b.head[1] !== "Razão Social" || b.head[21] !== "Vencimento" || b.head[24] !== "Valor Pago") falta.push(`colunas A a Y da aba ${c.aba} na ordem da exportação do Connectere`);
+    }
+  } catch { falta.push("um arquivo Excel válido (.xlsm/.xlsx)"); }
+  return falta;
+}
+async function enviarVersao() {
+  const f = $("#fEnvio").files[0] || (S.forcarEnvio && S.envioPendente), msg = $("#envMsg");
+  if (!f) { msg.textContent = "Escolha o arquivo da planilha."; return; }
+  if (!/\.(xlsm|xlsx)$/i.test(f.name)) { msg.textContent = "Envie um arquivo .xlsm ou .xlsx."; return; }
+  if (S.rodando) { msg.textContent = "Espere a atualização das bases terminar."; return; }
+  const b = $("#bEscolher"); b.disabled = true; msg.textContent = "Conferindo e enviando " + f.name + " (" + tam(f.size) + ")…";
+  try {
+    await rpc("cpg_pegar", { p_empresa: S.emp.empresa });
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const aviso = await conferirEstrutura(bytes);
+    if (aviso.length && !S.forcarEnvio) {
+      S.envioPendente = f; msg.classList.add("err");
+      msg.innerHTML = `${esc(f.name)} não tem ${esc(aviso.join("; "))}. Sem isso, a atualização automática e os balancetes deixam de funcionar. Confira se é o arquivo certo. <button class="btn sm danger" id="bForcarEnvio">Enviar mesmo assim</button>`;
+      $("#bForcarEnvio").onclick = () => { S.forcarEnvio = true; enviarVersao(); };
+      b.disabled = false; $("#fEnvio").value = ""; return;
+    }
+    S.forcarEnvio = false; S.envioPendente = null;
+    const caminho = await subir(bytes, f.name);
+    await rpc("cpg_registrar_versao", { p_empresa: S.emp.empresa, p_caminho: caminho, p_nome: f.name, p_tamanho: f.size, p_origem: "envio", p_resumo: aviso.length ? { avisos: aviso } : null });
+    toast("Versão enviada. Ao terminar, libere a planilha.");
+    S.base = null; await carregar();
+  } catch (e) { S.forcarEnvio = false; msg.textContent = e.message; b.disabled = false; $("#fEnvio").value = ""; }
+}
+
+addEventListener("beforeunload", (e) => { if (S.rodando || meu()) { e.preventDefault(); e.returnValue = ""; } });
+iniciar().catch((e) => falhaGeral("Erro ao abrir: " + (e.message || e)));
+})();
+</script>
+</body>
+</html>

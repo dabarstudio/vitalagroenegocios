@@ -130,7 +130,7 @@ td.nw{white-space:nowrap}
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="/vitalagroenegocios/cpg/engine.js?v=1"></script>
+<script src="/vitalagroenegocios/cpg/engine.js?v=2"></script>
 </head>
 <body>
 <header class="top">
@@ -358,7 +358,7 @@ function renderFiltros() {
     <p class="note">${S.contabil ? "Marque aqui quem sai (ou quem entra) em cada relatório, com a observação do motivo. A Vital acompanha tudo o que for registrado." : "Registre aqui cada pedido da Tática Contabilidade (Driele), com a observação."} Os balancetes gerados nesta página aplicam estes filtros. Um filtro pode valer para todos os balanços ou só para o balanço de um mês.${S.rel === "crc" ? " No Contas a receber, quando há pessoas em “Mostrar somente”, o relatório traz só elas." : ""}</p>
     <div class="tablewrap"><table><thead><tr><th>Pessoa</th><th>Ação</th><th>Vale para</th><th>Observação</th><th>Registro</th>${S.filtra ? '<th class="num"></th>' : ""}</tr></thead><tbody>
       ${lista.map((f) => `<tr><td>${esc(nomePessoa(f.pessoa))}</td><td>${f.acao === "excluir" ? '<span class="tag ex">Excluir</span>' : '<span class="tag in">Mostrar somente</span>'}</td>
-        <td class="nw">${f.data_balanco ? "Balanço de " + br(f.data_balanco) : "Todos os balanços"}</td>
+        <td class="nw">${f.data_balanco ? (f.acao === "excluir" ? "Do balanço de " + br(f.data_balanco) + " em diante" : "Só o balanço de " + br(f.data_balanco)) : "Todos os balanços"}</td>
         <td><div class="obs">${esc(f.observacao)}</div>${f.solicitado_por ? `<div class="note">Pedido por ${esc(f.solicitado_por)}</div>` : ""}</td>
         <td class="note nw">${esc(f.criado_por_nome || "")}<br>${dataHora(f.criado_em)}</td>
         ${S.filtra ? `<td class="num"><button class="btn sm danger" data-rem="${f.id}">Remover</button></td>` : ""}</tr>
@@ -370,7 +370,7 @@ function renderFiltros() {
         <div class="grid3">
           <div class="field"><label for="nfRel">Relatório</label><select id="nfRel">${["cpg", "crc"].map((k) => `<option value="${k}"${N.relatorio === k ? " selected" : ""}>${RELN[k]}</option>`).join("")}</select></div>
           <div class="field"><label for="nfAcao">O que fazer</label><select id="nfAcao"><option value="excluir"${N.acao === "excluir" ? " selected" : ""}>Excluir do relatório</option><option value="incluir"${N.acao === "incluir" ? " selected" : ""}>Mostrar somente estas pessoas</option></select></div>
-          <div class="field"><label for="nfData">Vale para</label><select id="nfData"><option value="">Todos os balanços</option>${datas.map((d) => `<option value="${d}"${N.data === d ? " selected" : ""}>Só o balanço de ${br(d)}</option>`).join("")}</select></div>
+          <div class="field"><label for="nfData">Vale para</label><select id="nfData"><option value="">Todos os balanços</option>${datas.map((d) => `<option value="${d}"${N.data === d ? " selected" : ""}>${N.acao === "excluir" ? "Do balanço de " + br(d) + " em diante" : "Só o balanço de " + br(d)}</option>`).join("")}</select></div>
         </div>
         <div class="field"><label for="nfPes">Pessoas (como aparecem no Connectere)</label>
           <div class="cbx" id="nfCbx"><div class="cbx-in"><input id="nfPes" role="combobox" aria-expanded="false" aria-controls="nfLista" autocomplete="off" ${NOMES() ? "" : "disabled"} placeholder="${NOMES() ? `🔎 Buscar entre ${(NOMES()[N.relatorio] || []).length} pessoas de ${RELN[N.relatorio].toLowerCase()}…` : "Carregando a lista de pessoas (só na primeira vez de cada planilha)…"}"><button class="btn" id="nfAbre" type="button" ${NOMES() ? "" : "disabled"} aria-label="Abrir a lista">▾</button></div>
@@ -403,6 +403,7 @@ function renderFiltros() {
     if (det.open && !NOMES() && !S.carregandoNomes) { S.carregandoNomes = true; nomesPessoas().then(() => { S.carregandoNomes = false; renderFiltros(); }).catch((e) => { S.carregandoNomes = false; const x = $("#nfErr"); if (x) x.textContent = e.message; }); }
     const guarda = () => { N.relatorio = $("#nfRel").value; N.acao = $("#nfAcao").value; N.data = $("#nfData").value; N.sol = $("#nfSol").value; N.obs = $("#nfObs").value; };
     ["nfAcao", "nfData", "nfSol", "nfObs"].forEach((id) => $("#" + id).addEventListener("input", guarda));
+    $("#nfAcao").addEventListener("change", () => { guarda(); renderFiltros(); });
     $("#nfRel").onchange = () => { guarda(); N.pessoas = []; renderFiltros(); };
     // lista suspensa com busca: só deixa escolher nomes que existem na base do relatório
     const inp = $("#nfPes"), box = $("#nfLista"), sem = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();

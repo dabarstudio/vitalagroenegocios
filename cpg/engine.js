@@ -179,7 +179,8 @@ const VCPG = (() => {
   const limpo = (s) => String(s ?? "");
   /* filtros: [{relatorio, acao, pessoa, data_balanco|null}] */
   function filtrosDoDia(filtros, tipo, dataISO) {
-    const f = filtros.filter((x) => x.relatorio === tipo && (!x.data_balanco || x.data_balanco === dataISO));
+    // exclusão vale do balanço informado em diante (só volta com nova ordem); "mostrar somente" vale só para o balanço informado
+    const f = filtros.filter((x) => x.relatorio === tipo && (!x.data_balanco || (x.acao === "excluir" ? x.data_balanco <= dataISO : x.data_balanco === dataISO)));
     return { excluir: new Set(f.filter((x) => x.acao === "excluir").map((x) => x.pessoa)), incluir: f.filter((x) => x.acao === "incluir").map((x) => x.pessoa) };
   }
   function relatorio(dados, tipo, dataISO, filtros) {

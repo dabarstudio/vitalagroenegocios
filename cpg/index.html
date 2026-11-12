@@ -208,7 +208,7 @@ async function carregar() {
   const E = S.emp.empresa;
   const [sem, vers, evs, fil] = await Promise.all([
     sb.from("cpg_semaforo").select("*").eq("empresa", E).maybeSingle(),
-    sb.from("cpg_versoes").select("id, caminho, nome_arquivo, tamanho, origem, resumo, criado_por_nome, criado_em").eq("empresa", E).order("criado_em", { ascending: false }).limit(20),
+    sb.from("cpg_versoes").select("id, caminho, nome_arquivo, tamanho, origem, resumo, criado_por_nome, criado_em, pessoas").eq("empresa", E).order("criado_em", { ascending: false }).limit(20),
     sb.from("cpg_eventos").select("nome, acao, detalhe, em").eq("empresa", E).order("em", { ascending: false }).limit(15),
     sb.from("cpg_filtros").select("*").eq("empresa", E).order("criado_em", { ascending: false })]);
   S.sem = sem.data; S.pode = !!S.emp.edita; S.filtra = !!S.emp.filtra; S.contabil = !!S.emp.contabil; S.versoes = vers.data || []; S.eventos = evs.data || [];
@@ -336,7 +336,14 @@ async function base() {
   const b = { cpg: (await VCPG.lerBase(ctx, "cpg")).dados, crc: (await VCPG.lerBase(ctx, "crc")).dados };
   b.nomes = { cpg: [...new Set(b.cpg.map((r) => String(r[1] ?? "")).filter(Boolean))].sort((x, y) => x.localeCompare(y, "pt-BR")), crc: [...new Set(b.crc.map((r) => String(r[1] ?? "")).filter(Boolean))].sort((x, y) => x.localeCompare(y, "pt-BR")) };
   S.base = b; S.baseDe = v.id;
+  if (!v.pessoas) { v.pessoas = b.nomes; sb.rpc("cpg_salvar_pessoas", { p_id: v.id, p_pessoas: b.nomes }).then(() => {}, () => {}); }
   return b;
+}
+// lista de pessoas para os filtros: guardada por versão (abre na hora); só lê a planilha inteira se ainda não houver
+const NOMES = () => (S.base && S.base.nomes) || (S.versoes[0] && S.versoes[0].pessoas) || null;
+async function nomesPessoas() {
+  if (NOMES()) return NOMES();
+  return (await base()).nomes;
 }
 
 /* ---------- filtros da contabilidade ---------- */
@@ -366,7 +373,7 @@ function renderFiltros() {
           <div class="field"><label for="nfData">Vale para</label><select id="nfData"><option value="">Todos os balanços</option>${datas.map((d) => `<option value="${d}"${N.data === d ? " selected" : ""}>Só o balanço de ${br(d)}</option>`).join("")}</select></div>
         </div>
         <div class="field"><label for="nfPes">Pessoas (como aparecem no Connectere)</label>
-          <div class="cbx" id="nfCbx"><div class="cbx-in"><input id="nfPes" role="combobox" aria-expanded="false" aria-controls="nfLista" autocomplete="off" ${S.base ? "" : "disabled"} placeholder="${S.base ? `🔎 Buscar entre ${S.base.nomes[N.relatorio].length} pessoas de ${RELN[N.relatorio].toLowerCase()}…` : "Carregando a lista de pessoas…"}"><button class="btn" id="nfAbre" type="button" ${S.base ? "" : "disabled"} aria-label="Abrir a lista">▾</button></div>
+          <div class="cbx" id="nfCbx"><div class="cbx-in"><input id="nfPes" role="combobox" aria-expanded="false" aria-controls="nfLista" autocomplete="off" ${NOMES() ? "" : "disabled"} placeholder="${NOMES() ? `🔎 Buscar entre ${(NOMES()[N.relatorio] || []).length} pessoas de ${RELN[N.relatorio].toLowerCase()}…` : "Carregando a lista de pessoas (só na primeira vez de cada planilha)…"}"><button class="btn" id="nfAbre" type="button" ${NOMES() ? "" : "disabled"} aria-label="Abrir a lista">▾</button></div>
           <div class="cbx-lista" id="nfLista" role="listbox" aria-multiselectable="true" hidden></div></div>
           <p class="note" style="margin:4px 0 0">Escolha na lista (pode marcar várias). Só aparecem os nomes que estão no relatório, do jeito que vêm do Connectere.</p>
           <div class="chips" id="nfChips">${N.pessoas.map((p, i) => `<span class="chip"><span>${esc(nomePessoa(p))}</span><button type="button" data-tira="${i}" aria-label="Tirar ${esc(nomePessoa(p))}">×</button></span>`).join("")}</div>
@@ -392,7 +399,8 @@ function renderFiltros() {
   });
   const det = $("#novoF");
   if (det) {
-    det.ontoggle = () => { N.aberto = det.open; if (!det.open) return; if (S.base) { if ($("#nfPes") && $("#nfPes").disabled) renderFiltros(); return; } base().then(renderFiltros).catch((e) => { const x = $("#nfErr"); if (x) x.textContent = e.message; }); };
+    det.ontoggle = () => { N.aberto = det.open; if (!det.open) return; if (NOMES()) { if ($("#nfPes") && $("#nfPes").disabled) renderFiltros(); return; } nomesPessoas().then(renderFiltros).catch((e) => { const x = $("#nfErr"); if (x) x.textContent = e.message; }); };
+    if (det.open && !NOMES() && !S.carregandoNomes) { S.carregandoNomes = true; nomesPessoas().then(() => { S.carregandoNomes = false; renderFiltros(); }).catch((e) => { S.carregandoNomes = false; const x = $("#nfErr"); if (x) x.textContent = e.message; }); }
     const guarda = () => { N.relatorio = $("#nfRel").value; N.acao = $("#nfAcao").value; N.data = $("#nfData").value; N.sol = $("#nfSol").value; N.obs = $("#nfObs").value; };
     ["nfAcao", "nfData", "nfSol", "nfObs"].forEach((id) => $("#" + id).addEventListener("input", guarda));
     $("#nfRel").onchange = () => { guarda(); N.pessoas = []; renderFiltros(); };
@@ -402,15 +410,15 @@ function renderFiltros() {
     const chips = () => { const c = $("#nfChips"); if (!c) return; c.innerHTML = N.pessoas.map((p, i) => `<span class="chip"><span>${esc(nomePessoa(p))}</span><button type="button" data-tira="${i}" aria-label="Tirar ${esc(nomePessoa(p))}">×</button></span>`).join("");
       c.querySelectorAll("[data-tira]").forEach((b) => b.onclick = () => { N.pessoas.splice(+b.dataset.tira, 1); chips(); desenha(); }); };
     const desenha = () => {
-      if (!S.base || box.hidden) return;
-      const q = sem(inp.value).trim(), lst = S.base.nomes[N.relatorio] || [];
+      if (!NOMES() || box.hidden) return;
+      const q = sem(inp.value).trim(), lst = NOMES()[N.relatorio] || [];
       visiveis = lst.filter((n) => !q || sem(nomePessoa(n)).includes(q)).slice(0, 300);
       if (ativo >= visiveis.length) ativo = 0;
       box.innerHTML = visiveis.length ? visiveis.map((n, i) => `<button type="button" role="option" class="cbx-op${i === ativo ? " on" : ""}" aria-selected="${N.pessoas.includes(n)}" data-op="${i}"><span class="ck">${N.pessoas.includes(n) ? "☑" : "☐"}</span>${esc(nomePessoa(n))}</button>`).join("") + (lst.length > 300 && visiveis.length === 300 ? '<div class="note" style="padding:6px 10px">Mostrando 300. Digite para filtrar.</div>' : "")
         : `<div class="note" style="padding:8px 10px">Nenhuma pessoa com “${esc(inp.value)}” em ${RELN[N.relatorio].toLowerCase()}.</div>`;
       box.querySelectorAll("[data-op]").forEach((b) => { b.onmousedown = (e) => e.preventDefault(); b.onclick = () => alterna(visiveis[+b.dataset.op]); });
     };
-    const abre = () => { if (!S.base) return; box.hidden = false; inp.setAttribute("aria-expanded", "true"); desenha(); };
+    const abre = () => { if (!NOMES()) return; box.hidden = false; inp.setAttribute("aria-expanded", "true"); desenha(); };
     const fecha = () => { box.hidden = true; inp.setAttribute("aria-expanded", "false"); };
     const alterna = (n) => { if (!n) return; const k = N.pessoas.indexOf(n); if (k >= 0) N.pessoas.splice(k, 1); else N.pessoas.push(n); chips(); desenha(); inp.focus(); };
     inp.addEventListener("focus", abre); inp.addEventListener("input", () => { ativo = 0; abre(); });

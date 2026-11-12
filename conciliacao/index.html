@@ -74,7 +74,25 @@ tr.res-ok td{opacity:.55}
 .ext{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
 .st.m{background:var(--ok-bg);color:var(--ok)}.st.l{background:var(--ok-bg);color:var(--ok)}
 tr.dneg td:nth-child(2){box-shadow:inset 4px 0 0 var(--bad)}tr.dpos td:nth-child(2){box-shadow:inset 4px 0 0 var(--ok)}
-.cbusca{margin-bottom:6px}.lotebar{background:var(--warn-bg);border-radius:10px;padding:8px 12px;margin-bottom:8px}
+.cbusca{margin-bottom:6px}
+.mais summary{cursor:pointer;font-size:.85rem;color:var(--brand);font-weight:600;padding:4px 2px}
+table.res th.n{text-align:right}
+.vis{display:flex;gap:6px}.vis [aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+.lado{display:grid;gap:8px;max-height:75vh;overflow:auto;padding-right:4px}
+.ladoh{display:grid;grid-template-columns:minmax(0,1fr) 150px minmax(0,1fr);gap:10px;position:sticky;top:0;z-index:2;background:var(--surface);padding:6px 0;font:700 .85rem var(--display);color:var(--brand);border-bottom:2px solid var(--line)}
+.par{display:grid;grid-template-columns:minmax(0,1fr) 150px minmax(0,1fr);gap:10px;align-items:stretch;padding:6px 0;border-bottom:1px solid var(--line)}
+.par.res-ok{opacity:.55}
+.pb,.pl{display:grid;gap:6px;align-content:start;min-width:0}
+.pm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center}
+.cx{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);min-width:0}
+.cx.neg{border-left-color:var(--bad)}.cx.pos{border-left-color:var(--ok)}
+.cx.vazio{border-style:dashed;border-left-width:1px;color:var(--muted);font-size:.85rem;display:grid;place-items:center;background:var(--surface-2)}
+.cxh{display:flex;justify-content:space-between;gap:8px;font-size:.84rem;color:var(--muted)}.cxh b{font-size:.95rem}
+.cxd{font-weight:600;font-size:.9rem;overflow-wrap:anywhere}
+.paj{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--warn-bg);border-radius:8px;padding:6px 10px;font-size:.86rem}
+.paj span{flex:1;min-width:200px}.paj .obs{max-width:260px}
+@media (max-width:760px){.ladoh{display:none}.par{grid-template-columns:minmax(0,1fr)}.pm{flex-direction:row;flex-wrap:wrap;justify-content:flex-start}}
+@media print{.lado{max-height:none;overflow:visible}.pm button,.pm input{display:none}}.lotebar{background:var(--warn-bg);border-radius:10px;padding:8px 12px;margin-bottom:8px}
 .compor{border:1px dashed var(--brand-2);border-radius:12px;padding:12px;margin-top:12px;background:#FAFCF8}
 .compor h4{margin:0 0 6px;font:700 .9rem var(--display)}
 .cgrid{display:grid;grid-template-columns:minmax(0,1fr) 260px minmax(0,1fr);gap:12px;align-items:start}
@@ -124,7 +142,7 @@ const CFG = window.VITAL_CONFIG || {};
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-const S = { user: null, nome: "", equipe: false, empresas: [], empresa: "", bancos: [], base: null, tol: 3, res: null, filtro: "", salvoId: null, hist: [], compor: false, sel: new Set(), selRes: new Set(), busca: { b: "", l: "" } };
+const S = { user: null, nome: "", equipe: false, empresas: [], empresa: "", bancos: [], base: null, tol: 3, res: null, filtro: "", salvoId: null, hist: [], compor: false, sel: new Set(), selRes: new Set(), busca: { b: "", l: "" }, vis: (() => { try { return localStorage.getItem("conc.vis") || "lado"; } catch { return "lado"; } })() };
 
 /* ================= leitura de números e datas ================= */
 function num(v) {
@@ -433,14 +451,27 @@ function resultadoHTML() {
     <div class="kpis noprint" style="margin:12px 0">${ks.map(([k, l, v]) => `<button class="kpi" type="button" data-f="${k}" aria-pressed="${S.filtro === k}"><b>${cnt(k)}</b><span>${l}</span>${v ? `<em>${v}</em>` : ""}</button>`).join("")}<button class="kpi" type="button" data-f="pend" aria-pressed="${S.filtro === "pend"}"><b class="${pend ? "err" : "ok"}">${pend}</b><span>Pendências</span></button></div>
     <p class="note" style="margin-bottom:8px">Movimento dos bancos no período: <b>${din(totB)}</b> · da planilha: <b>${din(totL)}</b> · diferença: <b class="${Math.abs(totB - totL) < 0.01 ? "ok" : "err"}">${brl(totB - totL)}</b>${saldos ? ` · saldo final — ${saldos}` : ""}${S.filtro ? ` · <a href="#" data-f="">mostrar tudo</a>` : ""}</p>
     ${S.selRes.size ? `<div class="row noprint lotebar"><b>${S.selRes.size} selecionada(s)</b><button class="btn sm" id="desfVarios" type="button">↩ Desfazer as selecionadas</button><button class="btn ghost sm" id="limpaSelRes" type="button">Limpar seleção</button></div>` : ""}
-    <div class="tw" style="max-height:70vh"><table class="res"><thead><tr><th class="noprint"><input type="checkbox" id="selTodosRes" title="Marcar todos os conciliados"></th><th>Situação</th><th>Banco</th><th>Data banco</th><th>Descrição no banco</th><th>D/C</th><th class="n">Valor banco</th><th>Data planilha</th><th>Descrição na planilha</th><th class="n">Valor planilha</th><th>Ajuste sugerido</th><th class="noprint">Resolvido / observação</th></tr></thead><tbody>
+    <div class="row noprint" style="justify-content:space-between;margin-bottom:8px"><div class="vis" role="group" aria-label="Visualização"><button class="btn sm" type="button" data-vis="lado" aria-pressed="${S.vis === "lado"}">◧ Banco × Sistema</button><button class="btn sm" type="button" data-vis="tabela" aria-pressed="${S.vis === "tabela"}">☰ Tabela</button></div>${S.vis === "lado" ? `<label class="note" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="selTodosRes"> marcar todos os conciliados</label>` : ""}</div>
+    ${S.vis === "lado" ? ladoHTML(vis, it) : `<div class="tw" style="max-height:70vh"><table class="res"><thead><tr><th class="noprint"><input type="checkbox" id="selTodosRes" title="Marcar todos os conciliados"></th><th>Situação</th><th>Banco</th><th>Data banco</th><th>Descrição no banco</th><th>D/C</th><th class="n">Valor banco</th><th>Data planilha</th><th>Descrição na planilha</th><th class="n">Valor planilha</th><th>Ajuste sugerido</th><th class="noprint">Resolvido / observação</th></tr></thead><tbody>
     ${vis.map((r) => { const idx = it.indexOf(r), b = r.bx, l = r.l, v0 = (b[0] || l[0] || {}).valor; const casado = !["b", "p", "f", "v"].includes(r.tipo); return `<tr class="${r.ok ? "res-ok" : ""} ${v0 < 0 ? "dneg" : "dpos"}"><td class="noprint">${casado ? `<input type="checkbox" data-sx="${idx}" ${S.selRes.has(idx) ? "checked" : ""}>` : ""}</td><td><span class="st ${r.tipo}">${NOME[r.tipo]}</span>${casado ? `<br><button class="btn ghost sm noprint" data-desf="${idx}" type="button">↩ desfazer</button>` : ""}${r.tipo === "b" ? `<br><button class="btn ghost sm noprint" data-montar="${idx}" type="button">🧩 compor</button>` : ""}</td>
       <td>${[...new Set(b.map((x) => x.banco))].map(esc).join("<br>") || esc(l.map((x) => x.banco).filter(Boolean)[0] || "")}</td><td>${b.map((x) => dBR(x.data)).join("<br>")}</td><td>${b.map((x) => esc(x.desc) + (x.doc && String(x.doc).length <= 20 ? ` <span class="note">Doc: ${esc(x.doc)}</span>` : "")).join("<br>")}</td><td>${dc(v0)}</td><td class="n">${b.map((x) => din(x.valor)).join("<br>")}</td>
       <td>${l.map((x) => dBR(x.data)).join("<br>")}</td><td>${l.map((x) => esc(x.desc) + (x.linha ? ` <span class="note">(linha ${x.linha})</span>` : "")).join("<br>")}</td><td class="n">${l.map((x) => din(x.valor)).join("<br>")}</td>
       <td>${esc(r.ajuste)}</td><td class="noprint">${!pendente(r) ? "" : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-ok="${idx}" ${r.ok ? "checked" : ""}> feito</label><input class="obs" data-obs="${idx}" value="${esc(r.obs || "")}" placeholder="observação">`}</td></tr>`; }).join("") || `<tr><td colspan="12" class="note">Nada nesta situação.</td></tr>`}
-    </tbody></table></div></div>`;
+    </tbody></table></div>`}</div>`;
 }
 /* composição manual: arrastar ou marcar lançamentos pendentes dos dois lados */
+function ladoHTML(vis, it) {
+  const cartB = (x) => `<div class="cx ${x.valor < 0 ? "neg" : "pos"}"><div class="cxh"><span>${dBR(x.data)}</span><b class="n">${din(x.valor)}</b></div><div class="cxd">${esc(x.desc)}</div><div class="note">${esc(x.banco || "")}${x.doc && String(x.doc).length <= 20 ? ` · Doc: ${esc(x.doc)}` : ""}</div></div>`;
+  const cartL = (x) => `<div class="cx ${x.valor < 0 ? "neg" : "pos"}"><div class="cxh"><span>${dBR(x.data)}</span><b class="n">${din(x.valor)}</b></div><div class="cxd">${esc(x.desc)}</div><div class="note">${x.linha ? "linha " + x.linha : ""}${x.lote ? " · lote " + esc(x.lote) : ""}${x.banco ? " · " + esc(x.banco) : ""}</div></div>`;
+  const vazio = (t) => `<div class="cx vazio">${t}</div>`;
+  return `<div class="lado"><div class="ladoh"><span>🏦 Extrato do banco</span><span></span><span>📋 Sistema / planilha</span></div>
+    ${vis.map((r) => { const idx = it.indexOf(r), casado = !["b", "p", "f", "v"].includes(r.tipo), pd = pendente(r);
+      return `<div class="par ${r.ok ? "res-ok" : ""}"><div class="pb">${r.bx.map(cartB).join("") || vazio("— não está no banco —")}</div>
+        <div class="pm">${casado ? `<input type="checkbox" data-sx="${idx}" ${S.selRes.has(idx) ? "checked" : ""} title="Selecionar">` : ""}<span class="st ${r.tipo}">${NOME[r.tipo]}</span>${["v", "b", "p", "l", "m"].includes(r.tipo) && Math.abs(r.dif) >= 0.005 && r.tipo !== "b" && r.tipo !== "p" ? `<span class="note">dif. ${brl(r.dif)}</span>` : ""}
+          ${casado ? `<button class="btn ghost sm" data-desf="${idx}" type="button">↩ desfazer</button>` : ""}${r.tipo === "b" ? `<button class="btn ghost sm" data-montar="${idx}" type="button">🧩 compor</button>` : ""}</div>
+        <div class="pl">${r.l.length > 3 ? r.l.slice(0, 2).map(cartL).join("") + `<details class="mais"><summary>+ ${r.l.length - 2} lançamento(s) do lote · total ${din(soma(r.l))}</summary><div style="display:grid;gap:6px;margin-top:6px">${r.l.slice(2).map(cartL).join("")}</div></details>` : r.l.map(cartL).join("") || vazio("— não está na planilha —")}</div>
+        ${pd || r.tipo === "f" ? `<div class="paj"><span>💡 ${esc(r.ajuste)}</span>${pd ? `<label style="display:flex;gap:6px;align-items:center;white-space:nowrap"><input type="checkbox" data-ok="${idx}" ${r.ok ? "checked" : ""}> feito</label><input class="obs" data-obs="${idx}" value="${esc(r.obs || "")}" placeholder="observação">` : ""}</div>` : ""}</div>`; }).join("") || '<p class="note">Nada nesta situação.</p>'}</div>`;
+}
 function pendentes() {
   const it = S.res.itens, B = [], L = [];
   it.forEach((r) => { if (["b", "v"].includes(r.tipo)) r.bx.forEach((x) => B.push(x)); if (["p", "v"].includes(r.tipo)) r.l.forEach((x) => L.push(x)); });
@@ -567,6 +598,7 @@ function ligar() {
   app.querySelectorAll("[data-ok]").forEach((c) => c.onchange = () => { S.res.itens[+c.dataset.ok].ok = c.checked; render(); });
   app.querySelectorAll("[data-obs]").forEach((i) => i.onchange = () => { S.res.itens[+i.dataset.obs].obs = i.value; });
   app.querySelectorAll("[data-desf]").forEach((b) => b.onclick = () => desfazer([+b.dataset.desf]));
+  app.querySelectorAll("[data-vis]").forEach((b) => b.onclick = () => { S.vis = b.dataset.vis; try { localStorage.setItem("conc.vis", S.vis); } catch {} render(); });
   app.querySelectorAll("[data-montar]").forEach((b) => b.onclick = () => montarLote(+b.dataset.montar));
   app.querySelectorAll("[data-sx]").forEach((c) => c.onchange = () => { const i = +c.dataset.sx; if (c.checked) S.selRes.add(i); else S.selRes.delete(i); render(); });
   const st = $("#selTodosRes"); if (st) st.onchange = () => { if (st.checked) app.querySelectorAll("[data-sx]").forEach((c) => S.selRes.add(+c.dataset.sx)); else S.selRes.clear(); render(); };

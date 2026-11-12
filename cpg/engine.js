@@ -181,19 +181,20 @@ const VCPG = (() => {
   function filtrosDoDia(filtros, tipo, dataISO) {
     // exclusão vale do balanço informado em diante (só volta com nova ordem); "mostrar somente" vale só para o balanço informado
     const f = filtros.filter((x) => x.relatorio === tipo && (!x.data_balanco || (x.acao === "excluir" ? x.data_balanco <= dataISO : x.data_balanco === dataISO)));
-    return { excluir: new Set(f.filter((x) => x.acao === "excluir").map((x) => x.pessoa)), incluir: f.filter((x) => x.acao === "incluir").map((x) => x.pessoa) };
+    return { excluir: new Set(f.filter((x) => x.acao === "excluir").map((x) => x.pessoa)), incluir: f.filter((x) => x.acao === "incluir").map((x) => x.pessoa), regras: f };
   }
   function relatorio(dados, tipo, dataISO, filtros) {
     const cfg = CFG[tipo], D = serialISO(dataISO), vmin = serialISO(cfg.vencApos);
-    const { excluir, incluir } = filtrosDoDia(filtros, tipo, dataISO), inc = incluir.length ? new Set(incluir) : null;
-    const itens = [];
+    const { excluir, incluir, regras } = filtrosDoDia(filtros, tipo, dataISO), inc = incluir.length ? new Set(incluir) : null;
+    const itens = [], exVal = new Map();
     for (const v of dados) {
       const t2 = +v[COL.total2] || 0, vp = +v[COL.pago] || 0, pg = v[COL.pag];
       const saldo = typeof pg === "number" && pg > D ? t2 : t2 - vp;
       if (!(saldo > 0) || !(typeof v[COL.data] === "number" && v[COL.data] <= D)) continue;
       if (!(typeof v[COL.venc] === "number" && v[COL.venc] > vmin)) continue;
       const nome = limpo(v[COL.nome]);
-      if (excluir.has(nome) || (inc && !inc.has(nome))) continue;
+      if (excluir.has(nome)) { exVal.set(nome, (exVal.get(nome) || 0) + saldo); continue; }
+      if (inc && !inc.has(nome)) continue;
       const vi = isoSerial(v[COL.venc]);
       itens.push({ nome, saldo, ano: +vi.slice(0, 4), mes: +vi.slice(5, 7) });
     }
@@ -207,7 +208,8 @@ const VCPG = (() => {
     const porNome = new Map(); for (const x of itens) { if (!porNome.has(x.nome)) porNome.set(x.nome, []); porNome.get(x.nome).push(x); }
     let linhas = [...porNome.entries()].map(([nome, l]) => ({ nome, vals: cols.map((c) => soma(l, c)), total: l.reduce((s, x) => s + x.saldo, 0) }));
     linhas = cfg.ordem === "valor" ? linhas.sort((a, b) => b.total - a.total) : linhas.sort((a, b) => a.nome.trim().toLowerCase().localeCompare(b.nome.trim().toLowerCase(), "pt-BR"));
-    return { tipo, dataISO, cols, linhas, totais: cols.map((c) => soma(itens, c)), total: itens.reduce((s, x) => s + x.saldo, 0), excluidos: [...excluir], incluidos: incluir };
+    return { tipo, dataISO, cols, linhas, totais: cols.map((c) => soma(itens, c)), total: itens.reduce((s, x) => s + x.saldo, 0), excluidos: [...excluir], incluidos: incluir,
+      notas: regras.map((r) => ({ acao: r.acao, pessoa: String(r.pessoa).trim(), desde: r.data_balanco || null, pedido: r.solicitado_por || "", valor: r.acao === "excluir" ? exVal.get(r.pessoa) || 0 : null })) };
   }
   const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   const SIGLA = { cpg: "CPG", crc: "CRC" };
@@ -260,6 +262,30 @@ const VCPG = (() => {
     for (const l of rel.linhas) { if (y > BASE - 6) { doc.addPage(); y = pagina(); } row(y, l.nome, [...l.vals, l.total]); y += RH; }
     if (y > BASE - 6) { doc.addPage(); y = pagina(); }
     row(y, "Total Geral", [...rel.totais, rel.total], true);
+    y += RH * 2.5;
+    const ex = (rel.notas || []).filter((x) => x.acao === "excluir").sort((a, b) => b.valor - a.valor || a.pessoa.localeCompare(b.pessoa, "pt-BR"));
+    const so = (rel.notas || []).filter((x) => x.acao === "incluir");
+    if (ex.length || so.length) {
+      const quebra = (h) => { if (y + h > BASE - 6) { doc.addPage(); topo(); y = TOPO + 14; } };
+      const par = (s, tam, cor, neg) => { doc.setFont("helvetica", neg ? "bold" : "normal"); doc.setFontSize(tam); doc.setTextColor(...cor); const ls = doc.splitTextToSize(s, R - L); quebra(ls.length * tam * 1.3); doc.text(ls, L, y); y += ls.length * tam * 1.3; };
+      quebra(60); par("Notas explicativas", 11, verde, true); y += 2;
+      let k = 0;
+      if (ex.length) {
+        const tot = ex.reduce((s, x) => s + x.valor, 0);
+        par(`${++k}. Exclusões aplicadas. As pessoas abaixo foram retiradas deste relatório por orientação da contabilidade e não entram no Total Geral. Somam R$ ${brl(tot)} em saldo ${rel.tipo === "crc" ? "a receber" : "a pagar"} no balanço de ${brData(rel.dataISO)}. A exclusão vale até nova orientação.`, 8, tinta);
+        y += 4;
+        const cx = [L, L + 300, L + 420, L + 560], cab = ["Pessoa", "Saldo não considerado", "Vale desde", "Pedido por"];
+        const linhaN = (v, neg, fundo) => { quebra(RH + 2); if (fundo) { doc.setFillColor(...fundo); doc.rect(L, y - 7, R - L, RH + 1, "F"); }
+          doc.setFont("helvetica", neg ? "bold" : "normal"); doc.setFontSize(7.4); doc.setTextColor(...(fundo === azul ? [255, 255, 255] : tinta));
+          v.forEach((s, i) => i === 1 ? doc.text(String(s), cx[2] - 16, y, { align: "right" }) : doc.text(String(s).slice(0, i === 0 ? 70 : 60), cx[i] + 2, y));
+          if (!fundo) { doc.setDrawColor(...linha); doc.setLineWidth(0.4); doc.line(L, y + 2.5, R, y + 2.5); } y += RH + 1; };
+        linhaN(cab, true, azul);
+        ex.forEach((x) => linhaN([x.pessoa, x.valor ? "R$ " + brl(x.valor) : "sem saldo", x.desde ? "Balanço de " + brData(x.desde) : "Todos os balanços", x.pedido || "–"]));
+        linhaN(["Total excluído", "R$ " + brl(tot), "", ""], true);
+        y += 6;
+      }
+      if (so.length) par(`${++k}. Este relatório mostra somente: ${so.map((x) => x.pessoa).sort((a, b) => a.localeCompare(b, "pt-BR")).join("; ")}.`, 8, tinta);
+    }
     const n = doc.getNumberOfPages();
     for (let p = 1; p <= n; p++) {
       doc.setPage(p);

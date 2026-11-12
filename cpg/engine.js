@@ -265,7 +265,7 @@ const VCPG = (() => {
     y += RH * 2.5;
     const ex = (rel.notas || []).filter((x) => x.acao === "excluir").sort((a, b) => b.valor - a.valor || a.pessoa.localeCompare(b.pessoa, "pt-BR"));
     const so = (rel.notas || []).filter((x) => x.acao === "incluir");
-    if (ex.length || so.length) {
+    if (M.notas !== false && (ex.length || so.length)) {
       const quebra = (h) => { if (y + h > BASE - 6) { doc.addPage(); topo(); y = TOPO + 14; } };
       const par = (s, tam, cor, neg) => { doc.setFont("helvetica", neg ? "bold" : "normal"); doc.setFontSize(tam); doc.setTextColor(...cor); const ls = doc.splitTextToSize(s, R - L); quebra(ls.length * tam * 1.3); doc.text(ls, L, y); y += ls.length * tam * 1.3; };
       quebra(60); par("Notas explicativas", 11, verde, true); y += 2;

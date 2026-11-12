@@ -130,7 +130,7 @@ td.nw{white-space:nowrap}
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="/vitalagroenegocios/cpg/engine.js?v=4"></script>
+<script src="/vitalagroenegocios/cpg/engine.js?v=5"></script>
 </head>
 <body>
 <header class="top">
@@ -496,27 +496,35 @@ async function renderAcesso() {
 function renderBal() {
   const el = $("#balCard"); if (!el) return;
   const uf = ultimoFechamento(), meses = VCPG.fechamentos("2024-01", uf.slice(0, 7)).reverse();
-  const B = S.bal || (S.bal = { modo: "mes", mes: uf, de: "2025-12-31", ate: uf, cpg: true, crc: true });
+  const B = S.bal || (S.bal = { modo: "mes", mes: uf, de: "2025-12-31", ate: uf, cpg: true, crc: true, notas: true });
+  if (B.notas === undefined) B.notas = true;
   const opt = (v) => meses.map((d) => `<option value="${d}"${v === d ? " selected" : ""}>${br(d)}</option>`).join("");
   el.innerHTML = `<div><div class="eyebrow">Balancetes</div><h2 style="font-size:1.15rem">Gerar os PDFs de fim de mês</h2></div>
-    <p class="note">Usa a última versão da planilha e os filtros acima, no mesmo formato da tabela dinâmica (saldo a pagar/receber por pessoa e vencimento). Um mês com um relatório sai direto em PDF; mais de um PDF sai num arquivo .zip, pronto para enviar à contabilidade.</p>
+    <p class="note">Usa a última versão da planilha e os filtros acima, no mesmo formato da tabela dinâmica (saldo a pagar/receber por pessoa e vencimento). Em <b>Um mês</b>, cada relatório baixa direto em PDF. Em <b>Período</b>, os PDFs saem juntos num arquivo .zip, pronto para enviar à contabilidade.</p>
     <div class="row" role="radiogroup" aria-label="Tipo de data"><label class="row" style="gap:6px"><input type="radio" name="bModo" value="mes" ${B.modo === "mes" ? "checked" : ""}> Um mês</label><label class="row" style="gap:6px"><input type="radio" name="bModo" value="per" ${B.modo === "per" ? "checked" : ""}> Período</label></div>
     <div class="grid3">
       ${B.modo === "mes" ? `<div class="field"><label for="bMes">Balanço</label><select id="bMes">${opt(B.mes)}</select></div>`
       : `<div class="field"><label for="bDe">De</label><select id="bDe">${opt(B.de)}</select></div>
       <div class="field"><label for="bAte">Até</label><select id="bAte">${opt(B.ate)}</select></div>`}
       <div class="field"><span style="font-weight:600;font-size:.92rem">Relatórios</span><div class="row" style="min-height:46px"><label class="row" style="gap:6px"><input type="checkbox" id="bCpg" ${B.cpg ? "checked" : ""}> Contas a pagar</label><label class="row" style="gap:6px"><input type="checkbox" id="bCrc" ${B.crc ? "checked" : ""}> Contas a receber</label></div></div>
+      <div class="field"><span style="font-weight:600;font-size:.92rem">No fim do PDF</span><div class="row" style="min-height:46px"><label class="row" style="gap:6px"><input type="checkbox" id="bNotas" ${B.notas ? "checked" : ""}> Com notas explicativas (exclusões aplicadas)</label></div></div>
     </div>
-    <div class="row"><button class="btn primary" id="bGerar" ${S.versoes.length ? "" : "disabled"}>${rotuloGerar(B)}</button><button class="btn" id="bPrevia" ${S.versoes.length ? "" : "disabled"}>Ver totais</button><span class="note" id="balMsg" role="status"></span></div>
+    <div class="row"><span id="bBotoes" class="row">${botoesGerar(B)}</span><button class="btn" id="bPrevia" ${S.versoes.length ? "" : "disabled"}>Ver totais</button><span class="note" id="balMsg" role="status"></span></div>
     <div id="balTab"></div>`;
-  const guarda = () => { if (B.modo === "mes") B.mes = $("#bMes").value; else { B.de = $("#bDe").value; B.ate = $("#bAte").value; } B.cpg = $("#bCpg").checked; B.crc = $("#bCrc").checked; $("#bGerar").textContent = rotuloGerar(B); };
-  ["bMes", "bDe", "bAte", "bCpg", "bCrc"].forEach((id) => { const e = $("#" + id); if (e) e.onchange = guarda; });
+  const guarda = () => { if (B.modo === "mes") B.mes = $("#bMes").value; else { B.de = $("#bDe").value; B.ate = $("#bAte").value; } B.cpg = $("#bCpg").checked; B.crc = $("#bCrc").checked; B.notas = $("#bNotas").checked; $("#bBotoes").innerHTML = botoesGerar(B); ligaGerar(); };
+  const ligaGerar = () => el.querySelectorAll("[data-gerar]").forEach((b) => b.onclick = () => balancetes(true, b.dataset.gerar || null));
+  ligaGerar();
+  ["bMes", "bDe", "bAte", "bCpg", "bCrc", "bNotas"].forEach((id) => { const e = $("#" + id); if (e) e.onchange = guarda; });
   el.querySelectorAll('input[name="bModo"]').forEach((r) => r.onchange = () => { guarda(); B.modo = r.value; if (B.modo === "mes") B.mes = B.ate; renderBal(); });
   $("#bPrevia").onclick = () => balancetes(false);
-  $("#bGerar").onclick = () => balancetes(true);
 }
 const datasBal = (B) => B.modo === "mes" ? [B.mes] : VCPG.fechamentos((B.de < B.ate ? B.de : B.ate).slice(0, 7), (B.de < B.ate ? B.ate : B.de).slice(0, 7));
-const rotuloGerar = (B) => datasBal(B).length * ((B.cpg ? 1 : 0) + (B.crc ? 1 : 0)) === 1 ? "Baixar PDF" : "Gerar balancetes (.zip)";
+function botoesGerar(B) {
+  const off = S.versoes.length ? "" : " disabled";
+  if (B.modo !== "mes" && datasBal(B).length > 1) return `<button class="btn primary" data-gerar=""${off}>Gerar balancetes (.zip)</button>`;
+  const t = [B.cpg && ["cpg", "Contas a pagar"], B.crc && ["crc", "Contas a receber"]].filter(Boolean);
+  return t.length ? t.map(([k, n]) => `<button class="btn primary" data-gerar="${k}"${off}>Baixar PDF · ${n}</button>`).join("") : `<span class="note">Marque ao menos um relatório.</span>`;
+}
 /* Identidade visual do PDF: logo do cliente no topo, Vital no rodapé */
 let MARCA = null;
 async function marcaPdf() {
@@ -526,16 +534,16 @@ async function marcaPdf() {
   if (!(e in MARCA.logos)) MARCA.logos[e] = /tnz/i.test(e) ? await carrega("/vitalagroenegocios/clientes/agro-tnz.png") : null;
   return { empresa: nome, logo: MARCA.logos[e], vital: MARCA.vital };
 }
-async function balancetes(gerar) {
+async function balancetes(gerar, soTipo) {
   const B = S.bal, msg = $("#balMsg");
   const datas = datasBal(B);
-  const tipos = [B.cpg && "cpg", B.crc && "crc"].filter(Boolean);
+  const tipos = soTipo ? [soTipo] : [B.cpg && "cpg", B.crc && "crc"].filter(Boolean);
   if (!tipos.length) { msg.textContent = "Marque ao menos um relatório."; return; }
-  const bt = [$("#bGerar"), $("#bPrevia")]; bt.forEach((b) => b.disabled = true);
+  const bt = [...document.querySelectorAll("#balCard [data-gerar]"), $("#bPrevia")]; bt.forEach((b) => b.disabled = true);
   try {
     msg.textContent = S.base ? "Calculando…" : "Abrindo a última versão da planilha…";
     const b = await base();
-    const mk = gerar ? await marcaPdf() : null, pdfs = [];
+    const mk = gerar ? { ...(await marcaPdf()), notas: B.notas } : null, pdfs = [];
     const zip = new JSZip(), linhas = [];
     for (const d of datas) {
       const l = { d };

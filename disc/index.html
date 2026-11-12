@@ -593,7 +593,7 @@ function go(k){
 document.addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) go(b.dataset.tab); });
 function definirAbas(navegar){
   if (S.papel === "admin") TABS = [["avaliar","Avaliar"],["rel","Relatórios"],["emp","Empresas"],["gest","Gestores"],["lemb","Lembretes"],["pbi","Power BI"]];
-  else if (S.papel === "gestor") TABS = [["rel","Minha empresa"],["avaliar","Aplicar teste"]];
+  else if (S.papel === "gestor") TABS = S.disc && !S.disc.todos ? [["rel","Meu resultado"],["avaliar","Refazer o teste"]] : [["rel","Minha empresa"],["avaliar","Aplicar teste"]];
   else TABS = [];   // colaborador ou candidato: só o formulário
   document.body.classList.toggle("so-form", !TABS.length);
   $("#rodape").hidden = TABS.length > 0;
@@ -825,7 +825,7 @@ function concluir(){
   const d = S.draft, p = pontuar(d.respostas);
   const item = {id:d.id, form:FORM.id, origem:"app", tipo:d.tipo, nome:d.nome, email:d.email, empresa:d.empresa, catalogo:d.catalogo||"", processo:d.processo||"",
     cbo:d.cbo||"", area:d.area, cargo:d.cargo, cboPretendido:d.cboPretendido||"", areaPretendida:d.areaPretendida||"", cargoPretendido:d.cargoPretendido||"", telefone:d.telefone, cpf:d.cpf,
-    respostas:d.respostas, contagem:p.contagem, perfil:p.perfil, criadoEm:new Date().toISOString(), inicio:d.inicio, autor:null,
+    respostas:d.respostas, contagem:p.contagem, perfil:p.perfil, criadoEm:new Date().toISOString(), inicio:d.inicio, autor:null, proprio:!!(S.disc && !S.disc.todos),
     curriculo: d.cv ? {...d.cv, pendente:true} : null};
   if (!S.outbox.some(o=>o.id===item.id)) S.outbox.push(item);
   store.set("vd_outbox", S.outbox);
@@ -1056,7 +1056,7 @@ function pendentesReav(lista){
 function renderRel(){
   const baseTodos = baseRel(), gestor = S.papel==="gestor";
   const base = F.tipo ? baseTodos.filter(r => tipoDe(r)===F.tipo) : baseTodos;
-  $("#relTitulo").textContent = gestor ? "Resultados da sua empresa" : "Relatório DISC";
+  $("#relTitulo").textContent = gestor ? (S.disc && !S.disc.todos ? "Seu resultado DISC" : "Resultados da sua empresa") : "Relatório DISC";
   if (gestor) { const p = S.painel || {}; $("#relSrc").innerHTML = `${esc((p.empresas||[]).join(" · "))} · atualizado em ${p.atualizadoEm?fmtData(p.atualizadoEm):"—"}`; }
   else $("#relSrc").innerHTML = S.demo ? `<span class="chip demo">Dados de exemplo</span> fictícios, só neste aparelho` :
     S.local ? "Modo local: avaliações deste aparelho" : `Atualizado ao vivo · ${base.length} avaliações no total`;
@@ -1398,10 +1398,16 @@ async function entrar(user){
   const {data:perfil} = await sb.from("perfis").select("papel, nome, email, login").eq("user_id", user.id).maybeSingle();
   if (!perfil) { await sb.auth.signOut(); throw new Error("sem-perfil"); }
   if (perfil.papel === "comite") { location.href = "/vitalagroenegocios/5s/"; return; }
-  if (perfil.papel === "cliente") { location.href = "/vitalagroenegocios/cliente/"; return; }   // comitê usa só o 5S
+  S.disc = null;
+  if (perfil.papel === "cliente") {   // cliente do portal: entra no DISC só se a empresa liberou para ele
+    const {data:da} = await sb.from("disc_acessos").select("empresa, ve_todos").eq("user_id", user.id);
+    if (!da || !da.length) { location.href = "/vitalagroenegocios/cliente/"; return; }
+    S.disc = {empresas:da.map(x=>x.empresa), todos:da.some(x=>x.ve_todos), meses:6};
+    perfil.papel = "gestor";   // usa a visão de gestor; o banco só devolve o que a pessoa pode ver
+  }
   S.perfil = perfil; S.login = perfil.login || perfil.email; S.papel = perfil.papel; S.admin = perfil.papel === "admin";
   if (perfil.papel === "gestor") {
-    const {data:emps} = await sb.from("gestor_empresas").select("empresa").eq("user_id", user.id);
+    const {data:emps} = S.disc ? {data:S.disc.empresas.map(e=>({empresa:e}))} : await sb.from("gestor_empresas").select("empresa").eq("user_id", user.id);
     S.painel = {empresas:(emps||[]).map(x=>x.empresa), atualizadoEm:new Date().toISOString()};
   }
   selId = null; F.emp = ""; F.pessoa = ""; F.tipo = "";
@@ -1410,7 +1416,7 @@ async function entrar(user){
 }
 async function sair(msg){
   await sb.auth.signOut().catch(()=>{});
-  S.papel = "respondente"; S.admin = false; S.perfil = null; S.login = null; S.painel = null; S.todas = []; ENVIOS_BRUTO = []; modoSenha = false;
+  S.papel = "respondente"; S.admin = false; S.perfil = null; S.disc = null; S.login = null; S.painel = null; S.todas = []; ENVIOS_BRUTO = []; modoSenha = false;
   definirAbas(false); go("login"); if (msg) toast(msg);
 }
 $("#btnSair").addEventListener("click", () => sair("Você saiu da área restrita."));
@@ -1837,6 +1843,7 @@ async function carregarDados(){
       UNIF = Object.fromEntries(un.map(u => [u.de, {de:u.de, deNome:u.de_nome, para:u.para, em:u.em}]));
       DISTINTOS = new Set(dist);
       if (lemb) S.lemb = {mesma:lemb.mesma||12, repos:lemb.repos||6, aviso:lemb.aviso||30};
+      if (S.disc && S.disc.meses) S.lemb = {...S.lemb, mesma:S.disc.meses, repos:Math.min(S.lemb.repos, S.disc.meses)};   // empresa com reavaliação a cada 6 meses
       S.pbiUrl = (pbi && pbi.url) || "";
       S.catalogo = cat; S.gestores = gest;
       aplicarUnificacoes(); S.todasOk = true; S.funcoesOk = true; S.demo = false;

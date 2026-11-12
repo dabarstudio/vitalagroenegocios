@@ -1,0 +1,18 @@
+{
+  "name": "Área do cliente · Vital Agro & Negócios",
+  "short_name": "Vital",
+  "description": "Painéis, entregas e documentos da sua empresa com a Vital Agro & Negócios.",
+  "lang": "pt-BR",
+  "id": "/vitalagroenegocios/cliente/",
+  "start_url": "/vitalagroenegocios/cliente/",
+  "scope": "/vitalagroenegocios/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#00582F",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

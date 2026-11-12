@@ -72,7 +72,9 @@ td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 tr.res-ok td{opacity:.55}
 .vp{color:var(--ok);font-weight:600}.vn{color:var(--bad);font-weight:600}
 .ext{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
-.st.m{background:var(--ok-bg);color:var(--ok)}
+.st.m{background:var(--ok-bg);color:var(--ok)}.st.l{background:var(--ok-bg);color:var(--ok)}
+tr.dneg td:nth-child(2){box-shadow:inset 4px 0 0 var(--bad)}tr.dpos td:nth-child(2){box-shadow:inset 4px 0 0 var(--ok)}
+.cbusca{margin-bottom:6px}.lotebar{background:var(--warn-bg);border-radius:10px;padding:8px 12px;margin-bottom:8px}
 .compor{border:1px dashed var(--brand-2);border-radius:12px;padding:12px;margin-top:12px;background:#FAFCF8}
 .compor h4{margin:0 0 6px;font:700 .9rem var(--display)}
 .cgrid{display:grid;grid-template-columns:minmax(0,1fr) 260px minmax(0,1fr);gap:12px;align-items:start}
@@ -122,7 +124,7 @@ const CFG = window.VITAL_CONFIG || {};
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-const S = { user: null, nome: "", equipe: false, empresas: [], empresa: "", bancos: [], base: null, tol: 3, res: null, filtro: "", salvoId: null, hist: [], compor: false, sel: new Set() };
+const S = { user: null, nome: "", equipe: false, empresas: [], empresa: "", bancos: [], base: null, tol: 3, res: null, filtro: "", salvoId: null, hist: [], compor: false, sel: new Set(), selRes: new Set(), busca: { b: "", l: "" } };
 
 /* ================= leitura de números e datas ================= */
 function num(v) {
@@ -240,6 +242,7 @@ function sugerirMapa(cab) {
     dc: idx(/^d\/c$|^dc$|^tipo$|natureza|^c\/d$/),
     status: idx(/status|situacao|situa/),
     banco: idx(/banco|conta corrente|^conta$|conta banc|portador/),
+    lote: idx(/lote|id pag|remessa|agrupador|n.? ?do ?pagamento/),
   };
 }
 function linhasDaTabela(rows, mapa, opts = {}) {
@@ -254,7 +257,7 @@ function linhasDaTabela(rows, mapa, opts = {}) {
     if (mapa.dc >= 0) { const t = normTxt(r[mapa.dc]); if (/^d|debito|saida|despesa|pagar/.test(t)) v = -Math.abs(v); else if (/^c|credito|entrada|receita|receber/.test(t)) v = Math.abs(v); }
     const st = mapa.status >= 0 ? String(r[mapa.status] ?? "").trim() : "";
     if (opts.status && opts.status.size && !opts.status.has(st)) continue;
-    out.push({ data: d, desc: mapa.desc >= 0 ? String(r[mapa.desc] ?? "").trim() : "", valor: v, status: st, banco: mapa.banco >= 0 ? String(r[mapa.banco] ?? "").trim() : "", linha: i + 1 });
+    out.push({ data: d, desc: mapa.desc >= 0 ? String(r[mapa.desc] ?? "").trim() : "", valor: v, status: st, banco: mapa.banco >= 0 ? String(r[mapa.banco] ?? "").trim() : "", lote: mapa.lote >= 0 ? String(r[mapa.lote] ?? "").trim() : "", linha: i + 1 });
   }
   return out;
 }
@@ -274,10 +277,30 @@ function conciliar(banco, base, tol, periodo) {
   for (const b of B) { const c = L.filter((l) => !l.usado && compat(b, l) && mesmoValor(l.valor, b.valor) && l.data === b.data).sort((x, y) => semelhanca(y.desc, b.desc) - semelhanca(x.desc, b.desc))[0]; if (c) add("c", [b], [c]); }
   // 2) mesmo valor, data dentro da tolerância
   for (const b of B.filter((x) => !x.usado)) { const c = L.filter((l) => !l.usado && compat(b, l) && mesmoValor(l.valor, b.valor) && Math.abs(dias(l.data, b.data)) <= tol).sort((x, y) => Math.abs(dias(x.data, b.data)) - Math.abs(dias(y.data, b.data)) || semelhanca(y.desc, b.desc) - semelhanca(x.desc, b.desc))[0]; if (c) add("d", [b], [c]); }
-  // 3) composição automática: 1 do banco = soma de 2 a 4 da planilha (e o contrário)
+  // 3) LOTES — 1 linha no banco = vários lançamentos da planilha
+  const ehLote = (b) => RX_LOTE.test(normTxt(b.desc));
+  const fila = B.filter((x) => !x.usado).sort((a, b) => (ehLote(b) - ehLote(a)) || Math.abs(b.valor) - Math.abs(a.valor));
+  for (const b of fila) {
+    if (b.usado) continue;
+    const cand = L.filter((l) => !l.usado && compat(b, l) && Math.sign(l.valor) === Math.sign(b.valor) && Math.abs(dias(l.data, b.data)) <= tol);
+    if (cand.length < 2) continue;
+    const dts = [...new Set(cand.map((l) => l.data))].sort((x, y) => Math.abs(dias(x, b.data)) - Math.abs(dias(y, b.data)));
+    let g = null, como = "", taxa = 0;
+    // a) mesmo nº de lote na planilha
+    const porLote = new Map(); cand.filter((l) => l.lote).forEach((l) => { if (!porLote.has(l.lote)) porLote.set(l.lote, []); porLote.get(l.lote).push(l); });
+    for (const [k, arr] of porLote) if (arr.length > 1 && mesmoValor(soma(arr), b.valor)) { g = arr; como = "pelo nº do lote " + k; break; }
+    // b) tudo o que foi lançado no mesmo dia
+    if (!g) for (const d of dts) { const arr = cand.filter((l) => l.data === d); if (arr.length > 1 && mesmoValor(soma(arr), b.valor)) { g = arr; como = "pela soma do dia " + dBR(d); break; } }
+    // c) combinação de valores (até 40 candidatos, os mais próximos primeiro)
+    if (!g) { const ord = cand.filter((l) => Math.abs(l.valor) <= Math.abs(b.valor) + 0.005).sort((x, y) => Math.abs(dias(x.data, b.data)) - Math.abs(dias(y.data, b.data)) || semelhanca(y.desc, b.desc) - semelhanca(x.desc, b.desc)).slice(0, 40);
+      const r = subconjunto(b.valor, ord); if (r && r.length > 1) { g = r; como = "por combinação de valores"; } }
+    // d) maquininha / cobrança: banco recebe o líquido, planilha tem o bruto
+    if (!g && ehLote(b) && b.valor > 0) for (const d of dts) { const arr = cand.filter((l) => l.data === d); const s = soma(arr); if (arr.length && s > b.valor && (s - b.valor) / s <= 0.05) { g = arr; taxa = Math.round((s - b.valor) * 100) / 100; como = "pela soma do dia " + dBR(d) + " menos a taxa"; break; } }
+    if (g) add("l", [b], g, { como, taxa });
+  }
+  // 3b) o contrário: 1 da planilha = 2 a 4 do banco (recebimento em partes)
   const combina = (alvo, cands) => { cands = cands.slice(0, 14); const n = cands.length;
     for (let k = 2; k <= 4; k++) { const idx = []; const rec = (s, sm) => { if (idx.length === k) return mesmoValor(sm, alvo) ? idx.slice() : null; for (let j = s; j < n; j++) { idx.push(j); const r = rec(j + 1, sm + cands[j].valor); if (r) return r; idx.pop(); } return null; }; const r = rec(0, 0); if (r) return r.map((j) => cands[j]); } return null; };
-  for (const b of B.filter((x) => !x.usado)) { const g = combina(b.valor, L.filter((l) => !l.usado && compat(b, l) && Math.sign(l.valor) === Math.sign(b.valor) && Math.abs(l.valor) < Math.abs(b.valor) && Math.abs(dias(l.data, b.data)) <= tol)); if (g) add("s", [b], g); }
   for (const l of L.filter((x) => !x.usado)) { const g = combina(l.valor, B.filter((b) => !b.usado && compat(b, l) && Math.sign(l.valor) === Math.sign(b.valor) && Math.abs(b.valor) < Math.abs(l.valor) && Math.abs(dias(l.data, b.data)) <= tol)); if (g) add("s", g, [l]); }
   // 4) valor divergente: data próxima, mesmo sinal, descrição parecida
   for (const b of B.filter((x) => !x.usado)) { const c = L.filter((l) => !l.usado && compat(b, l) && Math.sign(l.valor) === Math.sign(b.valor) && Math.abs(dias(l.data, b.data)) <= tol && semelhanca(l.desc, b.desc) >= 0.5).sort((x, y) => Math.abs(x.valor - b.valor) - Math.abs(y.valor - b.valor))[0]; if (c && Math.abs(c.valor - b.valor) <= Math.max(50, Math.abs(b.valor) * 0.2)) add("v", [b], [c]); }
@@ -288,6 +311,19 @@ function conciliar(banco, base, tol, periodo) {
   res.forEach((r) => r.ajuste = sugestao(r, periodo));
   ordenar(res); return res;
 }
+const RX_LOTE = /\blote\b|sispag|folha|salario|multipag|pag(to|amento)? ?(de )?fornec|liq(uidacao)?\.? ?(de )?cobr|cobranca|cielo|\brede\b|redecard|stone|getnet|pagseguro|pagbank|safrapay|sumup|zucchetti|gdoor|repasse|credito ?em ?lote|pix ?lote|ted ?lote/;
+function subconjunto(alvo, cands) {
+  const T = Math.round(Math.abs(alvo) * 100), vs = cands.map((c) => Math.round(Math.abs(c.valor) * 100));
+  const pai = new Map([[0, null]]);
+  for (let i = 0; i < vs.length; i++) {
+    const atuais = [...pai.keys()];
+    for (const sm of atuais) { const t = sm + vs[i]; if (t > T || pai.has(t)) continue; pai.set(t, [sm, i]);
+      if (t === T) { const out = []; let k = t; while (k) { const [p, j] = pai.get(k); out.push(cands[j]); k = p; } return out; } }
+    if (pai.size > 200000) break;
+  }
+  return null;
+}
+const pendente = (r) => PEND.includes(r.tipo) || (["l", "m"].includes(r.tipo) && Math.abs(r.dif) >= 0.005);
 const dataRow = (r) => ((r.bx[0] || r.l[0] || {}).data || "");
 const ordenar = (res) => res.sort((a, b) => dataRow(a).localeCompare(dataRow(b)));
 function sugestao(r, periodo) {
@@ -295,6 +331,7 @@ function sugestao(r, periodo) {
   if (r.tipo === "c") return "OK";
   if (r.tipo === "d") return `OK, mas a data na planilha está ${Math.abs(r.dd)} dia(s) ${r.dd > 0 ? "depois" : "antes"} do banco: ajustar a data para ${dBR(b.data)}.`;
   if (r.tipo === "s") return r.bx.length > 1 ? "Um lançamento da planilha foi pago/recebido em partes no banco: OK." : "Lançamento único no banco que soma vários da planilha (pagamento em lote): OK.";
+  if (r.tipo === "l") return r.taxa ? `Lote conciliado ${r.como}. A diferença de ${brl(r.taxa)} é a taxa da operadora/banco: lançar como despesa (tarifa de cartão/cobrança).` : `Lote conciliado ${r.como} (${r.l.length} lançamentos): OK.`;
   if (r.tipo === "m") return Math.abs(r.dif) < 0.005 ? "Composição manual: OK." : `Composição manual com diferença de ${brl(Math.abs(r.dif))}: lançar o ajuste (juros, tarifa, desconto…).`;
   if (r.tipo === "v") return `Valor diferente em ${brl(Math.abs(r.dif))}: ${Math.abs(b.valor) > Math.abs(r.l[0].valor) ? "o banco movimentou mais" : "o banco movimentou menos"} que a planilha. Conferir juros, multa, desconto ou tarifa e corrigir o valor.`;
   if (r.tipo === "b") {
@@ -310,7 +347,7 @@ function sugestao(r, periodo) {
   if (r.tipo === "f") return `Fora do período dos extratos (${dBR(periodo.ini)} a ${dBR(periodo.fim)}): não entra na conciliação.`;
   return "";
 }
-const NOME = { c: "Conciliado", d: "Data diferente", s: "Conciliado por soma", m: "Composição manual", v: "Valor divergente", b: "Só no banco", p: "Só na planilha", f: "Fora do período" };
+const NOME = { c: "Conciliado", d: "Data diferente", l: "Lote conciliado", s: "Conciliado por soma", m: "Composição manual", v: "Valor divergente", b: "Só no banco", p: "Só na planilha", f: "Fora do período" };
 const PEND = ["d", "v", "b", "p"];
 const din = (v) => v == null || v === "" || isNaN(v) ? "" : `<span class="${v < 0 ? "vn" : "vp"}">${brl(v)}</span>`;
 const dc = (v) => v == null || v === "" ? "" : v < 0 ? '<span class="vn">D</span>' : '<span class="vp">C</span>';
@@ -363,7 +400,7 @@ function mapaHTML(a, chave) {
     st = `<div class="field" style="grid-column:1/-1"><label>Considerar só os lançamentos com status</label><div class="row">${vals.map((v) => `<label style="font-weight:400;display:flex;gap:4px;align-items:center"><input type="checkbox" data-st="${esc(v)}" ${a.status.has(v) ? "checked" : ""}> ${esc(v)}</label>`).join("")}</div></div>`;
   }
   return `<details ${a.itens && a.itens.length ? "" : "open"} style="margin-top:10px"><summary class="note" style="cursor:pointer">Colunas reconhecidas (clique para ajustar)</summary><div class="map">
-    ${sel("data", "Data", false)}${sel("desc", "Descrição", true)}${sel("valor", "Valor (com sinal)", true)}${sel("entrada", "Entrada / crédito", true)}${sel("saida", "Saída / débito", true)}${sel("dc", "Tipo (D/C)", true)}${base ? sel("banco", "Banco / conta", true) + sel("status", "Status", true) : ""}${st}</div></details>`;
+    ${sel("data", "Data", false)}${sel("desc", "Descrição", true)}${sel("valor", "Valor (com sinal)", true)}${sel("entrada", "Entrada / crédito", true)}${sel("saida", "Saída / débito", true)}${sel("dc", "Tipo (D/C)", true)}${base ? sel("banco", "Banco / conta", true) + sel("lote", "Nº do lote / ID do pagamento", true) + sel("status", "Status", true) : ""}${st}</div></details>`;
 }
 function render() {
   const pronto = S.bancos.some((E) => E.itens.length) && S.base && S.base.itens.length;
@@ -382,9 +419,9 @@ function resultadoHTML() {
   const R = S.res, it = R.itens;
   const cnt = (t) => it.filter((r) => r.tipo === t).length;
   const sm = (t, f) => it.filter((r) => r.tipo === t).reduce((s, r) => s + f(r), 0);
-  const ks = [["c", "Conciliados", ""], ["d", "Data diferente", ""], ["s", "Conciliados por soma", ""], ["m", "Composição manual", ""], ["v", "Valor divergente", brl(sm("v", (r) => Math.abs(r.dif)))], ["b", "Só no banco", din(sm("b", (r) => soma(r.bx)))], ["p", "Só na planilha", din(sm("p", (r) => soma(r.l)))], ["f", "Fora do período", ""]];
-  const pend = it.filter((r) => PEND.includes(r.tipo) && !r.ok).length;
-  const vis = it.filter((r) => !S.filtro ? r.tipo !== "f" : S.filtro === "pend" ? PEND.includes(r.tipo) : r.tipo === S.filtro);
+  const ks = [["c", "Conciliados", ""], ["d", "Data diferente", ""], ["l", "Lotes conciliados", ""], ["s", "Conciliados por soma", ""], ["m", "Composição manual", ""], ["v", "Valor divergente", brl(sm("v", (r) => Math.abs(r.dif)))], ["b", "Só no banco", din(sm("b", (r) => soma(r.bx)))], ["p", "Só na planilha", din(sm("p", (r) => soma(r.l)))], ["f", "Fora do período", ""]];
+  const pend = it.filter((r) => pendente(r) && !r.ok).length;
+  const vis = it.filter((r) => !S.filtro ? r.tipo !== "f" : S.filtro === "pend" ? pendente(r) : r.tipo === S.filtro);
   const totB = soma(it.flatMap((r) => r.bx)), totL = soma(it.filter((r) => r.tipo !== "f").flatMap((r) => r.l));
   const saldos = (R.saldos || []).filter((x) => x.saldo != null).map((x) => `${esc(x.rotulo)}: <b>${din(x.saldo)}</b> em ${dBR(x.dt)}`).join(" · ");
   return `<div class="card">
@@ -395,11 +432,12 @@ function resultadoHTML() {
     ${S.compor ? comporHTML() : ""}
     <div class="kpis noprint" style="margin:12px 0">${ks.map(([k, l, v]) => `<button class="kpi" type="button" data-f="${k}" aria-pressed="${S.filtro === k}"><b>${cnt(k)}</b><span>${l}</span>${v ? `<em>${v}</em>` : ""}</button>`).join("")}<button class="kpi" type="button" data-f="pend" aria-pressed="${S.filtro === "pend"}"><b class="${pend ? "err" : "ok"}">${pend}</b><span>Pendências</span></button></div>
     <p class="note" style="margin-bottom:8px">Movimento dos bancos no período: <b>${din(totB)}</b> · da planilha: <b>${din(totL)}</b> · diferença: <b class="${Math.abs(totB - totL) < 0.01 ? "ok" : "err"}">${brl(totB - totL)}</b>${saldos ? ` · saldo final — ${saldos}` : ""}${S.filtro ? ` · <a href="#" data-f="">mostrar tudo</a>` : ""}</p>
-    <div class="tw" style="max-height:70vh"><table class="res"><thead><tr><th>Situação</th><th>Banco</th><th>Data banco</th><th>Descrição no banco</th><th>D/C</th><th class="n">Valor banco</th><th>Data planilha</th><th>Descrição na planilha</th><th class="n">Valor planilha</th><th>Ajuste sugerido</th><th class="noprint">Resolvido / observação</th></tr></thead><tbody>
-    ${vis.map((r) => { const idx = it.indexOf(r), b = r.bx, l = r.l, v0 = (b[0] || l[0] || {}).valor; return `<tr class="${r.ok ? "res-ok" : ""}"><td><span class="st ${r.tipo}">${NOME[r.tipo]}</span>${r.tipo === "m" ? `<br><button class="btn ghost sm noprint" data-desf="${idx}" type="button">↩ desfazer</button>` : ""}</td>
-      <td>${[...new Set(b.map((x) => x.banco))].map(esc).join("<br>") || esc(l.map((x) => x.banco).filter(Boolean)[0] || "")}</td><td>${b.map((x) => dBR(x.data)).join("<br>")}</td><td>${b.map((x) => esc(x.desc)).join("<br>")}</td><td>${dc(v0)}</td><td class="n">${b.map((x) => din(x.valor)).join("<br>")}</td>
+    ${S.selRes.size ? `<div class="row noprint lotebar"><b>${S.selRes.size} selecionada(s)</b><button class="btn sm" id="desfVarios" type="button">↩ Desfazer as selecionadas</button><button class="btn ghost sm" id="limpaSelRes" type="button">Limpar seleção</button></div>` : ""}
+    <div class="tw" style="max-height:70vh"><table class="res"><thead><tr><th class="noprint"><input type="checkbox" id="selTodosRes" title="Marcar todos os conciliados"></th><th>Situação</th><th>Banco</th><th>Data banco</th><th>Descrição no banco</th><th>D/C</th><th class="n">Valor banco</th><th>Data planilha</th><th>Descrição na planilha</th><th class="n">Valor planilha</th><th>Ajuste sugerido</th><th class="noprint">Resolvido / observação</th></tr></thead><tbody>
+    ${vis.map((r) => { const idx = it.indexOf(r), b = r.bx, l = r.l, v0 = (b[0] || l[0] || {}).valor; const casado = !["b", "p", "f", "v"].includes(r.tipo); return `<tr class="${r.ok ? "res-ok" : ""} ${v0 < 0 ? "dneg" : "dpos"}"><td class="noprint">${casado ? `<input type="checkbox" data-sx="${idx}" ${S.selRes.has(idx) ? "checked" : ""}>` : ""}</td><td><span class="st ${r.tipo}">${NOME[r.tipo]}</span>${casado ? `<br><button class="btn ghost sm noprint" data-desf="${idx}" type="button">↩ desfazer</button>` : ""}${r.tipo === "b" ? `<br><button class="btn ghost sm noprint" data-montar="${idx}" type="button">🧩 compor</button>` : ""}</td>
+      <td>${[...new Set(b.map((x) => x.banco))].map(esc).join("<br>") || esc(l.map((x) => x.banco).filter(Boolean)[0] || "")}</td><td>${b.map((x) => dBR(x.data)).join("<br>")}</td><td>${b.map((x) => esc(x.desc) + (x.doc && String(x.doc).length <= 20 ? ` <span class="note">Doc: ${esc(x.doc)}</span>` : "")).join("<br>")}</td><td>${dc(v0)}</td><td class="n">${b.map((x) => din(x.valor)).join("<br>")}</td>
       <td>${l.map((x) => dBR(x.data)).join("<br>")}</td><td>${l.map((x) => esc(x.desc) + (x.linha ? ` <span class="note">(linha ${x.linha})</span>` : "")).join("<br>")}</td><td class="n">${l.map((x) => din(x.valor)).join("<br>")}</td>
-      <td>${esc(r.ajuste)}</td><td class="noprint">${["c", "s", "f"].includes(r.tipo) || (r.tipo === "m" && Math.abs(r.dif) < 0.005) ? "" : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-ok="${idx}" ${r.ok ? "checked" : ""}> feito</label><input class="obs" data-obs="${idx}" value="${esc(r.obs || "")}" placeholder="observação">`}</td></tr>`; }).join("") || `<tr><td colspan="11" class="note">Nada nesta situação.</td></tr>`}
+      <td>${esc(r.ajuste)}</td><td class="noprint">${!pendente(r) ? "" : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-ok="${idx}" ${r.ok ? "checked" : ""}> feito</label><input class="obs" data-obs="${idx}" value="${esc(r.obs || "")}" placeholder="observação">`}</td></tr>`; }).join("") || `<tr><td colspan="12" class="note">Nada nesta situação.</td></tr>`}
     </tbody></table></div></div>`;
 }
 /* composição manual: arrastar ou marcar lançamentos pendentes dos dois lados */
@@ -413,7 +451,7 @@ function comporHTML() {
   const sB = soma(selB), sL = soma(selL), dif = Math.round((sB - sL) * 100) / 100;
   const item = (x) => `<label class="ci ${S.sel.has(x.uid) ? "on" : ""}" draggable="true" data-uid="${x.uid}"><input type="checkbox" data-pick="${x.uid}" ${S.sel.has(x.uid) ? "checked" : ""}><span>${dBR(x.data)}</span><span class="cd" title="${esc(x.desc)}">${esc(x.desc)}${x.banco ? ` <em class="note">· ${esc(x.banco)}</em>` : ""}</span><span class="n">${din(x.valor)}</span></label>`;
   return `<div class="compor noprint"><p class="note" style="margin:0 0 8px">Marque ou <b>arraste</b> para a área do meio os lançamentos que formam o mesmo valor. Ex.: extrato 100 + 50 + 30 = planilha 180.</p>
-    <div class="cgrid"><div><h4>🏦 Pendentes no banco (${B.length})</h4><div class="clist" data-lado="b">${B.map(item).join("") || '<p class="note">Nenhum.</p>'}</div></div>
+    <div class="cgrid"><div><h4>🏦 Pendentes no banco (${B.length})</h4><input class="obs cbusca" data-busca="b" placeholder="🔎 buscar no banco" value="${esc(S.busca.b)}"><div class="clist" data-lado="b">${B.map(item).join("") || '<p class="note">Nenhum.</p>'}</div></div>
     <div class="czona" data-zona="1"><h4>🧩 Composição</h4>
       <div class="cs"><span>Banco</span><b>${din(sB)}</b><span class="note">${selB.length} lanç.</span></div>
       <div class="cs"><span>Planilha</span><b>${din(sL)}</b><span class="note">${selL.length} lanç.</span></div>
@@ -421,7 +459,7 @@ function comporHTML() {
       ${Math.abs(dif) >= 0.005 && selB.length && selL.length ? `<input class="obs" id="cmpObs" placeholder="Motivo da diferença (obrigatório)">` : ""}
       <div class="row" style="justify-content:center"><button class="btn primary sm" id="cmpOk" type="button" ${selB.length && selL.length ? "" : "disabled"}>${Math.abs(dif) < 0.005 ? "✅ Conciliar composição" : "Conciliar com diferença"}</button><button class="btn ghost sm" id="cmpLimpa" type="button">Limpar</button></div>
       <p class="note" style="text-align:center;margin:0">Solte aqui os lançamentos</p></div>
-    <div><h4>📋 Pendentes na planilha (${L.length})</h4><div class="clist" data-lado="l">${L.map(item).join("") || '<p class="note">Nenhum.</p>'}</div></div></div></div>`;
+    <div><h4>📋 Pendentes na planilha (${L.length})</h4><input class="obs cbusca" data-busca="l" placeholder="🔎 buscar na planilha" value="${esc(S.busca.l)}"><div class="clist" data-lado="l">${L.map(item).join("") || '<p class="note">Nenhum.</p>'}</div></div></div></div>`;
 }
 function comporConfirmar() {
   const it = S.res.itens, { B, L } = pendentes();
@@ -438,11 +476,23 @@ function comporConfirmar() {
   S.res.itens = it.filter((r) => !tocadas.includes(r)).concat(novas); ordenar(S.res.itens);
   S.sel.clear(); toast("Composição conciliada ✓"); render();
 }
-function desfazer(idx) {
-  const r = S.res.itens[idx]; if (!r || r.tipo !== "m") return;
-  const novas = r.bx.map((x) => ({ tipo: "b", bx: [x], l: [], dif: x.valor, dd: 0 })).concat(r.l.map((x) => ({ tipo: "p", bx: [], l: [x], dif: -x.valor, dd: 0 })));
-  novas.forEach((n) => n.ajuste = sugestao(n, S.res.periodo));
-  S.res.itens.splice(idx, 1, ...novas); ordenar(S.res.itens); render();
+function separar(r) { const novas = r.bx.map((x) => ({ tipo: "b", bx: [x], l: [], dif: x.valor, dd: 0 })).concat(r.l.map((x) => ({ tipo: "p", bx: [], l: [x], dif: -x.valor, dd: 0 }))); novas.forEach((n) => n.ajuste = sugestao(n, S.res.periodo)); return novas; }
+function desfazer(idxs) {
+  const set = new Set(idxs), novas = [];
+  S.res.itens = S.res.itens.filter((r, i) => { if (!set.has(i) || ["b", "p", "f"].includes(r.tipo)) return true; novas.push(...separar(r)); return false; }).concat(novas);
+  ordenar(S.res.itens); S.selRes.clear(); toast(`${set.size} conciliação(ões) desfeita(s).`); render();
+}
+function montarLote(idx) {
+  const r = S.res.itens[idx], b = r && r.bx[0]; if (!b) return;
+  const { L } = pendentes();
+  const mesmos = L.filter((l) => compat(b, l) && Math.sign(l.valor) === Math.sign(b.valor) && Math.abs(dias(l.data, b.data)) <= S.res.tol);
+  const dts = [...new Set(mesmos.map((l) => l.data))].sort((x, y) => Math.abs(dias(x, b.data)) - Math.abs(dias(y, b.data)));
+  S.sel.clear(); S.sel.add(b.uid);
+  let pre = mesmos.filter((l) => l.data === dts[0]);
+  const comb = subconjunto(b.valor, mesmos.slice(0, 40)); if (comb) pre = comb;
+  pre.forEach((l) => S.sel.add(l.uid));
+  S.compor = true; render(); const z = document.querySelector(".compor"); if (z) z.scrollIntoView({ behavior: "smooth", block: "start" });
+  toast(pre.length ? `Sugeri ${pre.length} lançamento(s) da planilha. Confira e confirme.` : "Nenhum candidato próximo: escolha na lista da planilha.");
 }
 
 /* ================= arquivos ================= */
@@ -511,12 +561,19 @@ function ligar() {
     S.bancos.forEach((E) => E.itens.forEach((x) => itens.push({ ...x, banco: E.rotulo, ch: E.chave || "", uid: "b" + (n++) })));
     const ini = S.bancos.map((E) => E.ini).filter(Boolean).concat(itens.map((x) => x.data)).reduce((m, x) => x < m ? x : m), fim = S.bancos.map((E) => E.fim).filter(Boolean).concat(itens.map((x) => x.data)).reduce((m, x) => x > m ? x : m);
     S.res = { empresa: S.empresa, bancoNome: S.bancos.map((E) => E.rotulo).join(" + "), periodo: { ini, fim }, tol: S.tol, saldos: S.bancos.map((E) => ({ rotulo: E.rotulo, saldo: E.saldo ?? null, dt: E.dtSaldo || fim })), itens: conciliar(itens, S.base.itens, S.tol, { ini, fim }), arqB: S.bancos.map((E) => E.nome).join(", "), arqL: S.base.nome };
-    S.filtro = "pend"; S.salvoId = null; S.sel.clear(); render(); $("#res").scrollIntoView({ behavior: "smooth" });
+    S.filtro = "pend"; S.salvoId = null; S.sel.clear(); S.selRes.clear(); render(); $("#res").scrollIntoView({ behavior: "smooth" });
   };
   app.querySelectorAll("[data-f]").forEach((b) => b.onclick = (e) => { e.preventDefault(); S.filtro = S.filtro === b.dataset.f ? "" : b.dataset.f; render(); });
   app.querySelectorAll("[data-ok]").forEach((c) => c.onchange = () => { S.res.itens[+c.dataset.ok].ok = c.checked; render(); });
   app.querySelectorAll("[data-obs]").forEach((i) => i.onchange = () => { S.res.itens[+i.dataset.obs].obs = i.value; });
-  app.querySelectorAll("[data-desf]").forEach((b) => b.onclick = () => desfazer(+b.dataset.desf));
+  app.querySelectorAll("[data-desf]").forEach((b) => b.onclick = () => desfazer([+b.dataset.desf]));
+  app.querySelectorAll("[data-montar]").forEach((b) => b.onclick = () => montarLote(+b.dataset.montar));
+  app.querySelectorAll("[data-sx]").forEach((c) => c.onchange = () => { const i = +c.dataset.sx; if (c.checked) S.selRes.add(i); else S.selRes.delete(i); render(); });
+  const st = $("#selTodosRes"); if (st) st.onchange = () => { if (st.checked) app.querySelectorAll("[data-sx]").forEach((c) => S.selRes.add(+c.dataset.sx)); else S.selRes.clear(); render(); };
+  const dv = $("#desfVarios"); if (dv) dv.onclick = () => { if (confirm(`Desfazer ${S.selRes.size} conciliação(ões)? Os lançamentos voltam para pendentes.`)) desfazer([...S.selRes]); };
+  const ls = $("#limpaSelRes"); if (ls) ls.onclick = () => { S.selRes.clear(); render(); };
+  const filtra = (lado) => { const q = normTxt(S.busca[lado]); app.querySelectorAll(`[data-lado="${lado}"] .ci`).forEach((el) => { el.hidden = q && !normTxt(el.textContent).includes(q) && !S.sel.has(el.dataset.uid); }); };
+  app.querySelectorAll("[data-busca]").forEach((i) => { filtra(i.dataset.busca); i.oninput = () => { S.busca[i.dataset.busca] = i.value; filtra(i.dataset.busca); }; });
   const bco = $("#btnCompor"); if (bco) bco.onclick = () => { S.compor = !S.compor; S.sel.clear(); render(); };
   app.querySelectorAll("[data-pick]").forEach((c) => c.onchange = () => { if (c.checked) S.sel.add(c.dataset.pick); else S.sel.delete(c.dataset.pick); render(); });
   app.querySelectorAll("[data-uid]").forEach((el) => el.ondragstart = (e) => { e.dataTransfer.setData("text/plain", el.dataset.uid); e.dataTransfer.effectAllowed = "move"; });
@@ -529,12 +586,12 @@ function ligar() {
   const bp = $("#btnPdf"); if (bp) bp.onclick = () => { const f = S.filtro, c = S.compor; S.filtro = ""; S.compor = false; render(); setTimeout(() => { window.print(); S.filtro = f; S.compor = c; render(); }, 200); };
   app.querySelectorAll("[data-hist]").forEach((b) => b.onclick = () => abrirHist(+b.dataset.hist));
 }
-const enxuto = (x) => x && { data: x.data, desc: x.desc, valor: x.valor, banco: x.banco || "", linha: x.linha || null, uid: x.uid };
+const enxuto = (x) => x && { data: x.data, desc: x.desc, valor: x.valor, banco: x.banco || "", doc: x.doc || "", lote: x.lote || "", linha: x.linha || null, uid: x.uid };
 async function salvar() {
   const R = S.res, it = R.itens;
-  const resumo = { conc: it.filter((r) => ["c", "s", "m"].includes(r.tipo)).length, data: it.filter((r) => r.tipo === "d").length, valor: it.filter((r) => r.tipo === "v").length, banco: it.filter((r) => r.tipo === "b").length, planilha: it.filter((r) => r.tipo === "p").length, pend: it.filter((r) => PEND.includes(r.tipo) && !r.ok).length, tol: R.tol, saldos: R.saldos };
+  const resumo = { conc: it.filter((r) => ["c", "s", "m", "l"].includes(r.tipo)).length, data: it.filter((r) => r.tipo === "d").length, valor: it.filter((r) => r.tipo === "v").length, banco: it.filter((r) => r.tipo === "b").length, planilha: it.filter((r) => r.tipo === "p").length, pend: it.filter((r) => pendente(r) && !r.ok).length, tol: R.tol, saldos: R.saldos };
   const row = { empresa: R.empresa, banco: R.bancoNome, periodo_ini: R.periodo.ini, periodo_fim: R.periodo.fim, arquivo_banco: R.arqB, arquivo_base: R.arqL, resumo, criado_nome: S.nome,
-    itens: it.map((r) => ({ tipo: r.tipo, bx: r.bx.map(enxuto), l: r.l.map(enxuto), dif: r.dif, dd: r.dd, ajuste: r.ajuste, ok: !!r.ok, obs: r.obs || "" })), atualizado_em: new Date().toISOString() };
+    itens: it.map((r) => ({ tipo: r.tipo, bx: r.bx.map(enxuto), l: r.l.map(enxuto), dif: r.dif, dd: r.dd, como: r.como || "", taxa: r.taxa || 0, ajuste: r.ajuste, ok: !!r.ok, obs: r.obs || "" })), atualizado_em: new Date().toISOString() };
   const q = S.salvoId ? sb.from("conc_conciliacoes").update(row).eq("id", S.salvoId).select("id").single() : sb.from("conc_conciliacoes").insert(row).select("id").single();
   const { data, error } = await q;
   if (error) { toast("Não foi possível salvar: " + error.message); return; }
@@ -546,16 +603,16 @@ async function abrirHist(id) {
   const itens = (h.itens || []).map((r) => ({ ...r, bx: r.bx || (r.b ? [r.b] : []), l: r.l || [] }));
   const rs = h.resumo || {};
   S.res = { empresa: h.empresa, bancoNome: h.banco, periodo: { ini: h.periodo_ini, fim: h.periodo_fim }, tol: rs.tol ?? 3, saldos: rs.saldos || (rs.saldo != null ? [{ rotulo: h.banco, saldo: rs.saldo, dt: rs.dtSaldo }] : []), itens, arqB: h.arquivo_banco, arqL: h.arquivo_base };
-  S.salvoId = h.id; S.filtro = "pend"; S.sel.clear(); render(); $("#res").scrollIntoView({ behavior: "smooth" });
+  S.salvoId = h.id; S.filtro = "pend"; S.sel.clear(); S.selRes.clear(); render(); $("#res").scrollIntoView({ behavior: "smooth" });
 }
 function exportarExcel() {
   const R = S.res, j = (a, f) => a.map(f).join(" | ");
   const linhas = R.itens.map((r) => { const v0 = (r.bx[0] || r.l[0] || {}).valor; return { "Situação": NOME[r.tipo], "Banco": [...new Set(r.bx.map((x) => x.banco).concat(r.l.map((x) => x.banco)).filter(Boolean))].join(" | "), "Tipo (D/C)": v0 == null ? "" : v0 < 0 ? "D" : "C",
     "Data banco": j(r.bx, (x) => dBR(x.data)), "Descrição banco": j(r.bx, (x) => x.desc), "Valor banco": r.bx.length === 1 ? r.bx[0].valor : j(r.bx, (x) => x.valor),
     "Data planilha": j(r.l, (x) => dBR(x.data)), "Descrição planilha": j(r.l, (x) => x.desc), "Valor planilha": r.l.length === 1 ? r.l[0].valor : j(r.l, (x) => x.valor),
-    "Linha na planilha": j(r.l, (x) => x.linha || ""), "Diferença": ["v", "b", "p", "m"].includes(r.tipo) ? r.dif : "", "Ajuste sugerido": r.ajuste, "Resolvido": r.ok ? "Sim" : "", "Observação": r.obs || "" }; });
+    "Linha na planilha": j(r.l, (x) => x.linha || ""), "Diferença": ["v", "b", "p", "m", "l"].includes(r.tipo) ? r.dif : "", "Ajuste sugerido": r.ajuste, "Resolvido": r.ok ? "Sim" : "", "Observação": r.obs || "" }; });
   const wb = XLSX.utils.book_new();
-  const pend = linhas.filter((x, i) => PEND.includes(R.itens[i].tipo));
+  const pend = linhas.filter((x, i) => pendente(R.itens[i]));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pend.length ? pend : [{ "Situação": "Sem pendências" }]), "Pendências");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "Tudo");
   XLSX.writeFile(wb, `Conciliacao_${R.empresa.replace(/[^\w]+/g, "_")}_${R.periodo.ini}_${R.periodo.fim}.xlsx`);

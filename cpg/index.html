@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -21,7 +21,7 @@
   --lamp-off:#C9D3C6; --red:#D93A2B; --green:#2FA352;
   --display:"Poppins","Segoe UI",system-ui,sans-serif; --body:"Source Sans 3","Segoe UI",system-ui,sans-serif; --mono:ui-monospace,Consolas,monospace; --r:12px;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+@media (prefers-color-scheme: dark) and (max-width: 0px){:root:not([data-theme="light"]){
   --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
   --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522; --info:#8DB9E3; --info-bg:#1B2A38;
   --lamp-off:#2E4034; --red:#F0604F; --green:#4CC66F; color-scheme:dark}}
@@ -113,6 +113,10 @@ td.num,th.num{text-align:right;white-space:nowrap}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 12px;font-size:.88rem;max-width:100%}
 .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbx{position:relative}.cbx-in{display:flex;gap:6px}.cbx-in input{flex:1;min-width:0}
+.cbx-lista{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;max-height:300px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:4px}
+.cbx-op{display:flex;gap:8px;align-items:center;width:100%;text-align:left;border:0;background:none;color:var(--fg);font:inherit;padding:7px 10px;border-radius:8px;cursor:pointer}
+.cbx-op:hover,.cbx-op.on{background:var(--surface-2)}.cbx-op[aria-selected="true"]{font-weight:700;color:var(--brand)}.cbx-op .ck{flex:none}
 .chip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:1rem;line-height:1;padding:2px 6px;border-radius:999px}
 .chip button:hover{background:var(--line);color:var(--bad)}
 .obs{max-width:46ch;white-space:pre-wrap;font-size:.88rem}
@@ -362,8 +366,9 @@ function renderFiltros() {
           <div class="field"><label for="nfData">Vale para</label><select id="nfData"><option value="">Todos os balanços</option>${datas.map((d) => `<option value="${d}"${N.data === d ? " selected" : ""}>Só o balanço de ${br(d)}</option>`).join("")}</select></div>
         </div>
         <div class="field"><label for="nfPes">Pessoas (como aparecem no Connectere)</label>
-          <div class="row" style="flex-wrap:nowrap"><input id="nfPes" list="dlPes" placeholder="${S.base ? "Comece a digitar e escolha da lista" : "Carregando a lista de pessoas…"}" style="flex:1"><button class="btn" id="nfAdd" type="button">Adicionar</button></div>
-          <datalist id="dlPes">${S.base ? S.base.nomes[N.relatorio].map((n) => `<option value="${esc(nomePessoa(n))}">`).join("") : ""}</datalist>
+          <div class="cbx" id="nfCbx"><div class="cbx-in"><input id="nfPes" role="combobox" aria-expanded="false" aria-controls="nfLista" autocomplete="off" ${S.base ? "" : "disabled"} placeholder="${S.base ? `🔎 Buscar entre ${S.base.nomes[N.relatorio].length} pessoas de ${RELN[N.relatorio].toLowerCase()}…` : "Carregando a lista de pessoas…"}"><button class="btn" id="nfAbre" type="button" ${S.base ? "" : "disabled"} aria-label="Abrir a lista">▾</button></div>
+          <div class="cbx-lista" id="nfLista" role="listbox" aria-multiselectable="true" hidden></div></div>
+          <p class="note" style="margin:4px 0 0">Escolha na lista (pode marcar várias). Só aparecem os nomes que estão no relatório, do jeito que vêm do Connectere.</p>
           <div class="chips" id="nfChips">${N.pessoas.map((p, i) => `<span class="chip"><span>${esc(nomePessoa(p))}</span><button type="button" data-tira="${i}" aria-label="Tirar ${esc(nomePessoa(p))}">×</button></span>`).join("")}</div>
         </div>
         <div class="grid2">
@@ -387,22 +392,37 @@ function renderFiltros() {
   });
   const det = $("#novoF");
   if (det) {
-    det.ontoggle = () => { N.aberto = det.open; if (!det.open) return; if (S.base) { if (!$("#dlPes").options.length) renderFiltros(); return; } base().then(renderFiltros).catch((e) => { const x = $("#nfErr"); if (x) x.textContent = e.message; }); };
+    det.ontoggle = () => { N.aberto = det.open; if (!det.open) return; if (S.base) { if ($("#nfPes") && $("#nfPes").disabled) renderFiltros(); return; } base().then(renderFiltros).catch((e) => { const x = $("#nfErr"); if (x) x.textContent = e.message; }); };
     const guarda = () => { N.relatorio = $("#nfRel").value; N.acao = $("#nfAcao").value; N.data = $("#nfData").value; N.sol = $("#nfSol").value; N.obs = $("#nfObs").value; };
     ["nfAcao", "nfData", "nfSol", "nfObs"].forEach((id) => $("#" + id).addEventListener("input", guarda));
     $("#nfRel").onchange = () => { guarda(); N.pessoas = []; renderFiltros(); };
-    const add = () => {
-      const t = $("#nfPes").value.trim(); if (!t) return;
-      const lst = S.base ? S.base.nomes[N.relatorio] : [];
-      const real = lst.find((n) => nomePessoa(n) === t) || lst.find((n) => nomePessoa(n).toLowerCase() === t.toLowerCase());
-      if (!real && S.base) { $("#nfErr").textContent = `“${t}” não aparece na base de ${RELN[N.relatorio].toLowerCase()}. Escolha o nome exatamente como está na lista.`; return; }
-      const nome = real || t;
-      if (!N.pessoas.includes(nome)) N.pessoas.push(nome);
-      guarda(); renderFiltros(); $("#nfPes").focus();
+    // lista suspensa com busca: só deixa escolher nomes que existem na base do relatório
+    const inp = $("#nfPes"), box = $("#nfLista"), sem = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    let ativo = 0, visiveis = [];
+    const chips = () => { const c = $("#nfChips"); if (!c) return; c.innerHTML = N.pessoas.map((p, i) => `<span class="chip"><span>${esc(nomePessoa(p))}</span><button type="button" data-tira="${i}" aria-label="Tirar ${esc(nomePessoa(p))}">×</button></span>`).join("");
+      c.querySelectorAll("[data-tira]").forEach((b) => b.onclick = () => { N.pessoas.splice(+b.dataset.tira, 1); chips(); desenha(); }); };
+    const desenha = () => {
+      if (!S.base || box.hidden) return;
+      const q = sem(inp.value).trim(), lst = S.base.nomes[N.relatorio] || [];
+      visiveis = lst.filter((n) => !q || sem(nomePessoa(n)).includes(q)).slice(0, 300);
+      if (ativo >= visiveis.length) ativo = 0;
+      box.innerHTML = visiveis.length ? visiveis.map((n, i) => `<button type="button" role="option" class="cbx-op${i === ativo ? " on" : ""}" aria-selected="${N.pessoas.includes(n)}" data-op="${i}"><span class="ck">${N.pessoas.includes(n) ? "☑" : "☐"}</span>${esc(nomePessoa(n))}</button>`).join("") + (lst.length > 300 && visiveis.length === 300 ? '<div class="note" style="padding:6px 10px">Mostrando 300. Digite para filtrar.</div>' : "")
+        : `<div class="note" style="padding:8px 10px">Nenhuma pessoa com “${esc(inp.value)}” em ${RELN[N.relatorio].toLowerCase()}.</div>`;
+      box.querySelectorAll("[data-op]").forEach((b) => { b.onmousedown = (e) => e.preventDefault(); b.onclick = () => alterna(visiveis[+b.dataset.op]); });
     };
-    $("#nfAdd").onclick = add;
-    $("#nfPes").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } });
-    el.querySelectorAll("[data-tira]").forEach((b) => b.onclick = () => { N.pessoas.splice(+b.dataset.tira, 1); guarda(); renderFiltros(); });
+    const abre = () => { if (!S.base) return; box.hidden = false; inp.setAttribute("aria-expanded", "true"); desenha(); };
+    const fecha = () => { box.hidden = true; inp.setAttribute("aria-expanded", "false"); };
+    const alterna = (n) => { if (!n) return; const k = N.pessoas.indexOf(n); if (k >= 0) N.pessoas.splice(k, 1); else N.pessoas.push(n); chips(); desenha(); inp.focus(); };
+    inp.addEventListener("focus", abre); inp.addEventListener("input", () => { ativo = 0; abre(); });
+    inp.addEventListener("blur", () => setTimeout(fecha, 150));
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); abre(); ativo = Math.min(ativo + 1, visiveis.length - 1); desenha(); box.querySelector(".on")?.scrollIntoView({ block: "nearest" }); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); ativo = Math.max(ativo - 1, 0); desenha(); box.querySelector(".on")?.scrollIntoView({ block: "nearest" }); }
+      else if (e.key === "Enter") { e.preventDefault(); if (!box.hidden && visiveis[ativo]) alterna(visiveis[ativo]); }
+      else if (e.key === "Escape") fecha();
+    });
+    $("#nfAbre").onclick = () => { if (box.hidden) { inp.focus(); abre(); } else fecha(); };
+    chips();
     $("#nfSalvar").onclick = async () => {
       guarda(); const err = $("#nfErr"); err.textContent = "";
       if (!N.pessoas.length) { err.textContent = "Adicione ao menos uma pessoa."; return; }

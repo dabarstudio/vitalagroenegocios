@@ -143,7 +143,7 @@ const CFG = window.VITAL_CONFIG || {};
 const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-const S = { user: null, nome: "", equipe: false, empresas: [], empresa: "", bancos: [], base: null, tol: 3, res: null, filtro: "", salvoId: null, hist: [], compor: false, sel: new Set(), selRes: new Set(), busca: { b: "", l: "" }, vis: (() => { try { return localStorage.getItem("conc.vis") || "lado"; } catch { return "lado"; } })() };
+const S = { user: null, nome: "", equipe: false, empresas: [], empresa: "", bancos: [], base: null, tol: 2, res: null, filtro: "", salvoId: null, hist: [], compor: false, sel: new Set(), selRes: new Set(), busca: { b: "", l: "" }, vis: (() => { try { return localStorage.getItem("conc.vis") || "lado"; } catch { return "lado"; } })() };
 
 /* ================= leitura de números e datas ================= */
 function num(v) {
@@ -519,7 +519,7 @@ function render() {
   <div class="card noprint"><div class="row" style="justify-content:space-between;align-items:end">
     <div><div class="eyebrow">Ferramenta Vital</div><h2 style="font-size:1.35rem">Conciliação bancária</h2><p class="note">Suba os extratos dos bancos e a planilha da empresa. O sistema confere lançamento por lançamento e aponta o que falta, o que diverge e o ajuste sugerido.</p></div>
     <div class="row"><div class="field"><label for="selEmp">Empresa</label><select id="selEmp">${S.empresas.map((e) => `<option ${e === S.empresa ? "selected" : ""}>${esc(e)}</option>`).join("")}</select></div>
-    <div class="field" style="width:120px"><label for="tol">Tolerância (dias)</label><input id="tol" type="number" min="0" max="10" value="${S.tol}"></div></div></div></div>
+    <div class="field" style="width:120px"><label for="tol" title="Regra da Vital: banco e sistema podem ter até 2 dias de diferença (D+2)">Tolerância D+ (dias)</label><input id="tol" type="number" min="0" max="10" value="${S.tol}"></div></div></div></div>
   <div class="grid2 noprint">${blocoBancos()}${blocoBase()}</div>
   <div class="row noprint"><button class="btn primary" id="btnConc" type="button" ${pronto ? "" : "disabled"}>🔎 Conciliar</button>${pronto ? "" : '<span class="note">Envie os extratos e a planilha para liberar.</span>'}</div>
   <div id="res">${S.res ? resultadoHTML() : ""}</div>
@@ -750,7 +750,7 @@ async function abrirHist(id) {
   if (error || !h) { toast("Não consegui abrir."); return; }
   const itens = (h.itens || []).map((r) => ({ ...r, bx: r.bx || (r.b ? [r.b] : []), l: r.l || [] }));
   const rs = h.resumo || {};
-  S.res = { empresa: h.empresa, bancoNome: h.banco, periodo: { ini: h.periodo_ini, fim: h.periodo_fim }, tol: rs.tol ?? 3, saldos: rs.saldos || (rs.saldo != null ? [{ rotulo: h.banco, saldo: rs.saldo, dt: rs.dtSaldo }] : []), conf: rs.conf || null, itens, arqB: h.arquivo_banco, arqL: h.arquivo_base };
+  S.res = { empresa: h.empresa, bancoNome: h.banco, periodo: { ini: h.periodo_ini, fim: h.periodo_fim }, tol: rs.tol ?? 2, saldos: rs.saldos || (rs.saldo != null ? [{ rotulo: h.banco, saldo: rs.saldo, dt: rs.dtSaldo }] : []), conf: rs.conf || null, itens, arqB: h.arquivo_banco, arqL: h.arquivo_base };
   S.salvoId = h.id; S.filtro = "pend"; S.sel.clear(); S.selRes.clear(); render(); $("#res").scrollIntoView({ behavior: "smooth" });
 }
 function exportarExcel() {

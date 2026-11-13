@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#00582F">
+<meta name="robots" content="noindex">
+<title>Indicadores dos sócios · Vital Agro & Negócios</title>
+<link rel="icon" href="/vitalagroenegocios/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Indicadores (KPIs) da área dos sócios */
+:root{
+  color-scheme:light;
+  --bg:#F3F6F1; --surface:#FFFFFF; --surface-2:#E8EFE4; --line:#D3DECD;
+  --fg:#18241B; --muted:#57665A; --brand:#00582F; --brand-2:#007941; --leaf:#79C25B; --on-brand:#FFFFFF;
+  --warn:#9A6200; --warn-bg:#FFF3D6; --bad:#B3261E; --bad-bg:#FBE4E1; --ok:#1F7A3F; --ok-bg:#E1F2E5; --info:#2F6FA6; --info-bg:#E3EDF6;
+  --lamp-off:#C9D3C6; --red:#D93A2B; --green:#2FA352;
+  --display:"Poppins","Segoe UI",system-ui,sans-serif; --body:"Source Sans 3","Segoe UI",system-ui,sans-serif; --mono:ui-monospace,Consolas,monospace; --r:12px;
+}
+@media (prefers-color-scheme: dark) and (max-width: 0px){:root:not([data-theme="light"]){
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522; --info:#8DB9E3; --info-bg:#1B2A38;
+  --lamp-off:#2E4034; --red:#F0604F; --green:#4CC66F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1712; --surface:#17221A; --surface-2:#1F2D23; --line:#2E4034; --fg:#E6EEE7; --muted:#9DB0A2;
+  --brand:#5FBF7F; --brand-2:#79C25B; --on-brand:#0B1A10; --warn:#F2C062; --warn-bg:#3A2E12; --bad:#F2A097; --bad-bg:#3D1C19; --ok:#7FD39A; --ok-bg:#163522; --info:#8DB9E3; --info-bg:#1B2A38;
+  --lamp-off:#2E4034; --red:#F0604F; --green:#4CC66F; color-scheme:dark}
+html{padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+img{max-width:100%}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+.wrap{max-width:1020px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.logo{width:44px;height:44px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none;border:1px solid var(--line);text-decoration:none}
+.logo img{width:36px}
+.brandtxt{min-width:0}
+.brandtxt b{font-family:var(--display);display:block;color:var(--brand)}
+.brandtxt span{font-size:.8rem;color:var(--muted)}
+.spacer{flex:1}
+.top a.tab{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--muted);font-weight:600;white-space:nowrap;text-decoration:none}
+.top a.tab:hover{background:var(--surface-2);color:var(--brand)}
+main{padding-block:20px 48px;display:grid;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.stack{display:grid;gap:14px;align-content:start}
+.muted,.note{color:var(--muted)} .note{font-size:.88rem;margin:0}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.btn{border:1px solid var(--line);background:var(--surface);padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center;color:var(--fg)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.ghost{border-color:transparent;background:none;color:var(--brand)}
+.btn.sm{padding:6px 10px;font-size:.88rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.field{display:grid;gap:6px;min-width:0}
+.field label{font-weight:600;font-size:.92rem}
+.field input,.field select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.callout{background:var(--surface-2);border-radius:var(--r);padding:14px 16px;font-size:.93rem}
+.err{color:var(--bad);font-weight:600}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface-2);white-space:nowrap}
+td.num,th.num{text-align:right;white-space:nowrap}
+.mono{font-family:var(--mono);font-size:.85em;white-space:nowrap}
+.field textarea{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%}
+.passo{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;align-items:start}
+.num1{width:34px;height:34px;border-radius:50%;background:var(--brand);color:var(--on-brand);display:grid;place-items:center;font:700 1rem var(--display)}
+.passo.ok .num1{background:var(--ok)}
+.passo.pend .num1{background:var(--warn)}
+.arq{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface-2)}
+.arq .tx{flex:1;min-width:180px}
+.arq .tx b{display:block}
+.chip{display:inline-block;border-radius:999px;padding:3px 10px;font-size:.8rem;font-weight:700;background:var(--surface-2);color:var(--muted);white-space:normal;line-height:1.35}
+.chip.v{background:var(--ok-bg);color:var(--ok)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:720px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{border-radius:10px;padding:12px 14px;display:grid;gap:4px;background:var(--surface-2)}
+.tile .k{font:700 .72rem var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tile .v{font:700 1.35rem/1.1 var(--display);font-variant-numeric:tabular-nums;color:var(--brand)}
+.al{border-radius:10px;padding:10px 14px;font-size:.93rem}
+.al.alta{background:var(--bad-bg);color:var(--bad)} .al.media{background:var(--warn-bg);color:var(--warn)} .al.ok{background:var(--ok-bg);color:var(--ok)}
+.eq td{vertical-align:middle}
+.eq input[type=text]{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 9px;width:100%;min-width:110px}
+.eq select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 9px}
+.eq input[type=checkbox]{width:18px;height:18px;accent-color:var(--brand)}
+tr.fora td{color:var(--muted)}
+tr.tot td{font-weight:700;background:var(--surface-2)}
+details summary{cursor:pointer;color:var(--brand);font-weight:700}
+.sug{font-size:.86rem;color:var(--info)}
+.sug button{margin-left:6px}
+#selEmp{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px;width:100%}
+.passo>div,.card>*{min-width:0}
+.cab{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end}
+.cab .sels{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:10px}
+.pubs{display:grid;gap:8px}
+.acoes{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:640px){
+  .top .brandtxt span{display:none}
+  .top .brandtxt b{font-size:1rem;line-height:1.2}
+  .card{padding:16px}
+  .passo{grid-template-columns:minmax(0,1fr);gap:8px}
+  .num1{width:28px;height:28px;font-size:.9rem}
+  .cab{grid-template-columns:minmax(0,1fr)}
+  .cab .sels{grid-template-columns:minmax(0,1fr)}
+  .tile .v{font-size:1.1rem}
+  .acoes .btn{flex:1 1 auto}
+  table.eq thead{display:none}
+  table.eq,table.eq tbody,table.eq tr,table.eq td{display:block;width:100%}
+  table.eq tr{border-bottom:1px solid var(--line);padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px}
+  table.eq td{border:0;padding:0}
+  table.eq td[data-l]::before{content:attr(data-l);display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:3px}
+  table.eq td.nm,table.eq td.sy{grid-column:1/-1}
+  table.eq input[type=text]{min-width:0}
+  table.eq select{width:100%;min-width:0}
+  .res table{font-size:.85rem} .res th,.res td{padding:7px 8px}
+}
+
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kt{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}.kt b{display:block;font:700 1.6rem/1.1 Poppins,sans-serif;color:var(--fg)}.kt span{color:var(--muted);font-size:.88rem}.kt.bad b{color:var(--bad)}.kt.ok b{color:var(--ok)}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:14px}
+.sec h2{font:700 1.2rem/1.2 Poppins,sans-serif;margin:0}.eyeb{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-2)}
+.bars{display:grid;gap:6px}.bar{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr) 64px;gap:10px;align-items:center;font-size:.9rem}.bar i{display:block;height:14px;border-radius:0 4px 4px 0;background:var(--brand-2);min-width:2px}.bar em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.cols{display:flex;align-items:flex-end;gap:6px;height:170px;padding-top:6px;border-bottom:1px solid var(--line)}.cols div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;min-width:0}.cols i{display:block;width:100%;max-width:38px;border-radius:4px 4px 0 0;background:var(--brand-2)}.cols i.rh{background:var(--leaf)}.cols i.rf{background:#c9a74a}.cols small{font-size:.72rem;color:var(--muted)}.stk{display:flex;flex-direction:column-reverse;width:100%;max-width:38px;gap:1px;flex:none}.stk i{max-width:none;border-radius:2px}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}.leg span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+table.t{width:100%;border-collapse:collapse;font-size:.92rem}table.t th{text-align:left;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--line);padding:6px 8px}table.t td{border-bottom:1px solid var(--line);padding:7px 8px}table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums}.tw{overflow-x:auto}
+.lst{margin:0;padding-left:20px;display:grid;gap:6px}.lst b{color:var(--fg)}
+.per{display:flex;gap:6px;flex-wrap:wrap}.per button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font:600 .88rem "Source Sans 3",sans-serif;cursor:pointer;color:var(--fg)}.per button[aria-pressed="true"]{background:var(--brand);color:#fff;border-color:var(--brand)}
+.bloq{padding:30px;text-align:center}
+.rodape{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding:16px 0 28px;text-align:center}
+@media (max-width:640px){.bar{grid-template-columns:110px minmax(0,1fr) 52px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/vitalagroenegocios/" title="Página inicial da Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
+    <div class="brandtxt"><b>Indicadores dos sócios</b><span>Gestão · sócios</span></div>
+    <div class="spacer"></div>
+    <a class="tab" href="/vitalagroenegocios/cliente/">Área do cliente</a>
+  </div>
+</header>
+<main class="wrap" id="app" style="display:grid;gap:18px;padding-top:18px;padding-bottom:40px"><p class="note">Carregando…</p></main>
+<footer class="rodape"><div class="wrap">Vital Agro &amp; Negócios LTDA · CNPJ 54.146.859/0001-32 · CRC-GO GO-005215/O-1 · Alexânia/GO</div></footer>
+<script src="/vitalagroenegocios/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script>
+"use strict";
+const CFG = window.VITAL_CONFIG || {};
+const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nf = (n) => Number(n || 0).toLocaleString("pt-BR");
+const pct = (a, b) => b ? Math.round(100 * a / b) + "%" : "–";
+const S = { per: "mes" };
+
+/* Diagnóstico das conversas de WhatsApp da Arcanjos (exportadas em 13/11/2026). Atualizar quando subirem novas exportações. */
+const ARC = {
+  data: "13/11/2026",
+  conversas: [["BPO Estratégico (Silvana e Victor)", "dez/25 a nov/26", 2520, 2672, 7, 64], ["Janaína (RH)", "dez/25 a nov/26", 4030, 3019, 2, 13], ["Rafael", "jun/26 a nov/26", 674, 607, 2, 10]],
+  meses: ["dez/25", "jan/26", "fev/26", "mar/26", "abr/26", "mai/26", "jun/26", "jul/26", "ago/26", "set/26", "out/26", "nov/26*"],
+  bpo: [314, 350, 96, 207, 139, 224, 236, 326, 260, 126, 185, 57],
+  rh: [44, 29, 118, 430, 501, 398, 516, 539, 390, 404, 404, 257],
+  rf: [0, 0, 0, 0, 0, 0, 137, 80, 191, 83, 132, 51],
+  gatilhos: [["Pagamento, boleto e PIX", 939], ["Cobrança de status (\u201cjá foi pago?\u201d, comprovante)", 915], ["RH: folha, benefícios, plantões, rescisões", 806], ["Extrato, acesso e saldo de banco", 140], ["Nota fiscal", 114], ["Erros e correções", 111], ["Aprovações", 78]],
+};
+
+function tile(v, t, cls) { return `<div class="kt${cls ? " " + cls : ""}"><b>${v}</b><span>${t}</span></div>`; }
+function barras(l) { const mx = Math.max(...l.map((x) => x[1]), 1); return `<div class="bars">${l.map(([n, v]) => `<div class="bar"><span>${esc(n)}</span><i style="width:${Math.max(1, 100 * v / mx)}%"></i><em>${nf(v)}</em></div>`).join("")}</div>`; }
+function periodo() {
+  const h = new Date(), f = (d) => d.toISOString().slice(0, 10);
+  if (S.per === "ant") return [f(new Date(h.getFullYear(), h.getMonth() - 1, 1)), f(new Date(h.getFullYear(), h.getMonth(), 0)), "mês passado"];
+  if (S.per === "30") return [f(new Date(Date.now() - 29 * 864e5)), f(h), "últimos 30 dias"];
+  return [f(new Date(h.getFullYear(), h.getMonth(), 1)), f(h), "este mês"];
+}
+
+function arcanjosHTML() {
+  const mx = Math.max(...ARC.meses.map((_, i) => ARC.bpo[i] + ARC.rh[i] + ARC.rf[i]));
+  const tot = ARC.conversas.reduce((n, c) => n + c[2], 0);
+  return `<section class="sec"><div><div class="eyeb">Arcanjos · conversas do WhatsApp</div><h2>De onde vêm os pedidos</h2><p class="note" style="margin:4px 0 0">Análise automática de ${nf(tot)} mensagens do cliente (exportadas em ${ARC.data}). Números aproximados, por palavras-chave. Para atualizar: exportar as conversas sem mídia e mandar ao Claude.</p></div>
+    <div class="kgrid">${tile("~650", "mensagens do cliente por mês")}${tile("56%", "do volume vem do RH (Janaína)")}${tile("~915", "cobranças de status (\u201cjá foi pago?\u201d)", "bad")}${tile("1 em 4", "boletos e documentos chegam depois das 17h", "bad")}${tile("2–7 min", "1ª resposta da Vital (mediana)", "ok")}</div>
+    <div><b>Mensagens do cliente por mês</b><div class="leg" style="margin:6px 0"><span style="--c:var(--brand-2)">BPO Estratégico</span><span style="--c:var(--leaf)">Janaína (RH)</span><span style="--c:#c9a74a">Rafael</span></div>
+      <div class="cols">${ARC.meses.map((m, i) => { const h = (v) => Math.max(2, Math.round(130 * v / mx)) + "px", px = (v) => Math.round(130 * v / mx) + "px"; return `<div title="${m}: ${ARC.bpo[i] + ARC.rh[i] + ARC.rf[i]} mensagens"><small>${nf(ARC.bpo[i] + ARC.rh[i] + ARC.rf[i])}</small><div class="stk" style="height:${h(ARC.bpo[i] + ARC.rh[i] + ARC.rf[i])}"><i style="height:${px(ARC.bpo[i])}"></i><i class="rh" style="height:${px(ARC.rh[i])}"></i>${ARC.rf[i] ? `<i class="rf" style="height:${px(ARC.rf[i])}"></i>` : ""}</div><small>${m}</small></div>`; }).join("")}</div><p class="note" style="margin:4px 0 0">* novembro até o dia 13.</p></div>
+    <div><b>Gatilhos: assunto das mensagens</b><p class="note" style="margin:2px 0 8px">Uma mensagem pode ter mais de um assunto.</p>${barras(ARC.gatilhos)}</div>
+    <div class="tw"><table class="t"><thead><tr><th>Conversa</th><th>Período</th><th class="n">Msgs do cliente</th><th class="n">Msgs da Vital</th><th class="n">1ª resposta (mediana)</th><th class="n">75% respondidas em</th></tr></thead><tbody>${ARC.conversas.map((c) => `<tr><td>${esc(c[0])}</td><td>${c[1]}</td><td class="n">${nf(c[2])}</td><td class="n">${nf(c[3])}</td><td class="n">${c[4]} min</td><td class="n">${c[5]} min</td></tr>`).join("")}</tbody></table></div>
+    <div><b>O que fazer</b><ol class="lst" style="margin-top:6px">
+      <li><b>Horário de corte:</b> pedido até as 15h é pago no mesmo dia; depois, no dia seguinte, salvo urgência autorizada pela Silvana ou pelo Victor.</li>
+      <li><b>Duas janelas de aprovação (10h e 15h)</b>, com uma lista única por empresa (Life, Health, Fire).</li>
+      <li><b>Status sem precisar perguntar:</b> PDF Diretoria/RH no WhatsApp em horário fixo (11h e 16h) e link da pasta de comprovantes do dia. Meta: cortar pela metade os \u201cjá foi pago?\u201d.</li>
+      <li><b>Calendário da folha (dias 1 a 13):</b> checklist único por ciclo, com a Janaína mandando tudo de uma vez.</li>
+      <li><b>Acesso definitivo da Vital como operadora em cada banco</b> (≈55 mensagens sobre token e senha).</li>
+      <li><b>Todo pedido do WhatsApp vira cartão no quadro</b>, para entrar nestes indicadores.</li></ol></div>
+  </section>`;
+}
+
+function proxHTML() {
+  return `<section class="sec"><div><div class="eyeb">Em construção</div><h2>Próximos indicadores</h2></div><ul class="lst">
+    <li><b>Comprovantes × banco (Arcanjos Life, Health e Fire):</b> comprovantes salvos no Drive (Agendamentos/mês) contra as saídas do extrato na Conciliação. Para isso, salvar a conciliação da Arcanjos todo mês.</li>
+    <li><b>GestãoClick:</b> lançamentos por mês, lançados um a um ou em lote, antes ou depois do pagamento e atraso da baixa. Depende das chaves da API do GestãoClick.</li>
+    <li><b>Pedidos do WhatsApp por mês</b>, atualizados a cada exportação das conversas.</li></ul></section>`;
+}
+
+async function operacao() {
+  const [ini, fim, rot] = periodo(), el = $("#oper");
+  el.innerHTML = `<p class="note">Carregando os números do quadro…</p>`;
+  const { data: d, error } = await sb.rpc("kpi_quadro", { p_ini: ini, p_fim: fim });
+  if (error) { el.innerHTML = `<p class="note">Não foi possível carregar: ${esc(error.message)}</p>`; return; }
+  const pess = (d.pessoas || []).filter((p) => p.concluidas || p.abertas).sort((a, b) => b.concluidas - a.concluidas || b.abertas - a.abertas);
+  const qs = (d.quadros || []).filter((q) => q.criadas || q.concluidas || q.abertas);
+  el.innerHTML = `<div class="kgrid">${tile(nf(d.criadas), "tarefas criadas · " + rot)}${tile(nf(d.concluidas), "concluídas · " + rot, "ok")}${tile(pct(d.no_prazo, d.com_prazo), "concluídas no prazo (" + nf(d.no_prazo) + " de " + nf(d.com_prazo) + " com prazo)")}${tile(nf(d.atrasadas), "atrasadas agora", d.atrasadas ? "bad" : "")}${tile(nf(d.aguardando), "aguardando alguém")}${tile(d.dias_medios == null ? "–" : String(d.dias_medios).replace(".", ",") + " dias", "da criação à conclusão (média)")}${tile(nf(d.entregas), "entregas publicadas na Área do cliente")}</div>
+    <div><b>De onde vieram as tarefas · ${rot}</b><div style="margin-top:8px">${barras(Object.entries(d.origem || {}).sort((a, b) => b[1] - a[1]))}</div></div>
+    <div class="tw"><b>Por quadro</b><table class="t" style="margin-top:6px"><thead><tr><th>Quadro</th><th class="n">Criadas</th><th class="n">Concluídas</th><th class="n">Abertas</th><th class="n">Atrasadas</th></tr></thead><tbody>${qs.map((q) => `<tr><td>${esc(q.nome)}</td><td class="n">${nf(q.criadas)}</td><td class="n">${nf(q.concluidas)}</td><td class="n">${nf(q.abertas)}</td><td class="n"${q.atrasadas ? ' style="color:var(--bad);font-weight:700"' : ""}>${nf(q.atrasadas)}</td></tr>`).join("")}</tbody></table></div>
+    <div class="tw"><b>Por pessoa</b><table class="t" style="margin-top:6px"><thead><tr><th>Responsável</th><th class="n">Concluídas</th><th class="n">No prazo</th><th class="n">Abertas</th><th class="n">Atrasadas</th></tr></thead><tbody>${pess.map((p) => `<tr><td>${esc(p.nome)}</td><td class="n">${nf(p.concluidas)}</td><td class="n">${nf(p.no_prazo)}</td><td class="n">${nf(p.abertas)}</td><td class="n"${p.atrasadas ? ' style="color:var(--bad);font-weight:700"' : ""}>${nf(p.atrasadas)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+async function iniciar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = "/vitalagroenegocios/cliente/?volta=/vitalagroenegocios/kpi/"; return; }
+  const { data: p } = await sb.from("perfis").select("papel, socio").eq("user_id", session.user.id).maybeSingle();
+  if (!p || !(p.papel === "admin" || (p.papel === "equipe" && p.socio))) { $("#app").innerHTML = `<div class="sec bloq"><h2>Área exclusiva dos sócios</h2><p><a class="btn" href="/vitalagroenegocios/cliente/">Voltar para a Área do cliente</a></p></div>`; return; }
+  $("#app").innerHTML = `<section class="sec"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:end"><div><div class="eyeb">Operação da Vital · ao vivo</div><h2>Tarefas e entregas</h2></div>
+      <div class="per" role="group" aria-label="Período"><button type="button" data-per="mes" aria-pressed="true">Este mês</button><button type="button" data-per="ant" aria-pressed="false">Mês passado</button><button type="button" data-per="30" aria-pressed="false">Últimos 30 dias</button></div></div>
+      <div id="oper" style="display:grid;gap:14px"></div></section>${arcanjosHTML()}${proxHTML()}`;
+  document.querySelectorAll("[data-per]").forEach((b) => b.onclick = () => { S.per = b.dataset.per; document.querySelectorAll("[data-per]").forEach((x) => x.setAttribute("aria-pressed", x === b)); operacao(); });
+  operacao();
+}
+iniciar();
+</script>
+</body>
+</html>

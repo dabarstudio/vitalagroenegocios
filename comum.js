@@ -271,3 +271,101 @@ window.Midias = (function () {
     setTimeout(function () { ativo = false; ro.disconnect(); }, 5000);
   }
 })();
+
+/* Papo de Porteira em evidência: faixa no topo de todas as páginas e destaque na página inicial.
+   O episódio diário sai às 05:55 no YouTube e no Spotify (o player mostra sempre o mais recente); as lives com convidado vêm da agenda "Lives". */
+(function () {
+  "use strict";
+  if (!document.querySelector("header.top")) return;
+  var path = location.pathname.replace(/\/+$/, "/");
+  if (/\/papo-de-porteira\/$/.test(path)) return;
+  var YT = "https://www.youtube.com/@vitalconsultoria116/videos", SP = "https://open.spotify.com/show/60zUO3JtyC6l69njrLQPwA", IG = "https://www.instagram.com/vital_consultoria/";
+  var LISTA = "UUhqbLLQXrY01vRDKrtpYVfA", BASE = "/vitalagroenegocios/papo-de-porteira/", DIA = 864e5;
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  var st = document.createElement("style");
+  st.textContent = ".ppbar{background:#E5F1E0;color:#132018;font-size:.9rem;border-bottom:1px solid #D8E2D9}" +
+    ".ppbar .wrap{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;padding-top:7px;padding-bottom:7px}" +
+    ".ppbar b{font-weight:700}.ppbar .tag{background:#00582F;color:#fff;border-radius:999px;padding:2px 10px;font-weight:700;font-size:.78rem;letter-spacing:.02em;text-transform:uppercase}" +
+    ".ppbar a.go{color:#00582F;font-weight:700;text-decoration:underline;text-underline-offset:3px}" +
+    ".ppbar .x{margin-left:auto;background:none;border:0;color:#00582F;font-size:1.1rem;cursor:pointer;padding:2px 6px;opacity:.8}.ppbar .x:hover{opacity:1}" +
+    ".ppdest{padding:28px 0 0}.ppdest .card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:22px;align-items:center;background:#fff;border:1px solid #D8E2D9;border-left:6px solid #00582F;border-radius:16px;padding:20px 22px;box-shadow:0 6px 24px rgba(0,88,47,.08)}" +
+    ".ppdest h2{font-size:clamp(1.2rem,2.4vw,1.6rem);margin:6px 0 6px;font-weight:700}.ppdest p{margin:0;color:#56685C}" +
+    ".ppdest .ac{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.ppdest .prox{margin-top:12px;font-size:.92rem}" +
+    ".ppdest .vid{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000}.ppdest .vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}" +
+    "@media (max-width:760px){.ppdest .card{grid-template-columns:minmax(0,1fr)}}";
+  document.head.appendChild(st);
+  var hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  var saiu = new Date(Date.now() - 3 * 3600e3).toISOString().slice(11, 16) >= "05:55";
+  var chave = "papo-faixa-" + hoje, fechado = false;
+  try { fechado = localStorage.getItem("papo-faixa") === chave; } catch (_) {}
+  if (!fechado) {
+    var bar = document.createElement("div"); bar.className = "ppbar"; bar.setAttribute("role", "region"); bar.setAttribute("aria-label", "Papo de Porteira");
+    bar.innerHTML = '<div class="wrap"><span class="tag">' + (saiu ? "Novo episódio" : "Episódio diário") + '</span><span>🎙️ <b>Papo de Porteira</b> ' + (saiu ? "de hoje já está no ar" : "novo todo dia às 05:55") + '</span><a class="go" href="' + YT + '" target="_blank" rel="noopener">▶ YouTube</a><a class="go" href="' + SP + '" target="_blank" rel="noopener">🎧 Spotify</a><a class="go" href="' + IG + '" target="_blank" rel="noopener">📸 Instagram</a><button class="x" type="button" aria-label="Fechar aviso">✕</button></div>';
+    document.querySelector("header.top").insertAdjacentElement("afterend", bar);
+    bar.querySelector(".x").onclick = function () { bar.remove(); try { localStorage.setItem("papo-faixa", chave); } catch (_) {} };
+  }
+  var hero = /\/vitalagroenegocios\/$/.test(path) && document.querySelector("main .hero");
+  if (!hero) return;
+  var s = document.createElement("section"); s.className = "ppdest"; s.setAttribute("aria-label", "Papo de Porteira");
+  s.innerHTML = '<div class="wrap"><div class="card"><div><span class="eyebrow">Papo de Porteira · novo episódio todo dia às 05:55</span>' +
+    "<h2>O podcast da Vital para quem produz e empreende.</h2><p>Impostos, gestão, crédito e o dia a dia da propriedade e da empresa, numa conversa direta com os sócios da Vital.</p>" +
+    '<p class="prox" id="ppProx" hidden></p>' +
+    '<div class="ac"><a class="btn green" href="' + YT + '" target="_blank" rel="noopener">▶ YouTube</a><a class="btn ghost" href="' + SP + '" target="_blank" rel="noopener">🎧 Spotify</a><a class="btn ghost" href="' + IG + '" target="_blank" rel="noopener">📸 Instagram</a><a class="btn ghost" href="' + BASE + '">Ver tudo</a></div></div>' +
+    '<div class="vid"><iframe src="https://www.youtube-nocookie.com/embed/videoseries?list=' + LISTA + '" title="Episódio mais recente do Papo de Porteira" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></div></div>';
+  hero.insertAdjacentElement("afterend", s);
+  if (window.Papo) window.Papo.dados().then(function (d) {
+    var prox = (d.proximos || [])[0]; if (!prox || prox.ini - Date.now() > 14 * DIA) return;
+    var el = document.getElementById("ppProx"); if (!el) return;
+    var vivo = prox.ini <= Date.now();
+    el.innerHTML = (vivo ? "🔴 <b>Ao vivo agora</b>: " : "Próxima live com convidado: ") + "<b>" + esc(prox.tema || "tema a definir") + "</b>" + (prox.convidado ? ", com " + esc(prox.convidado) : "") + (vivo ? "" : " · " + esc(window.Papo.quando(prox)) + ' · <a href="' + window.Papo.agenda(prox) + '" target="_blank" rel="noopener">pôr na agenda</a>');
+    el.hidden = false;
+  }).catch(function () {});
+})();
+
+/* Presença no Google: endereço oficial, prévia para WhatsApp/redes e ficha da empresa para o Google.
+   Na troca de domínio, mudar só SITE abaixo (e o sitemap.xml). */
+(function () {
+  "use strict";
+  var SITE = "https://dabarstudio.github.io/vitalagroenegocios/";
+  var BASE = "/vitalagroenegocios/";
+  var rel = location.pathname.indexOf(BASE) === 0 ? location.pathname.slice(BASE.length) : location.pathname.replace(/^\//, "");
+  var url = SITE + rel.replace(/index\.html$/, "");
+  var head = document.head;
+  function meta(attr, k, v) { if (!v || head.querySelector("meta[" + attr + '="' + k + '"]')) return; var m = document.createElement("meta"); m.setAttribute(attr, k); m.content = v; head.appendChild(m); }
+  if (!head.querySelector('link[rel="canonical"]')) { var l = document.createElement("link"); l.rel = "canonical"; l.href = url; head.appendChild(l); }
+  var d = head.querySelector('meta[name="description"]'), desc = d ? d.content : "";
+  var tit = document.title.replace(/\s*·\s*Vital Agro & Negócios$/, "");
+  meta("property", "og:type", rel ? "website" : "website");
+  meta("property", "og:site_name", "Vital Agro & Negócios");
+  meta("property", "og:locale", "pt_BR");
+  meta("property", "og:title", tit);
+  meta("property", "og:description", desc);
+  meta("property", "og:url", url);
+  meta("property", "og:image", SITE + "logo.png");
+  meta("name", "twitter:card", "summary");
+  var YT = "https://www.youtube.com/@vitalconsultoria116", SP = "https://open.spotify.com/show/60zUO3JtyC6l69njrLQPwA", IG = "https://www.instagram.com/vital_consultoria/";
+  var org = {
+    "@type": ["AccountingService", "ProfessionalService"], "@id": SITE + "#empresa",
+    name: "Vital Agro & Negócios", legalName: "Vital Agro e Negócios LTDA", taxID: "54.146.859/0001-32",
+    url: SITE, logo: SITE + "logo.png", image: SITE + "logo.png",
+    description: "Contabilidade, BPO financeiro, regularização fiscal e planejamento tributário para produtores rurais e empresas.",
+    telephone: "+55 62 99174-4354",
+    address: { "@type": "PostalAddress", addressLocality: "Alexânia", addressRegion: "GO", addressCountry: "BR" },
+    areaServed: [{ "@type": "State", name: "Goiás" }, { "@type": "Country", name: "Brasil" }],
+    knowsAbout: ["Contabilidade rural", "Produtor rural", "Livro Caixa Digital do Produtor Rural", "Reforma Tributária IBS e CBS", "BPO financeiro", "Planejamento tributário", "Holding rural"],
+    sameAs: [IG, YT, SP]
+  };
+  var g = [];
+  if (!rel) g.push(org, { "@type": "WebSite", "@id": SITE + "#site", url: SITE, name: "Vital Agro & Negócios", inLanguage: "pt-BR", publisher: { "@id": SITE + "#empresa" } });
+  else {
+    g.push({ "@type": "WebPage", url: url, name: tit, description: desc, inLanguage: "pt-BR", isPartOf: { "@id": SITE + "#site" }, publisher: { "@id": SITE + "#empresa" } });
+    var partes = rel.replace(/\/$/, "").split("/"), itens = [{ "@type": "ListItem", position: 1, name: "Início", item: SITE }];
+    var nomes = { servicos: "Serviços", "papo-de-porteira": "Papo de Porteira", noticias: "Notícias" };
+    partes.forEach(function (p, i) { itens.push({ "@type": "ListItem", position: i + 2, name: i === partes.length - 1 ? tit : (nomes[p] || p), item: SITE + partes.slice(0, i + 1).join("/") + "/" }); });
+    g.push({ "@type": "BreadcrumbList", itemListElement: itens });
+  }
+  if (/^papo-de-porteira\/?$/.test(rel)) g.push({ "@type": "PodcastSeries", name: "Papo de Porteira", url: url, description: "Podcast diário da Vital Agro & Negócios para o produtor rural e o empresário: impostos, gestão, crédito e o dia a dia da propriedade e da empresa.", inLanguage: "pt-BR", sameAs: [YT, SP, IG], publisher: { "@id": SITE + "#empresa" } });
+  var s = document.createElement("script"); s.type = "application/ld+json";
+  s.textContent = JSON.stringify({ "@context": "https://schema.org", "@graph": g });
+  head.appendChild(s);
+})();

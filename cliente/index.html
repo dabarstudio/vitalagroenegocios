@@ -293,7 +293,7 @@ function definirAbas(){
   TABS = !S.papel ? [] : S.papel==="admin" ? [["inicio","Início"],["docs","Entregas"],["midias","Comunicação"],["acessos","Acessos"],["conta","Minha conta"]]
     : S.papel==="equipe" ? [["inicio","Início"],["midias","Comunicação"],["conta","Minha conta"]] : [["docs","Entregas"],["conta","Minha conta"]];
   if ((S.paineis||[]).length && !TABS.some(t=>t[0]==="painel")) TABS.splice(S.papel==="admin"||S.papel==="equipe"?1:0, 0, ["painel","Painéis"]);
-  const h = TABS.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${cur===k || (GRUPO_TAB[cur]===k)}">${l}</button>`).join("") + (["admin","equipe","cliente","gestor"].includes(S.papel) ? `<a class="tab" href="/vitalagroenegocios/projetos/">Projetos</a>` : "") + (["cliente","gestor"].includes(S.papel) && (S.conc||[]).length ? `<a class="tab" href="/vitalagroenegocios/conciliacao/">Conciliação bancária</a>` : "") + (S.papel ? `<button class="tab" data-sair="1">Sair</button>` : "");
+  const h = TABS.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${cur===k || (GRUPO_TAB[cur]===k)}">${l}</button>`).join("") + (["admin","equipe","cliente","gestor"].includes(S.papel) && !(S.perfil && Array.isArray(S.perfil.ferramentas) && S.perfil.ferramentas.length && !S.perfil.ferramentas.includes("projetos")) ? `<a class="tab" href="/vitalagroenegocios/projetos/">Projetos</a>` : "") + (["cliente","gestor"].includes(S.papel) && (S.conc||[]).length ? `<a class="tab" href="/vitalagroenegocios/conciliacao/">Conciliação bancária</a>` : "") + (S.papel ? `<button class="tab" data-sair="1">Sair</button>` : "");
   $("#tabsTop").innerHTML = h; navInferior(h);
 }
 const GRUPO_TAB = { pub:"docs", papo:"midias", vitrine:"midias" };
@@ -372,7 +372,7 @@ async function trocarSenha(a, b, errEl, depois){
   toast("Senha alterada."); depois && depois();
 }
 async function entrar(user, novoLogin){
-  const {data:perfil} = await sb.from("perfis").select("papel, nome, email, login, socio").eq("user_id", user.id).maybeSingle();
+  const {data:perfil} = await sb.from("perfis").select("papel, nome, email, login, socio, ferramentas").eq("user_id", user.id).maybeSingle();
   if (!perfil || !["admin","cliente","gestor","equipe"].includes(perfil.papel)) { await sb.auth.signOut(); S.papel=null; toast("Este acesso não está liberado para a área do cliente."); go("login"); return; }
   S.user = user; S.perfil = perfil; S.papel = perfil.papel; reinicia();
   try { sessionStorage.setItem("vital_aba", "1"); } catch {}
@@ -443,7 +443,12 @@ function renderInicio(){
       ["Financeiro", "Lançamentos, contas a pagar, orçado × realizado e comissões.", "/vitalagroenegocios/projetos/#financeiro", soc],
       ["Acessos", "Criar login de cliente, colaborador ou sócio.", "#acessos", adm],
       ["Dabar · escritórios", "Escritórios contábeis licenciados: uso, clientes e suporte.", "#dabar", soc]]]
-  ].map(([t, cs]) => [t, cs.filter(c => c[3])]).filter(g => g[1].length);
+  ];
+  /* perfis com ferramentas definidas (ex.: Yasmin) veem só essas; o resto segue a regra normal */
+  const F = Array.isArray(S.perfil && S.perfil.ferramentas) && S.perfil.ferramentas.length ? S.perfil.ferramentas : null;
+  const chave = (h) => (h.match(/^\/vitalagroenegocios\/([^/]+)\//) || h.match(/^#(\w+)/) || [])[1] || h;
+  const G2 = G.map(([t, cs]) => [t, cs.filter(c => F ? F.includes(chave(c[2])) && (chave(c[2]) !== "quadro" || c[3]) : c[3])]).filter(g => g[1].length);
+  G.length = 0; G.push(...G2);
   const card = ([t,d,h,,k]) => { const b = k ? `<em class="hubn" data-cnt="${k}" hidden></em>` : "";
     return h.startsWith("#") ? `<button class="hubc" type="button" data-tab="${h.slice(1)}"><b>${t}${b}</b><span>${d}</span></button>` : `<a class="hubc" href="${h}"><b>${t}${b}</b><span>${d}</span></a>`; };
   $("#v-inicio").innerHTML = `<div class="row" style="justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap"><div><div class="eyebrow">${adm?"Administração":soc?"Sócio(a)":"Equipe Vital"}</div><h2 style="font-size:1.35rem">Olá${nome?", "+esc(nome):""}! O que vamos fazer?</h2></div>

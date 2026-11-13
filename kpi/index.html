@@ -206,10 +206,27 @@ function arcanjosHTML() {
   </section>`;
 }
 
+/* Conciliação feita dentro do GestãoClick (coletada pelo Claude com o login da Vital) */
+async function gestaoClick() {
+  const el = $("#gcSec"); if (!el) return;
+  const { data, error } = await sb.from("gc_conciliacoes").select("*").order("importado_em", { ascending: false });
+  if (error || !data || !data.length) { el.remove(); return; }
+  const br = (d) => d ? d.slice(8, 10) + "/" + d.slice(5, 7) : "–", hoje = new Date();
+  const lojas = [...new Set(data.map((x) => x.loja))];
+  const col = data.reduce((m, x) => x.coletado_em > m ? x.coletado_em : m, "");
+  const card = (l) => { const r = data.filter((x) => x.loja === l), c = r.reduce((n, x) => n + x.conciliados, 0), tt = r.reduce((n, x) => n + x.total, 0), and = r.filter((x) => !/conclu/i.test(x.situacao)).length;
+    const contas = [...new Set(r.map((x) => x.conta))].map((ct) => { const u = r.filter((x) => x.conta === ct).reduce((m, x) => x.periodo_fim > m ? x.periodo_fim : m, ""); return [ct, u, Math.floor((hoje - new Date(u + "T12:00")) / 864e5)]; });
+    return `<div class="sec" style="padding:14px"><b>${esc(l)}</b><div class="kgrid">${tile(pct(c, tt), `lançamentos do banco conciliados (${nf(c)} de ${nf(tt)})`, c / tt < .7 ? "bad" : "ok")}${tile(nf(and), "extratos ainda em andamento", and ? "bad" : "")}${tile(nf(r.length), "extratos importados")}</div>
+      <div class="tw"><table class="t"><thead><tr><th>Conta</th><th>Extrato até</th><th class="n">Dias sem extrato</th></tr></thead><tbody>${contas.map(([ct, u, d]) => `<tr><td>${esc(ct)}</td><td>${br(u)}</td><td class="n"${d > 3 ? ' style="color:var(--bad);font-weight:700"' : ""}>${d}</td></tr>`).join("")}</tbody></table></div></div>`; };
+  el.innerHTML = `<div><div class="eyeb">Arcanjos · conciliação no GestãoClick</div><h2>Extratos importados e conciliados</h2><p class="note" style="margin:4px 0 0">Coletado do GestãoClick em ${new Date(col).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}. O GestãoClick casa sozinho os lançamentos do banco com as contas a pagar e a receber; aqui medimos se os extratos estão entrando todo dia e quanto foi conciliado.</p></div>
+    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">${lojas.map(card).join("")}</div>
+    <details><summary style="cursor:pointer;font-weight:600">Todos os extratos importados (${data.length})</summary><div class="tw" style="margin-top:8px"><table class="t"><thead><tr><th>Importado em</th><th>Empresa</th><th>Conta</th><th>Período do extrato</th><th class="n">Conciliados</th><th>Situação</th></tr></thead><tbody>${data.map((x) => `<tr><td>${new Date(x.importado_em).toLocaleDateString("pt-BR")}</td><td>${esc(x.loja)}</td><td>${esc(x.conta)}</td><td>${br(x.periodo_ini)}${x.periodo_fim !== x.periodo_ini ? " a " + br(x.periodo_fim) : ""}</td><td class="n">${nf(x.conciliados)} de ${nf(x.total)}</td><td${/conclu/i.test(x.situacao) ? ' style="color:var(--ok)"' : ' style="color:var(--warn)"'}>${esc(x.situacao)}</td></tr>`).join("")}</tbody></table></div></details>`;
+}
+
 function proxHTML() {
   return `<section class="sec"><div><div class="eyeb">Em construção</div><h2>Próximos indicadores</h2></div><ul class="lst">
     <li><b>Comprovantes × banco (Arcanjos Life, Health e Fire):</b> comprovantes salvos no Drive (Agendamentos/mês) contra as saídas do extrato na Conciliação. Para isso, salvar a conciliação da Arcanjos todo mês.</li>
-    <li><b>GestãoClick:</b> lançamentos por mês, lançados um a um ou em lote, antes ou depois do pagamento e atraso da baixa. Depende das chaves da API do GestãoClick.</li>
+    <li><b>GestãoClick:</b> lançamentos por mês, lançados um a um ou em lote, antes ou depois do pagamento e atraso da baixa (coleta pelo login da Vital).</li>
     <li><b>Pedidos do WhatsApp por mês</b>, atualizados a cada exportação das conversas.</li></ul></section>`;
 }
 
@@ -233,9 +250,9 @@ async function iniciar() {
   if (!p || !(p.papel === "admin" || (p.papel === "equipe" && p.socio))) { $("#app").innerHTML = `<div class="sec bloq"><h2>Área exclusiva dos sócios</h2><p><a class="btn" href="/vitalagroenegocios/cliente/">Voltar para a Área do cliente</a></p></div>`; return; }
   $("#app").innerHTML = `<section class="sec"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:end"><div><div class="eyeb">Operação da Vital · ao vivo</div><h2>Tarefas e entregas</h2></div>
       <div class="per" role="group" aria-label="Período"><button type="button" data-per="mes" aria-pressed="true">Este mês</button><button type="button" data-per="ant" aria-pressed="false">Mês passado</button><button type="button" data-per="30" aria-pressed="false">Últimos 30 dias</button></div></div>
-      <div id="oper" style="display:grid;gap:14px"></div></section>${arcanjosHTML()}${proxHTML()}`;
+      <div id="oper" style="display:grid;gap:14px"></div></section><section class="sec" id="gcSec"><p class="note">Carregando a conciliação do GestãoClick…</p></section>${arcanjosHTML()}${proxHTML()}`;
   document.querySelectorAll("[data-per]").forEach((b) => b.onclick = () => { S.per = b.dataset.per; document.querySelectorAll("[data-per]").forEach((x) => x.setAttribute("aria-pressed", x === b)); operacao(); });
-  operacao();
+  operacao(); gestaoClick();
 }
 iniciar();
 </script>

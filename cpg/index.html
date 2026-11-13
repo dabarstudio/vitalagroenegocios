@@ -350,11 +350,15 @@ async function nomesPessoas() {
 const RELN = { cpg: "Contas a pagar", crc: "Contas a receber" };
 function renderFiltros() {
   const el = $("#filCard"); if (!el) return;
+  if (S.filAberto === undefined) { S.filAberto = false; try { S.filAberto = localStorage.getItem("cpg.filAberto") === "1"; } catch (_) {} }
+  if (S.novo && S.novo.aberto) S.filAberto = true;
   const N = S.novo, lista = S.filtros.filter((f) => f.relatorio === S.rel);
   const datas = VCPG.fechamentos("2025-01", ultimoFechamento().slice(0, 7)).reverse();
   el.innerHTML = `
     <div class="row" style="justify-content:space-between"><div><div class="eyebrow">Filtros pedidos pela contabilidade</div><h2 style="font-size:1.15rem">${S.contabil ? "Filtre fornecedores e clientes para o fechamento" : "Quem sai (ou entra) nos balancetes"}</h2></div>
       <div class="seg" role="group" aria-label="Relatório">${["cpg", "crc"].map((k) => `<button data-rel="${k}" aria-pressed="${S.rel === k}">${RELN[k]} · ${S.filtros.filter((f) => f.relatorio === k).length}</button>`).join("")}</div></div>
+    <button class="btn" id="filTog" aria-expanded="${S.filAberto}" aria-controls="filCorpo" style="width:max-content">${S.filAberto ? "▾ Ocultar filtros" : `▸ Ver filtros de ${RELN[S.rel].toLowerCase()} (${lista.length})`}</button>
+    <div id="filCorpo" class="stack"${S.filAberto ? "" : ' style="display:none"'}>
     <p class="note">${S.contabil ? "Marque aqui quem sai (ou quem entra) em cada relatório, com a observação do motivo. A Vital acompanha tudo o que for registrado." : "Registre aqui cada pedido da Tática Contabilidade (Driele), com a observação."} Os balancetes gerados nesta página aplicam estes filtros. Um filtro pode valer para todos os balanços ou só para o balanço de um mês.${S.rel === "crc" ? " No Contas a receber, quando há pessoas em “Mostrar somente”, o relatório traz só elas." : ""}</p>
     <div class="tablewrap"><table><thead><tr><th>Pessoa</th><th>Ação</th><th>Vale para</th><th>Observação</th><th>Registro</th>${S.filtra ? '<th class="num"></th>' : ""}</tr></thead><tbody>
       ${lista.map((f) => `<tr><td>${esc(nomePessoa(f.pessoa))}</td><td>${f.acao === "excluir" ? '<span class="tag ex">Excluir</span>' : '<span class="tag in">Mostrar somente</span>'}</td>
@@ -387,7 +391,9 @@ function renderFiltros() {
       </div></details>` : ""}
     ${S.removidos.length ? `<details><summary class="note" style="cursor:pointer;font-weight:600">Filtros removidos (${S.removidos.length})</summary><div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>Relatório</th><th>Pessoa</th><th>Vale para</th><th>Observação</th><th>Removido</th></tr></thead><tbody>
       ${S.removidos.map((f) => `<tr><td>${RELN[f.relatorio]}</td><td>${esc(nomePessoa(f.pessoa))} · ${f.acao === "excluir" ? "excluir" : "mostrar somente"}</td><td class="nw">${f.data_balanco ? br(f.data_balanco) : "Todos"}</td><td><div class="obs">${esc(f.observacao)}</div></td><td class="note"><b>${esc(f.motivo_remocao || "")}</b><br>${esc(f.removido_por_nome || "")} · ${dataHora(f.removido_em)}</td></tr>`).join("")}
-    </tbody></table></div></details>` : ""}`;
+    </tbody></table></div></details>` : ""}
+    </div>`;
+  $("#filTog").onclick = () => { S.filAberto = !S.filAberto; try { localStorage.setItem("cpg.filAberto", S.filAberto ? "1" : "0"); } catch (_) {} renderFiltros(); };
   el.querySelectorAll("[data-rel]").forEach((b) => b.onclick = () => { S.rel = b.dataset.rel; renderFiltros(); });
   el.querySelectorAll("[data-rem]").forEach((b) => b.onclick = () => { el.querySelector(`[data-remf="${b.dataset.rem}"]`).hidden = false; $("#mot" + b.dataset.rem).focus(); });
   el.querySelectorAll("[data-remno]").forEach((b) => b.onclick = () => { el.querySelector(`[data-remf="${b.dataset.remno}"]`).hidden = true; });

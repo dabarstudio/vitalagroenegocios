@@ -228,6 +228,14 @@ button.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg
 .col:not(.ref) .colh{background:var(--surface-2)}.col.ref .colh{background:#f6efdc}
 .colh[data-dbl]{cursor:copy}
 .colh h2{font-size:.95rem;flex:1}
+.cal{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.calh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.calh h2{font-size:1.05rem;min-width:150px;text-align:center}.calh h2::first-letter{text-transform:uppercase}
+.cgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.cwd{font-size:.75rem;font-weight:700;color:var(--muted);text-align:center;padding:4px 0;text-transform:uppercase}
+.cdia{min-height:96px;background:var(--surface-2);border-radius:8px;padding:5px;display:flex;flex-direction:column;gap:3px;min-width:0}.cdia.vaz{background:transparent}.cdia.fds{opacity:.85}.cdia.hoje{outline:2px solid var(--brand);outline-offset:-2px}
+.cnum{display:flex;align-items:center;justify-content:flex-start;gap:6px;font-size:.8rem;text-align:left}.cnum .cdw{display:none}.cnum .n{margin-left:auto;font-size:.7rem;background:var(--surface);border-radius:999px;padding:0 6px;font-weight:700;color:var(--muted)}
+.cchip{display:block;width:100%;text-align:left;border:0;border-left:3px solid var(--brand-2);background:var(--surface);border-radius:5px;padding:3px 5px;font:inherit;font-size:.74rem;line-height:1.25;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg)}
+.cchip:hover{background:#eef5ec}.cchip.atr{border-left-color:var(--bad);color:var(--bad);font-weight:600}.cchip.ok{border-left-color:var(--ok);color:var(--muted);text-decoration:line-through}
+@media (max-width:760px){.cgrid{grid-template-columns:minmax(0,1fr)}.cwd,.cdia.vaz,.cdia.cvz{display:none}.cdia{min-height:0}.cnum .cdw{display:inline;color:var(--muted);text-transform:capitalize}.cchip{white-space:normal;font-size:.85rem;padding:6px 8px}}
 .pdfdlg{border:0;border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.pdfdlg::backdrop{background:rgba(0,0,0,.35)}
 .colh .n{font-size:.8rem;color:var(--muted);font-weight:700;background:var(--surface);border-radius:999px;padding:1px 8px}
 .k{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:grid;gap:6px;text-align:left;width:100%}
@@ -675,11 +683,11 @@ function render() {
     <div class="chips">${F.map(([v, t]) => `<button class="chipb" type="button" data-f="${v}" aria-pressed="${S.filtro === v}">${t}</button>`).join("")}</div>
     ${S.pessoas.length > 1 ? `<div class="pess" role="group" aria-label="Filtrar por pessoa"><span class="lbl">Pessoa:</span><button class="chipb" type="button" data-pp="" aria-pressed="${!S.fAtrib}">Todas</button>${S.pessoas.map(m => `<button class="chipb" type="button" data-pp="${m.user_id}" aria-pressed="${S.fAtrib === m.user_id}" title="Tarefas de ${esc(m.nome)}"><span class="av">${esc(ini(m.nome))}</span>${esc(m.nome.split(" ")[0])}</button>`).join("")}</div>` : ""}
     ${S.time && !S.marc ? `<button class="btn sm" type="button" id="bMem">Membros (${S.mem.length})</button>` : ""}
-    <div class="chips" role="group" aria-label="Visualização"><button class="chipb" type="button" data-vis="quadro" aria-pressed="${S.vis !== "lista"}">▦ Quadro</button><button class="chipb" type="button" data-vis="lista" aria-pressed="${S.vis === "lista"}">☰ Lista</button>${S.vis === "lista" ? "" : `<button class="chipb" type="button" id="bSel" aria-pressed="${!!S.modoSel}" title="Marcar várias tarefas para mudar de uma vez">☑ Selecionar</button>`}</div></div>
+    <div class="chips" role="group" aria-label="Visualização"><button class="chipb" type="button" data-vis="quadro" aria-pressed="${S.vis !== "lista" && S.vis !== "cal"}">▦ Quadro</button><button class="chipb" type="button" data-vis="lista" aria-pressed="${S.vis === "lista"}">☰ Lista</button><button class="chipb" type="button" data-vis="cal" aria-pressed="${S.vis === "cal"}">📅 Calendário</button>${S.vis === "lista" || S.vis === "cal" ? "" : `<button class="chipb" type="button" id="bSel" aria-pressed="${!!S.modoSel}" title="Marcar várias tarefas para mudar de uma vez">☑ Selecionar</button>`}</div></div>
   </div>
   ${S.q && S.q.geral && !S.marc ? placarHTML() : ""}
   ${ehBPO() ? resumoBPO() : ""}
-  ${S.vis === "lista" ? listaHTML() : `<div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
+  ${S.vis === "cal" ? calHTML() : S.vis === "lista" ? listaHTML() : `<div class="board" style="--n:${Math.max(1, S.cols.length)}">${S.cols.map(c => {
     const ks = S.cards.filter(k => k._v === c.id).sort(S.ordem === "prazo" ? porPrazo : (a, b) => a.ordem - b.ordem);
     const vis = ks.filter(passa);
     return `<section class="col${c.referencia ? " ref" : ""}" data-col="${c.id}" aria-label="${esc(c.nome)}"${c.referencia ? ` title="Atribuições fixas e observações internas: não contam como tarefas em aberto"` : ""}>
@@ -812,6 +820,27 @@ async function envioPdf(html, nome, texto) {
   };
 }
 
+/* ===== visão em calendário (pelo prazo de cada tarefa) ===== */
+function calMes() { const h = new Date(); return S.calMes || (h.getFullYear() + "-" + String(h.getMonth() + 1).padStart(2, "0")); }
+function calHTML() {
+  const ym = calMes(), [a, m] = ym.split("-").map(Number), hoje = hojeISO();
+  const ks = S.cards.filter(k => passa(k) && !colDe(k.coluna).referencia), comP = new Map(); let semPrazo = 0;
+  for (const k of ks) { if (!k.prazo) { semPrazo++; continue; } const d = k.prazo.slice(0, 10); if (!comP.has(d)) comP.set(d, []); comP.get(d).push(k); }
+  const ini = new Date(a, m - 1, 1), ult = new Date(a, m, 0).getDate(), pad = ini.getDay();
+  const nomeMes = ini.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const iso = (d) => `${a}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const chip = (k) => { const fim = colDe(k.coluna).concluida, atr = !fim && k.prazo && dias(k.prazo) < 0;
+    return `<button type="button" class="cchip${fim ? " ok" : atr ? " atr" : ""}" data-cid="${k.id}" title="${esc(k.titulo)}${k.para_todos ? " · Todos" : nomeDe(k.responsavel) ? " · " + esc(nomeDe(k.responsavel)) : ""}">${esc(k.titulo)}</button>`; };
+  let cel = "";
+  for (let i = 0; i < pad; i++) cel += `<div class="cdia vaz" aria-hidden="true"></div>`;
+  for (let d = 1; d <= ult; d++) { const l = (comP.get(iso(d)) || []).sort(porPrazo), dt = new Date(a, m - 1, d);
+    cel += `<div class="cdia${iso(d) === hoje ? " hoje" : ""}${l.length ? "" : " cvz"}${dt.getDay() === 0 || dt.getDay() === 6 ? " fds" : ""}"><div class="cnum"><b>${d}</b><span class="cdw">${dt.toLocaleDateString("pt-BR", { weekday: "short" })}</span>${l.length ? `<span class="n">${l.length}</span>` : ""}</div>${l.map(chip).join("")}</div>`; }
+  const noMes = [...comP.keys()].filter(d => d.startsWith(ym)).reduce((n, d) => n + comP.get(d).length, 0);
+  return `<section class="cal" aria-label="Calendário de prazos"><div class="calh"><button class="btn sm" type="button" data-cm="-1" aria-label="Mês anterior">‹</button><h2>${nomeMes}</h2><button class="btn sm" type="button" data-cm="1" aria-label="Próximo mês">›</button><button class="btn sm ghost" type="button" data-cm="0">Hoje</button>
+    <span class="note" style="margin-left:auto">${noMes} tarefa(s) com prazo neste mês${semPrazo ? ` · ${semPrazo} sem prazo (veja em Quadro ou Lista)` : ""}</span></div>
+    <div class="cgrid"><div class="cwd">Dom</div><div class="cwd">Seg</div><div class="cwd">Ter</div><div class="cwd">Qua</div><div class="cwd">Qui</div><div class="cwd">Sex</div><div class="cwd">Sáb</div>${cel}</div></section>`;
+}
+
 /* ===== visão em lista e mudanças em lote ===== */
 function listaHTML() {
   const ord = new Map(S.cols.map((c, i) => [c.id, i]));
@@ -835,10 +864,12 @@ function loteHTML() {
     <button class="btn primary sm" type="button" id="lApl">Aplicar</button><button class="btn sm" type="button" id="lExc" title="Tirar do quadro (vai para o arquivo)">🗑 Excluir</button>${S.cards.some(k => S.sel.has(k.id) && k.origem === "bpo" && k.origem_ref) ? `<button class="btn sm" type="button" id="lSpam" title="Excluir e não criar mais cartões desse e-mail/remetente">🚫 É spam</button>` : ""}<button class="btn sm" type="button" id="lLimpa">Limpar</button></div>`;
 }
 function ligarLote() {
-  $$("[data-vis]").forEach(b => b.onclick = () => { S.vis = b.dataset.vis; if (S.vis === "lista") S.modoSel = false; try { localStorage.setItem("cq.vis", S.vis); } catch {} render(); });
+  $$("[data-vis]").forEach(b => b.onclick = () => { S.vis = b.dataset.vis; if (S.vis === "lista" || S.vis === "cal") S.modoSel = false; try { localStorage.setItem("cq.vis", S.vis); } catch {} render(); });
   if ($("#bSel")) $("#bSel").onclick = () => { S.modoSel = !S.modoSel; if (!S.modoSel) S.sel.clear(); render(); };
   if ($("#lTodos")) $("#lTodos").onclick = (e) => { const ks = S.cards.filter(passa); if (e.target.checked) ks.forEach(k => S.sel.add(k.id)); else S.sel.clear(); render(); };
   $$("[data-lsel]").forEach(i => i.onclick = (e) => { e.stopPropagation(); i.checked ? S.sel.add(i.dataset.lsel) : S.sel.delete(i.dataset.lsel); render(); });
+  $$("[data-cid]").forEach(b => b.onclick = () => abrir(b.dataset.cid));
+  $$("[data-cm]").forEach(b => b.onclick = () => { const [a, m] = calMes().split("-").map(Number), d = new Date(a, m - 1 + (+b.dataset.cm), 1); S.calMes = b.dataset.cm === "0" ? null : d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); render(); });
   $$("[data-lid]").forEach(r => r.onclick = (e) => { if (e.target.closest("input")) return; abrir(r.dataset.lid); });
   if ($("#lResp")) $("#lResp").onchange = async (e) => { if (e.target.value !== "__novo") return; e.target.value = ""; const id = await novoMembro(); if (id) { await carregar(true); const s = $("#lResp"); if (s) s.value = id; } };
   if ($("#lLimpa")) $("#lLimpa").onclick = () => { S.sel.clear(); S.modoSel = false; render(); };

@@ -57,6 +57,7 @@ main>*,.grid2>*{min-width:0}
 .mini{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:8px}
 .mini td,.mini th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 .tw{overflow-x:auto}
+.conf{width:100%;border-collapse:collapse;font-size:.88rem}.conf th,.conf td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.conf th:first-child,.conf td:first-child{text-align:left}.conf tr.tc td{font-weight:700;background:var(--surface-2)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .kpi{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface);text-align:left;cursor:pointer;display:grid;gap:2px}
 .kpi b{font:700 1.4rem var(--display)}.kpi span{font-size:.8rem;color:var(--muted)}.kpi em{font-style:normal;font-size:.78rem;font-weight:700}
@@ -264,6 +265,7 @@ function sugerirMapa(cab) {
     status: idx(/status|situacao|situa/),
     banco: idx(/banco|conta corrente|conta banc|portador/, /^cod|historico/),
     lote: idx(/lote|id pag|remessa|agrupador|n.? ?do ?pagamento/),
+    saldo: idx(/^saldo/),
   };
 }
 const RX_SALDO = /^\s*(saldo|s a l d o)\b|saldo do dia|saldo anterior|saldo final|saldo disponivel|saldo bloqueado|^\s*total\b/;
@@ -312,6 +314,58 @@ function gdoor(itens) {
   });
   const caixa = itens.filter((x, i) => !ehMk(x) && !usados.has(i)).length;
   return { itens: out, caixa, naoBanco, marcas: nMk, semDetalhe };
+}
+
+/* ================= saldos do extrato (conferência de variação) ================= */
+// Excel/CSV com coluna de saldo: saldo inicial = 1º saldo − 1º lançamento; saldo final = último saldo (corrige ordem decrescente).
+function saldosDaTabela(E) {
+  if (!E.rows || E.mapa.saldo == null || E.mapa.saldo < 0) return null;
+  const pts = [];
+  for (let i = E.mapa.header + 1; i < E.rows.length; i++) {
+    const r = E.rows[i]; if (!r) continue; const d = data(r[E.mapa.data]); const sd = num(r[E.mapa.saldo]); if (!d || sd == null) continue;
+    const desc = E.mapa.desc >= 0 ? normTxt(r[E.mapa.desc]) : "";
+    let v = null; if (E.mapa.valor >= 0) v = num(r[E.mapa.valor]);
+    if ((v == null || E.mapa.valor < 0) && (E.mapa.entrada >= 0 || E.mapa.saida >= 0)) { const e = num(r[E.mapa.entrada]) || 0, sa = num(r[E.mapa.saida]) || 0; v = Math.round((Math.abs(e) - Math.abs(sa)) * 100) / 100; }
+    if (E.mapa.dc >= 0 && v != null) { const t = normTxt(r[E.mapa.dc]).trim(); if (/^d\b|^d$|debito|saida|^-/.test(t)) v = -Math.abs(v); else if (/^c\b|^c$|credito|entrada|^\+/.test(t)) v = Math.abs(v); }
+    pts.push({ d, v: RX_SALDO.test(desc) ? 0 : (v || 0), sd });
+  }
+  if (pts.length < 2) return null;
+  if (pts[0].d > pts[pts.length - 1].d) pts.reverse();
+  const ini = Math.round((pts[0].sd - pts[0].v) * 100) / 100, fim = pts[pts.length - 1].sd;
+  return { ini, fim, dt: pts[pts.length - 1].d };
+}
+// Conferência de saldos por conta e por mês: variação do extrato × movimento do sistema (o "double check" mês a mês)
+function conferirSaldos(bancos, base) {
+  const mes = (d) => d.slice(0, 7);
+  return bancos.filter((E) => E.itens.length).map((E) => {
+    const ds = E.itens.map((x) => x.data), ini = E.ini || ds.reduce((m, x) => x < m ? x : m), fim = E.fim || ds.reduce((m, x) => x > m ? x : m);
+    const doSist = base.filter((l) => (!E.chave || normTxt(l.banco) === normTxt(E.chave)) && l.data >= ini && l.data <= fim);
+    const meses = [...new Set(E.itens.map((x) => mes(x.data)).concat(doSist.map((x) => mes(x.data))))].sort();
+    const linhas = meses.map((m) => { const b = E.itens.filter((x) => mes(x.data) === m), l = doSist.filter((x) => mes(x.data) === m);
+      const eb = soma(b.filter((x) => x.valor > 0)), sb_ = soma(b.filter((x) => x.valor < 0)), el = soma(l.filter((x) => x.valor > 0)), sl = soma(l.filter((x) => x.valor < 0));
+      return { mes: m, entB: eb, saiB: sb_, varB: Math.round((eb + sb_) * 100) / 100, entS: el, saiS: sl, varS: Math.round((el + sl) * 100) / 100, dif: Math.round((eb + sb_ - el - sl) * 100) / 100 }; });
+    const totB = soma(E.itens), totS = soma(doSist);
+    let sIni = E.saldoIni ?? null, sFim = E.saldoFim ?? null, integro = null;
+    if (sIni == null && sFim != null && E.ofx) sIni = Math.round((sFim - totB) * 100) / 100;
+    if (sIni != null && sFim != null && !E.ofx) integro = Math.abs(sIni + totB - sFim) < 0.01;
+    return { conta: E.chave || E.rotulo, rotulo: E.rotulo, arquivo: E.nome, ini, fim, sIni, sFim, integro, totB, totS, dif: Math.round((totB - totS) * 100) / 100, linhas, semChave: !E.chave };
+  });
+}
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const mesBR = (m) => MESES[+m.slice(5, 7) - 1] + "/" + m.slice(0, 4);
+function conferenciaHTML(conf) {
+  if (!conf || !conf.length) return "";
+  const ok = (v) => Math.abs(v) < 0.01;
+  const nOk = conf.filter((c) => ok(c.dif)).length;
+  return `<details class="card" ${conf.some((c) => !ok(c.dif) || c.integro === false) ? "open" : ""} style="margin-top:12px"><summary style="cursor:pointer"><b>Conferência de saldos (variação mês a mês)</b> · <span class="${nOk === conf.length ? "ok" : "err"}">${nOk} de ${conf.length} conta(s) batendo</span></summary>
+    <p class="note" style="margin:8px 0">Para cada conta: variação do extrato (entradas + saídas do banco) × movimento lançado no sistema no mesmo período. Diferença zero = saldo do sistema acompanha o banco.</p>
+    ${conf.map((c) => `<div style="margin-top:12px"><div class="row" style="justify-content:space-between"><b>${esc(c.conta)}</b><span class="note">${esc(c.arquivo)} · ${dBR(c.ini)} a ${dBR(c.fim)}</span></div>
+      ${c.semChave ? `<p class="warn" style="margin:4px 0">⚠️ Extrato sem conta do sistema escolhida: comparado com todos os lançamentos da planilha. Escolha a conta no passo 1.</p>` : ""}
+      ${c.sIni != null || c.sFim != null ? `<p class="note" style="margin:4px 0">Extrato: saldo inicial <b>${din(c.sIni)}</b> · saldo final <b>${din(c.sFim)}</b>${c.integro === false ? ` · <b class="err">o extrato não fecha: saldo inicial + lançamentos ≠ saldo final (faltam linhas no arquivo?)</b>` : c.integro ? ' · <b class="ok">extrato completo ✓</b>' : ""}</p>` : ""}
+      <div class="tw"><table class="conf"><thead><tr><th>Mês</th><th>Entradas banco</th><th>Saídas banco</th><th>Variação banco</th><th>Entradas sistema</th><th>Saídas sistema</th><th>Variação sistema</th><th>Diferença</th></tr></thead><tbody>
+      ${c.linhas.map((l) => `<tr><td>${mesBR(l.mes)}</td><td>${din(l.entB)}</td><td>${din(l.saiB)}</td><td>${din(l.varB)}</td><td>${din(l.entS)}</td><td>${din(l.saiS)}</td><td>${din(l.varS)}</td><td class="${ok(l.dif) ? "ok" : "err"}"><b>${ok(l.dif) ? "✓ 0,00" : brl(l.dif)}</b></td></tr>`).join("")}
+      ${c.linhas.length > 1 ? `<tr class="tc"><td>Período</td><td></td><td></td><td>${din(c.totB)}</td><td></td><td></td><td>${din(c.totS)}</td><td class="${ok(c.dif) ? "ok" : "err"}">${ok(c.dif) ? "✓ 0,00" : brl(c.dif)}</td></tr>` : ""}
+      </tbody></table></div></div>`).join("")}</details>`;
 }
 
 /* ================= motor de conciliação ================= */
@@ -434,9 +488,9 @@ function blocoBancos() {
   const bancosPlan = S.base ? [...new Set(S.base.itens.map((x) => x.banco).filter(Boolean))] : [];
   const lista = S.bancos.map((E, k) => `<div class="ext"><div class="row" style="justify-content:space-between;align-items:start">
       <div style="min-width:0;flex:1"><div class="field" style="max-width:340px"><label>Banco / conta</label><input data-rot="${k}" value="${esc(E.rotulo)}"></div>
-      <div class="note" style="margin-top:4px">📄 ${esc(E.nome)} · ${resumoArq(E.itens)}</div></div>
+      <div class="note" style="margin-top:4px">📄 ${esc(E.nome)} · ${resumoArq(E.itens)}${E.saldoFim != null ? ` · saldo final ${din(E.saldoFim)}` : ""}</div></div>
       <button class="btn ghost sm" data-rem="${k}" type="button" title="Tirar este extrato">✕ Tirar</button></div>
-      ${bancosPlan.length ? `<div class="field" style="max-width:340px;margin-top:6px"><label>Na planilha, este banco aparece como</label><select data-ch="${k}"><option value="">— conciliar com todos —</option>${bancosPlan.map((v) => `<option ${v === E.chave ? "selected" : ""}>${esc(v)}</option>`).join("")}</select></div>` : ""}
+      ${bancosPlan.length ? `<div class="field" style="max-width:340px;margin-top:6px"><label>Na planilha, este banco aparece como</label><select data-ch="${k}"><option value="">— conciliar com todos —</option>${bancosPlan.map((v) => `<option ${v === E.chave ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>${E.chaveAuto ? '<span class="note">escolhida pelos lançamentos que batem; confira</span>' : ""}</div>` : ""}
       ${E.aviso ? `<p class="warn" style="margin:6px 0 0">⚠️ ${esc(E.aviso)}</p>` : ""}
       ${E.rows ? mapaHTML(E, "b" + k) : ""}${previa(E.itens, false)}</div>`).join("");
   return `<div class="card"><div class="step"><i>1</i><h3 style="font-size:1.05rem">Extratos dos bancos</h3><span class="note">${S.bancos.length ? S.bancos.length + " extrato(s)" : ""}</span></div>
@@ -486,6 +540,8 @@ function resultadoHTML() {
       <div><div class="eyebrow">Resultado</div><h2 style="font-size:1.2rem">${esc(R.empresa)} · ${esc(R.bancoNome || "Contas")}</h2><p class="note">Período: ${dBR(R.periodo.ini)} a ${dBR(R.periodo.fim)} · tolerância de ${R.tol} dia(s) · ${pend ? `<b class="err">${pend} pendência(s) para ajustar</b>` : '<b class="ok">tudo conciliado ✓</b>'}</p></div>
       <div class="row noprint"><button class="btn sm" id="btnCompor" type="button" aria-pressed="${S.compor}">🧩 ${S.compor ? "Fechar composição" : "Compor manualmente"}</button><button class="btn primary sm" id="btnSalvar" type="button">💾 ${S.salvoId ? "Salvar alterações" : "Salvar conciliação"}</button><button class="btn sm" id="btnXls" type="button">⬇️ Excel</button><button class="btn sm" id="btnPdf" type="button">📄 PDF</button></div>
     </div>
+    ${R.foraConta && R.foraConta.length ? `<p class="note" style="margin-top:6px">Contas da planilha sem extrato enviado (ficaram fora desta conciliação): ${R.foraConta.map(esc).join(", ")}.</p>` : ""}
+    ${conferenciaHTML(R.conf)}
     ${S.compor ? comporHTML() : ""}
     <div class="kpis noprint" style="margin:12px 0">${ks.map(([k, l, v]) => `<button class="kpi" type="button" data-f="${k}" aria-pressed="${S.filtro === k}"><b>${cnt(k)}</b><span>${l}</span>${v ? `<em>${v}</em>` : ""}</button>`).join("")}<button class="kpi" type="button" data-f="pend" aria-pressed="${S.filtro === "pend"}"><b class="${pend ? "err" : "ok"}">${pend}</b><span>Pendências</span></button></div>
     <p class="note" style="margin-bottom:8px">Movimento dos bancos no período: <b>${din(totB)}</b> · da planilha: <b>${din(totL)}</b> · diferença: <b class="${Math.abs(totB - totL) < 0.01 ? "ok" : "err"}">${brl(totB - totL)}</b>${saldos ? ` · saldo final — ${saldos}` : ""}${S.filtro ? ` · <a href="#" data-f="">mostrar tudo</a>` : ""}</p>
@@ -579,14 +635,19 @@ async function carregarExtratos(files) {
     toast("Lendo " + file.name + "…");
     try {
       const nome = file.name, base = nome.replace(/\.[^.]+$/, ""); let E;
-      if (/\.ofx$/i.test(nome)) { const o = lerOFX(await lerTexto(file)); E = { nome, rotulo: o.banco || base, itens: o.itens, ini: o.ini, fim: o.fim, saldo: o.saldo, dtSaldo: o.dtSaldo }; }
+      if (/\.ofx$/i.test(nome)) { const o = lerOFX(await lerTexto(file));
+        // alguns bancos (ex.: Bradesco) gravam no OFX a data da exportação em vez do período: vale o intervalo dos lançamentos
+        const ds = o.itens.map((x) => x.data).sort(), dmin = ds[0], dmax = ds[ds.length - 1];
+        const ini = o.ini && dmin && o.ini <= dmin ? o.ini : dmin, fim = o.fim && dmax && o.fim >= dmax && o.fim <= addD(dmax, 5) ? o.fim : dmax;
+        const saldoOk = o.saldo != null && o.dtSaldo && o.dtSaldo <= addD(fim, 1);
+        E = { nome, rotulo: o.banco || base, itens: o.itens, ini, fim, saldo: saldoOk ? o.saldo : null, dtSaldo: saldoOk ? o.dtSaldo : null, ofx: true, saldoFim: saldoOk ? o.saldo : null }; }
       else if (/\.pdf$/i.test(nome)) { const p = await lerPDF(file); E = { nome, rotulo: base, itens: p.itens, aviso: p.aviso }; }
-      else if (/\.(xlsx|xls|csv|txt)$/i.test(nome)) { const t = await lerTabela(file); E = { nome, rotulo: base, ...t }; E.itens = linhasDaTabela(E.rows, E.mapa); }
+      else if (/\.(xlsx|xls|csv|txt)$/i.test(nome)) { const t = await lerTabela(file); E = { nome, rotulo: base, ...t }; E.itens = linhasDaTabela(E.rows, E.mapa); const sd = saldosDaTabela(E); if (sd) { E.saldoIni = sd.ini; E.saldoFim = sd.fim; E.saldo = sd.fim; E.dtSaldo = sd.dt; } }
       else { toast("Formato não aceito: " + nome); continue; }
       E.chave = ""; S.bancos.push(E); n++;
     } catch (err) { console.error(err); toast("Não consegui ler " + file.name + ": " + (err.message || err)); }
   }
-  if (n) { S.res = null; S.salvoId = null; render(); toast(n + " extrato(s) carregado(s)."); }
+  if (n) { S.res = null; S.salvoId = null; autoChaves(); render(); toast(n + " extrato(s) carregado(s)."); }
 }
 async function carregarBase(file) {
   if (!/\.(xlsx|xls|csv|txt)$/i.test(file.name)) { toast("Use Excel ou CSV para a planilha."); return; }
@@ -605,11 +666,18 @@ function aplicarGdoor(obj) {
 function autoChaves() {
   if (!S.base) return;
   const vals = [...new Set(S.base.itens.map((x) => x.banco).filter(Boolean))]; if (!vals.length) return;
-  S.bancos.forEach((E) => { if (E.chave) return; const r = vals.map((v) => [v, semelhanca(v, E.rotulo + " " + E.nome)]).sort((a, b) => b[1] - a[1])[0]; if (r && r[1] >= 0.5) E.chave = r[0]; });
+  const usadas = new Set(S.bancos.map((E) => E.chave).filter(Boolean));
+  S.bancos.forEach((E) => { if (E.chave) return; const r = vals.map((v) => [v, semelhanca(v, E.rotulo + " " + E.nome)]).sort((a, b) => b[1] - a[1])[0];
+    const amb = r && vals.filter((v) => semelhanca(v, E.rotulo + " " + E.nome) === r[1]).length > 1;
+    if (r && r[1] >= 0.5 && !amb) { E.chave = r[0]; usadas.add(r[0]); return; }
+    // pelos lançamentos: a conta do sistema com mais pares data+valor iguais aos do extrato
+    const chaves = new Set(E.itens.map((x) => x.data + "|" + x.valor.toFixed(2)));
+    const placar = vals.filter((v) => !usadas.has(v)).map((v) => [v, S.base.itens.filter((l) => normTxt(l.banco) === normTxt(v) && chaves.has(l.data + "|" + l.valor.toFixed(2))).length]).sort((a, b) => b[1] - a[1]);
+    if (placar[0] && placar[0][1] >= Math.max(3, E.itens.length * 0.3) && (!placar[1] || placar[0][1] > placar[1][1] * 2)) { E.chave = placar[0][0]; usadas.add(placar[0][0]); E.chaveAuto = true; } });
 }
 function remapear(chave) {
   if (chave === "base") { const a = S.base; a.itens = linhasDaTabela(a.rows, a.mapa, { status: a.status }); aplicarGdoor(a); autoChaves(); }
-  else { const E = S.bancos[+chave.slice(1)]; E.itens = linhasDaTabela(E.rows, E.mapa); }
+  else { const E = S.bancos[+chave.slice(1)]; E.itens = linhasDaTabela(E.rows, E.mapa); const sd = saldosDaTabela(E); E.saldoIni = sd ? sd.ini : null; E.saldoFim = sd ? sd.fim : null; if (sd) { E.saldo = sd.fim; E.dtSaldo = sd.dt; } }
   S.res = null; render();
 }
 
@@ -627,14 +695,19 @@ function ligar() {
   app.querySelectorAll("[data-trocar]").forEach((b) => b.onclick = () => abrirArquivo(b.dataset.trocar));
   app.querySelectorAll("[data-rem]").forEach((b) => b.onclick = () => { S.bancos.splice(+b.dataset.rem, 1); S.res = null; render(); });
   app.querySelectorAll("[data-rot]").forEach((i) => i.onchange = () => { S.bancos[+i.dataset.rot].rotulo = i.value.trim() || S.bancos[+i.dataset.rot].nome; S.res = null; autoChaves(); render(); });
-  app.querySelectorAll("[data-ch]").forEach((s) => s.onchange = () => { S.bancos[+s.dataset.ch].chave = s.value; S.res = null; render(); });
+  app.querySelectorAll("[data-ch]").forEach((s) => s.onchange = () => { const E = S.bancos[+s.dataset.ch]; E.chave = s.value; E.chaveAuto = false; S.res = null; render(); });
   app.querySelectorAll("[data-mapa]").forEach((s) => s.onchange = () => { const ch = s.dataset.mapa, a = ch === "base" ? S.base : S.bancos[+ch.slice(1)]; a.mapa[s.dataset.k] = +s.value; if (s.dataset.k === "status") a.status = new Set(); remapear(ch); });
   app.querySelectorAll("[data-st]").forEach((c) => c.onchange = () => { const a = S.base; if (c.checked) a.status.add(c.dataset.st); else a.status.delete(c.dataset.st); remapear("base"); });
   const bc = $("#btnConc"); if (bc) bc.onclick = () => {
     let n = 0; const itens = [];
     S.bancos.forEach((E) => E.itens.forEach((x) => itens.push({ ...x, banco: E.rotulo, ch: E.chave || "", uid: "b" + (n++) })));
+    // várias contas na planilha (ex.: relatório de extrato do GestãoClick): só entram as contas dos extratos enviados
+    const comExt = S.bancos.filter((E) => E.itens.length), chs = new Set(comExt.map((E) => normTxt(E.chave)).filter(Boolean));
+    const filtra = comExt.length && comExt.every((E) => E.chave);
+    const baseUsada = filtra ? S.base.itens.filter((l) => !l.banco || chs.has(normTxt(l.banco))) : S.base.itens;
+    const foraConta = filtra ? [...new Set(S.base.itens.filter((l) => l.banco && !chs.has(normTxt(l.banco))).map((l) => l.banco))] : [];
     const ini = S.bancos.map((E) => E.ini).filter(Boolean).concat(itens.map((x) => x.data)).reduce((m, x) => x < m ? x : m), fim = S.bancos.map((E) => E.fim).filter(Boolean).concat(itens.map((x) => x.data)).reduce((m, x) => x > m ? x : m);
-    S.res = { empresa: S.empresa, bancoNome: S.bancos.map((E) => E.rotulo).join(" + "), periodo: { ini, fim }, tol: S.tol, saldos: S.bancos.map((E) => ({ rotulo: E.rotulo, saldo: E.saldo ?? null, dt: E.dtSaldo || fim })), itens: conciliar(itens, S.base.itens, S.tol, { ini, fim }, S.bancos.filter((E) => E.chave && E.itens.length).map((E) => { const ds = E.itens.map((x) => x.data); return { ch: E.chave, ini: E.ini || ds.reduce((m, x) => x < m ? x : m), fim: E.fim || ds.reduce((m, x) => x > m ? x : m) }; })), arqB: S.bancos.map((E) => E.nome).join(", "), arqL: S.base.nome };
+    S.res = { empresa: S.empresa, bancoNome: S.bancos.map((E) => E.rotulo).join(" + "), periodo: { ini, fim }, tol: S.tol, saldos: S.bancos.map((E) => ({ rotulo: E.rotulo, saldo: E.saldo ?? null, dt: E.dtSaldo || fim })), conf: conferirSaldos(S.bancos, S.base.itens), foraConta, itens: conciliar(itens, baseUsada, S.tol, { ini, fim }, S.bancos.filter((E) => E.chave && E.itens.length).map((E) => { const ds = E.itens.map((x) => x.data); return { ch: E.chave, ini: E.ini || ds.reduce((m, x) => x < m ? x : m), fim: E.fim || ds.reduce((m, x) => x > m ? x : m) }; })), arqB: S.bancos.map((E) => E.nome).join(", "), arqL: S.base.nome };
     S.filtro = "pend"; S.salvoId = null; S.sel.clear(); S.selRes.clear(); render(); $("#res").scrollIntoView({ behavior: "smooth" });
   };
   app.querySelectorAll("[data-f]").forEach((b) => b.onclick = (e) => { e.preventDefault(); S.filtro = S.filtro === b.dataset.f ? "" : b.dataset.f; render(); });
@@ -664,7 +737,7 @@ function ligar() {
 const enxuto = (x) => x && { data: x.data, desc: x.desc, valor: x.valor, banco: x.banco || "", doc: x.doc || "", lote: x.lote || "", linha: x.linha || null, linhas: x.linhas || null, uid: x.uid };
 async function salvar() {
   const R = S.res, it = R.itens;
-  const resumo = { conc: it.filter((r) => ["c", "s", "m", "l"].includes(r.tipo)).length, data: it.filter((r) => r.tipo === "d").length, valor: it.filter((r) => r.tipo === "v").length, banco: it.filter((r) => r.tipo === "b").length, planilha: it.filter((r) => r.tipo === "p").length, pend: it.filter((r) => pendente(r) && !r.ok).length, tol: R.tol, saldos: R.saldos };
+  const resumo = { conc: it.filter((r) => ["c", "s", "m", "l"].includes(r.tipo)).length, data: it.filter((r) => r.tipo === "d").length, valor: it.filter((r) => r.tipo === "v").length, banco: it.filter((r) => r.tipo === "b").length, planilha: it.filter((r) => r.tipo === "p").length, pend: it.filter((r) => pendente(r) && !r.ok).length, tol: R.tol, saldos: R.saldos, conf: R.conf || null };
   const row = { empresa: R.empresa, banco: R.bancoNome, periodo_ini: R.periodo.ini, periodo_fim: R.periodo.fim, arquivo_banco: R.arqB, arquivo_base: R.arqL, resumo, criado_nome: S.nome,
     itens: it.map((r) => ({ tipo: r.tipo, bx: r.bx.map(enxuto), l: r.l.map(enxuto), dif: r.dif, dd: r.dd, como: r.como || "", taxa: r.taxa || 0, ajuste: r.ajuste, ok: !!r.ok, obs: r.obs || "" })), atualizado_em: new Date().toISOString() };
   const q = S.salvoId ? sb.from("conc_conciliacoes").update(row).eq("id", S.salvoId).select("id").single() : sb.from("conc_conciliacoes").insert(row).select("id").single();
@@ -677,7 +750,7 @@ async function abrirHist(id) {
   if (error || !h) { toast("Não consegui abrir."); return; }
   const itens = (h.itens || []).map((r) => ({ ...r, bx: r.bx || (r.b ? [r.b] : []), l: r.l || [] }));
   const rs = h.resumo || {};
-  S.res = { empresa: h.empresa, bancoNome: h.banco, periodo: { ini: h.periodo_ini, fim: h.periodo_fim }, tol: rs.tol ?? 3, saldos: rs.saldos || (rs.saldo != null ? [{ rotulo: h.banco, saldo: rs.saldo, dt: rs.dtSaldo }] : []), itens, arqB: h.arquivo_banco, arqL: h.arquivo_base };
+  S.res = { empresa: h.empresa, bancoNome: h.banco, periodo: { ini: h.periodo_ini, fim: h.periodo_fim }, tol: rs.tol ?? 3, saldos: rs.saldos || (rs.saldo != null ? [{ rotulo: h.banco, saldo: rs.saldo, dt: rs.dtSaldo }] : []), conf: rs.conf || null, itens, arqB: h.arquivo_banco, arqL: h.arquivo_base };
   S.salvoId = h.id; S.filtro = "pend"; S.sel.clear(); S.selRes.clear(); render(); $("#res").scrollIntoView({ behavior: "smooth" });
 }
 function exportarExcel() {
@@ -690,6 +763,7 @@ function exportarExcel() {
   const pend = linhas.filter((x, i) => pendente(R.itens[i]));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pend.length ? pend : [{ "Situação": "Sem pendências" }]), "Pendências");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "Tudo");
+  if (R.conf && R.conf.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(R.conf.flatMap((c) => c.linhas.map((l) => ({ "Conta": c.conta, "Mês": mesBR(l.mes), "Entradas banco": l.entB, "Saídas banco": l.saiB, "Variação banco": l.varB, "Entradas sistema": l.entS, "Saídas sistema": l.saiS, "Variação sistema": l.varS, "Diferença": l.dif, "Saldo inicial extrato": c.sIni ?? "", "Saldo final extrato": c.sFim ?? "" })))), "Conferência de saldos");
   XLSX.writeFile(wb, `Conciliacao_${R.empresa.replace(/[^\w]+/g, "_")}_${R.periodo.ini}_${R.periodo.fim}.xlsx`);
 }
 iniciar().catch((e) => { console.error(e); $("#app").innerHTML = `<div class="card"><p class="err">Erro ao abrir: ${esc(e.message || e)}</p></div>`; });

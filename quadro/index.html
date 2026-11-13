@@ -1218,6 +1218,25 @@ async function irParaNotif(n) {
 const SEG_NOME = { agro: "Mercado agro", geral: "Mercado", tecnologia: "Tecnologia", saude: "Saúde", construcao: "Construção e imóveis", alimentacao: "Alimentação" };
 const brl = (v) => v;
 const PAPO_URL = new URL("../papo-de-porteira/noticias/", location.href).href;
+/* Papo de Porteira em evidência no letreiro: episódio novo (até 14 dias) e próxima live (até 14 dias) */
+const PP_PAG = new URL("../papo-de-porteira/", location.href).href;
+async function papoEpisodios() {
+  try {
+    const r = await fetch(CFG.supabaseUrl + "/functions/v1/papo"); if (!r.ok) return [];
+    const eps = ((await r.json()).episodios || []).map(e => { const [a, m, d] = e.data.split("-").map(Number), [h, mi] = (e.hora || "12:00").split(":").map(Number); const ini = Date.UTC(a, m - 1, d, h + 3, mi); return { ...e, ini, fim: ini + 3600e3 }; });
+    const ag = Date.now(), D = 864e5, out = [];
+    const novo = eps.filter(e => e.fim <= ag).pop(), prox = eps.find(e => e.fim > ag);
+    const nome = (e) => `<b>${esc(e.tema || "tema a definir")}</b>${e.convidado ? " com " + esc(e.convidado) : ""}`;
+    const dd = (e) => e.data.slice(8) + "/" + e.data.slice(5, 7) + " às " + (e.hora || "12:00").replace(":00", "h").replace(":", "h");
+    const hj = new Date(ag - 3 * 3600e3).toISOString(), saiu = hj.slice(11, 16) >= "05:55";
+    out.push(`<a href="https://www.youtube.com/@vitalconsultoria116/videos" target="_blank" rel="noopener" title="Papo de Porteira no YouTube">🎙️ <span class="up">${saiu ? "NOVO EPISÓDIO" : "EPISÓDIO DIÁRIO"}</span> <span class="fn">Papo de Porteira:</span> ${saiu ? "o de hoje já está no ar · assistir no YouTube" : "novo todo dia às 05:55 no YouTube e Spotify"}</a>`);
+    if (prox && prox.ini <= ag) out.push(`<a href="https://www.instagram.com/vital_consultoria/" target="_blank" rel="noopener" title="Papo de Porteira ao vivo no Instagram">🔴 <span class="up">AO VIVO</span> <span class="fn">Papo de Porteira:</span> ${nome(prox)}</a>`);
+    else {
+      if (prox && prox.ini - ag <= 14 * D) out.push(`<a href="${esc(PP_PAG)}" target="_blank" rel="noopener" title="Programação do Papo de Porteira">🎙️ <span class="fn">Próxima live com convidado (${dd(prox)}):</span> ${nome(prox)}</a>`);
+    }
+    return out;
+  } catch { return []; }
+}
 async function iniciarTicker() {
   const qSeg = (S.q && S.q.segmento) || ((S.quadros.find(q => q.segmento) || {}).segmento) || "geral";
   if (!qSeg || !sb.functions) return;
@@ -1233,16 +1252,18 @@ async function carregarTicker() {
     const { data: pn } = await sb.from("papo_noticias").select("id,data,segmento,titulo,fonte_nome").in("segmento", [...new Set(segs)]).order("data", { ascending: false }).order("id").limit(12);
     if (pn && pn.length) { const ult = pn[0].data; S.papo = pn.filter(x => dias(x.data) >= -3 && (x.data === ult || pn.length < 6)); } else S.papo = [];
   } catch { S.papo = []; }
+  S.ppEp = await papoEpisodios();
   if (S.papo.length) { j = j || {}; j.noticias = S.papo.map(n => ({ titulo: n.titulo, fonte: "Papo de Porteira", url: PAPO_URL + "#n" + n.id, publicado_em: n.data + "T09:00:00", papo: true })); }
-  if (!j || (!(j.cotacoes || []).length && !(j.noticias || []).length)) return;
+  if (S.ppEp.length) j = j || {};
+  if (!j || (!S.ppEp.length && !(j.cotacoes || []).length && !(j.noticias || []).length)) return;
   S.mercado = j;
   const ico = (t) => /soja/i.test(t) ? "🌱" : /milho/i.test(t) ? "🌽" : /boi/i.test(t) ? "🐂" : /d[oó]lar/i.test(t) ? "💵" : /caf/i.test(t) ? "☕" : "📈";
   const varH = (v) => v == null ? "" : v > 0 ? ` <span class="up">▲ ${String(v.toFixed(2)).replace(".", ",")}%</span>` : v < 0 ? ` <span class="dn">▼ ${String(Math.abs(v).toFixed(2)).replace(".", ",")}%</span>` : ` <span class="fn">= 0%</span>`;
   const cot = (j.cotacoes || []).map(c => `<a class="ct" href="${esc(c.url)}" target="_blank" rel="noopener" title="${esc(c.fonte || "")} · abre em nova guia">${ico(c.titulo)} ${esc(c.titulo)}: <b>R$ ${esc(c.valor)}</b>${c.unidade && c.unidade !== "R$" ? esc(c.unidade.replace("R$", "")) : ""}${varH(c.variacao)}</a>`);
   const nts = (j.noticias || []).slice(0, 15).map(n => n.papo ? `<a href="${esc(n.url)}" target="_blank" rel="noopener" title="Papo de Porteira Notícias · abre em nova guia">🎙️ <span class="fn">Papo de Porteira:</span> ${esc(n.titulo)}</a>` : `<a href="${esc(n.url)}" target="_blank" rel="noopener" title="Abre a notícia em nova guia">📰 <span class="fn">${esc(n.fonte || "")}:</span> ${esc(n.titulo)}</a>`);
-  const itens = [...cot, ...nts].join("");
+  const itens = [...S.ppEp, ...cot, ...nts].join("");
   const el = $("#ticker");
-  el.innerHTML = `<div class="lb">📈 <span>${esc(SEG_NOME[S.seg] || "Mercado")}</span></div><div class="vp"><div class="tr" style="--dur:${Math.max(60, (cot.length + nts.length) * 9)}s">${itens}<span aria-hidden="true" style="display:inline-flex;gap:28px">${itens.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div><button class="mais" type="button" id="tkMais" aria-label="Ver todas as notícias e cotações">📰 Todas</button>`;
+  el.innerHTML = `<div class="lb">📈 <span>${esc(SEG_NOME[S.seg] || "Mercado")}</span></div><div class="vp"><div class="tr" style="--dur:${Math.max(60, (S.ppEp.length + cot.length + nts.length) * 9)}s">${itens}<span aria-hidden="true" style="display:inline-flex;gap:28px">${itens.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div><button class="mais" type="button" id="tkMais" aria-label="Ver todas as notícias e cotações">📰 Todas</button>`;
   el.hidden = false;
   $("#tkMais").onclick = (e) => { e.stopPropagation(); abrirNoticias(); };
 }

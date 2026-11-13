@@ -216,7 +216,7 @@ td.num,th.num{text-align:right;white-space:nowrap}
 button.kpi{font:inherit;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
 button.kpi:hover{border-color:var(--brand-2)}
 button.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg);box-shadow:inset 0 0 0 1px var(--brand)}
-.board{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:12px;align-items:start}
+.board{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:12px;align-items:stretch}
 @media (max-width:900px){.board{grid-template-columns:minmax(0,1fr)}}
 .col{background:var(--surface-2);border-radius:var(--r);padding:10px;display:grid;gap:8px;align-content:start;min-height:120px}
 .col.drop{outline:2px dashed var(--brand-2);outline-offset:-2px}
@@ -224,14 +224,17 @@ button.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg
 .col.ref{background:rgba(201,167,74,.13);border:1px dashed rgba(201,167,74,.6)}
 .col.ref .colh h2::after{content:" · fixas";font-weight:400;font-size:.78rem;color:var(--muted)}
 .col.ref .k{border-left:3px solid #c9a74a}
-.colh{display:flex;align-items:center;gap:8px;padding:2px 4px}
+.colh{display:flex;align-items:center;gap:8px;padding:8px 4px 6px;margin:-10px -10px 0;padding-left:14px;padding-right:14px;position:sticky;top:var(--topo,64px);z-index:3;background:inherit;border-radius:var(--r) var(--r) 0 0;cursor:default;user-select:none}
+.col:not(.ref) .colh{background:var(--surface-2)}.col.ref .colh{background:#f6efdc}
+.colh[data-dbl]{cursor:copy}
 .colh h2{font-size:.95rem;flex:1}
+.pdfdlg{border:0;border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.pdfdlg::backdrop{background:rgba(0,0,0,.35)}
 .colh .n{font-size:.8rem;color:var(--muted);font-weight:700;background:var(--surface);border-radius:999px;padding:1px 8px}
 .k{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:grid;gap:6px;text-align:left;width:100%}
 .k:hover{border-color:var(--brand-2)}
 .k.drag{opacity:.4}
 .k .t{font-weight:600;line-height:1.3;overflow-wrap:anywhere;min-width:0}
-.board,.col,.k,.k .m{min-width:0}.k{max-width:100%;overflow:hidden}.col{overflow:hidden}
+.board,.col,.k,.k .m{min-width:0}.k{max-width:100%;overflow:hidden}.col{overflow:clip}
 .k .pill{max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35;padding:2px 8px}
 .rbpo{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:10px;margin-top:10px}.rbpo .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.rbpo h3{margin:0;font-size:1rem}.rbpo .rk{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.rbpo .rk button{all:unset;cursor:pointer;border-radius:12px;padding:10px 12px;background:var(--surface-2);display:grid;gap:2px}.rbpo .rk button:hover{outline:2px solid var(--brand)}.rbpo .rk b{font-size:1.35rem}.rbpo .rk span{font-size:.8rem;color:var(--muted)}.rbpo .rk em{font-style:normal;font-size:.78rem;font-weight:700}
 .pess{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.pess .lbl{font-size:.8rem;color:var(--muted);font-weight:700;margin-right:2px}.pess .chipb{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px}.pess .chipb .av{width:22px;height:22px;font-size:.7rem;margin-left:0}.pess .chipb[data-pp=""]{padding:6px 12px}
@@ -680,7 +683,7 @@ function render() {
     const ks = S.cards.filter(k => k._v === c.id).sort(S.ordem === "prazo" ? porPrazo : (a, b) => a.ordem - b.ordem);
     const vis = ks.filter(passa);
     return `<section class="col${c.referencia ? " ref" : ""}" data-col="${c.id}" aria-label="${esc(c.nome)}"${c.referencia ? ` title="Atribuições fixas e observações internas: não contam como tarefas em aberto"` : ""}>
-      <div class="colh"><h2>${esc(c.nome)}</h2><span class="n">${ks.length}</span></div>
+      <div class="colh"${c.concluida || S.marc ? "" : ` data-dbl="${c.id}" title="Dois cliques para criar um cartão nesta lista"`}><h2>${esc(c.nome)}</h2><span class="n">${ks.length}</span></div>
       ${vis.map(cardHTML).join("") || `<div class="vazio">${ks.length ? "Nada neste filtro." : "Nenhuma tarefa."}</div>`}
       ${c.concluida || S.marc ? "" : `<button class="add" type="button" data-add="${c.id}">+ Adicionar tarefa</button>`}
     </section>`;
@@ -728,6 +731,8 @@ function render() {
     };
   });
   $$("[data-add]").forEach(b => b.onclick = () => novoForm(b));
+  $$("[data-dbl]").forEach(h => h.ondblclick = (e) => { e.preventDefault(); const b = document.querySelector(`[data-add="${h.dataset.dbl}"]`); if (!b) return; h.after(b); novoForm(b); });
+  { const tp = document.querySelector(".top"); if (tp) document.documentElement.style.setProperty("--topo", tp.offsetHeight + "px"); }
 }
 /* ===== BPO: resumo dinâmico e PDFs para Diretoria e RH ===== */
 function ehBPO() { return !!(S.q && !S.marc && /^BPO ·/.test(S.q.nome || "")); }
@@ -773,9 +778,38 @@ function pdfBPO(tipo) {
     <header><img src="${logo}" alt=""><div><h1>${tit} · BPO ${esc(nomeQ)}</h1><p>Situação em ${hoje}, ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · Vital Agro & Negócios – BPO Financeiro</p></div></header>
     ${corpo || `<div class="vazio">Nenhum assunto ${tipo === "rh" ? "do RH" : "da Diretoria"} em aberto neste momento.</div>`}
     <footer>Gerado do quadro de tarefas da Vital. Concluído = movido para “Concluído” pelo time ou com evidência no e-mail.</footer>
-    <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
-  const w = window.open("", "_blank"); if (!w) return toast("Libere as janelas pop-up deste site para gerar o PDF.");
-  w.document.open(); w.document.write(html); w.document.close();
+    </body></html>`;
+  const nome = `${tit} - ${nomeQ} - ${hoje.replace(/\//g, "-")}.pdf`;
+  envioPdf(html, nome, `${tit} · BPO ${nomeQ} · ${hoje}`);
+}
+/* PDF de verdade (html2pdf) com opção de enviar no WhatsApp pelo compartilhar do aparelho */
+function libPdf() { return window.html2pdf ? Promise.resolve() : new Promise((ok, erro) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"; s.onload = ok; s.onerror = () => erro(new Error("Não foi possível carregar o gerador de PDF.")); document.head.appendChild(s); }); }
+async function pdfBlob(html) {
+  await libPdf();
+  const fr = document.createElement("iframe"); fr.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0"; document.body.appendChild(fr);
+  fr.contentDocument.open(); fr.contentDocument.write(html); fr.contentDocument.close();
+  await new Promise(r => { const im = [...fr.contentDocument.images]; let n = im.length; if (!n) return r(); const fim = () => --n <= 0 && r(); im.forEach(i => i.complete ? fim() : (i.onload = i.onerror = fim)); setTimeout(r, 3000); });
+  try { return await window.html2pdf().set({ margin: [10, 10, 12, 10], html2canvas: { scale: 2, useCORS: true, windowWidth: 794 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }, pagebreak: { mode: ["css", "legacy"], avoid: ["tr", "h2"] } }).from(fr.contentDocument.body).outputPdf("blob"); }
+  finally { fr.remove(); }
+}
+async function envioPdf(html, nome, texto) {
+  const d = document.createElement("dialog"); d.className = "pdfdlg";
+  d.innerHTML = `<form method="dialog" class="stack" style="gap:12px;min-width:min(420px,86vw)"><h3 style="margin:0;font-size:1.05rem">${esc(texto)}</h3><p class="note" id="pdfSt" style="margin:0">Gerando o PDF…</p>
+    <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn primary" type="button" id="pdfWa" disabled>📲 Enviar no WhatsApp</button><button class="btn" type="button" id="pdfBx" disabled>⬇ Baixar PDF</button><button class="btn ghost" value="x">Fechar</button></div></form>`;
+  document.body.appendChild(d); d.showModal(); d.onclose = () => d.remove();
+  let blob;
+  try { blob = await pdfBlob(html); } catch (e) { d.querySelector("#pdfSt").textContent = e.message; return; }
+  const arq = new File([blob], nome, { type: "application/pdf" });
+  const baixar = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+  const st = d.querySelector("#pdfSt"), wa = d.querySelector("#pdfWa"), bx = d.querySelector("#pdfBx");
+  const pode = !!(navigator.canShare && navigator.canShare({ files: [arq] }));
+  st.textContent = pode ? "Pronto. Toque em “Enviar no WhatsApp” e escolha o WhatsApp e a conversa." : "Pronto. Neste computador o PDF é baixado e o WhatsApp Web abre: é só anexar o arquivo (📎) na conversa.";
+  wa.disabled = bx.disabled = false;
+  bx.onclick = baixar;
+  wa.onclick = async () => {
+    if (pode) { try { await navigator.share({ files: [arq], title: texto, text: texto }); d.close(); } catch (e) { if (e.name !== "AbortError") toast("Não foi possível compartilhar: " + e.message); } return; }
+    baixar(); window.open("https://wa.me/?text=" + encodeURIComponent(texto + " (PDF em anexo)"), "_blank", "noopener");
+  };
 }
 
 /* ===== visão em lista e mudanças em lote ===== */

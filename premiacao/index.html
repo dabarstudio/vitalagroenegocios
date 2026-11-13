@@ -183,8 +183,9 @@ async function iniciar() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { location.href = "/vitalagroenegocios/cliente/?volta=/vitalagroenegocios/premiacao/"; return; }
   S.user = session.user;
-  const { data: perfil } = await sb.from("perfis").select("papel, nome, email, login").eq("user_id", S.user.id).maybeSingle();
-  S.perfil = perfil || { papel: "", nome: S.user.email }; S.adm = S.perfil.papel === "admin";
+  const { data: perfil } = await sb.from("perfis").select("papel, nome, email, login, ferramentas").eq("user_id", S.user.id).maybeSingle();
+  S.perfil = perfil || { papel: "", nome: S.user.email };
+  S.adm = S.perfil.papel === "admin" || (S.perfil.papel === "equipe" && (S.perfil.ferramentas || []).includes("premiacao"));
   const nomes = new Set();
   const { data: arqs } = await sb.from("ent_arquivos").select("empresa, titulo").limit(3000);
   (arqs || []).forEach((a) => { if (S.adm ? /arcanjos/i.test(a.empresa) : a.titulo.startsWith("[COE]")) nomes.add(a.empresa); });

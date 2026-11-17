@@ -959,7 +959,7 @@ function pac(){ const l=S.paineis||[]; const x = l.find(p=>p.empresa===P.emp) ||
 function mesesPrev(D){ const u=D.meses[D.meses.length-1]; let y=+u.slice(0,4), m=+u.slice(5,7); const o=[]; for(let i=0;i<4;i++){ m++; if(m>12){m=1;y++;} o.push(y+"-"+String(m).padStart(2,"0")); } return o; }
 function idxPer(D){ const n=D.meses.length, a=[...Array(n).keys()];
   if (P.per==="12") return a.slice(Math.max(0,n-12)); if (P.per==="tudo") return a; return a.filter(i=>D.meses[i].startsWith(P.per)); }
-const passa = f => P.ver==="c" ? !f[5] : P.ver==="l" ? f[1]===0 : f[1]===1;
+const passa = f => !f[5] && (P.ver==="c" ? true : P.ver==="l" ? f[1]===0 : f[1]===1);
 const passaCx = f => P.ver==="c" ? true : P.ver==="l" ? f[1]===0 : f[1]===1;
 function serie(D, pred){ const o=new Array(D.meses.length).fill(0); for (const f of D.fatos) if (passa(f) && pred(f)) o[f[0]]+=f[7]; return o; }
 const g_ = (D,f) => D.cats[f[2]].g;
@@ -1013,8 +1013,8 @@ const DRE = [
   {k:"cx", t:"= Resultado de caixa do período", s:["rlq","fx"]}];
 function calcDRE(D){
   const nm=D.meses.length, L={}, grupos={}, cats={};
-  D.grupos.X_IC ||= "Repasses entre Life e Health"; D.grupos.X_CARTAO = "Pagamento de fatura de cartão";
-  for (const f of D.fatos){ if(!passaCx(f)) continue; const c=D.cats[f[2]], g=(P.ver==="c"&&f[5])?"X_IC":c.g; const lin=DRE.find(l=>l.p&&l.p(g)); if(!lin) continue;
+  D.grupos.X_IC = "Transferências entre empresas do grupo (Life × Health)"; D.grupos.X_CARTAO = "Pagamento de fatura de cartão";
+  for (const f of D.fatos){ if(!passaCx(f)) continue; const c=D.cats[f[2]], g=(f[5]||c.g==="X_IC")?"X_IC":c.g; const lin=DRE.find(l=>l.p&&l.p(g)); if(!lin) continue;
     const cn=g==="X_IC"?c.n+" (repasse)":c.n;
     (L[lin.k] ||= new Array(nm).fill(0))[f[0]]+=f[7]; (grupos[g] ||= new Array(nm).fill(0))[f[0]]+=f[7]; (cats[cn] ||= new Array(nm).fill(0))[f[0]]+=f[7]; }
   DRE.forEach(l=>{ if (l.s) { L[l.k]=new Array(nm).fill(0); l.s.forEach(k=>(L[k]||[]).forEach((v,i)=>L[l.k][i]+=v)); } else L[l.k] ||= new Array(nm).fill(0); });
@@ -1117,7 +1117,7 @@ async function abrirQ(D,id,mi){ const q=QB[id]; if(!q) return;
   if(antes) h+=`<p class="note lcw">O detalhe por lançamento está disponível de ${esc(mesC(D.meses[ini]))} em diante. Os meses anteriores aparecem só no total.</p>`;
   if(!sel.length) h+=`<p class="note">Nenhum lançamento encontrado para este valor no período.</p>`;
   h+=Object.keys(porMes).sort().reverse().map(m=>{ const xs=porMes[m].sort((a,b)=>String(b[1]).localeCompare(String(a[1]))); const st=xs.reduce((a,x)=>a+(+x[7]||0),0);
-    return `<div class="lcm"><div class="lcmh"><b>${esc(mesC(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(fmtDia(x[1]))}</b><span class="${x[7]<0?"neg":""}">${fRc(+x[7]||0)}</span></div><div class="lcd">${esc(x[3]||"Sem fornecedor/cliente")}${x[4]?" · "+esc(x[4]):""}</div><div class="lcd note">${esc(x[5]||"")}${x[6]&&!/^([-#]|life$|health$)/i.test(x[6])?" · "+esc(x[6]):""} · ${esc(x[2]||"")}${x[8]===1?" · Health":" · Life"}${x[9]&&x[9]!=="lançado"?` · <i>CC por ${esc(x[9])}</i>`:""}${x[10]?` · <i>plano antes: ${esc(x[10])}</i>`:""}</div></div>`).join("")}</div>`; }).join("");
+    return `<div class="lcm"><div class="lcmh"><b>${esc(mesC(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(fmtDia(x[1]))}</b><span class="${x[7]<0?"neg":""}">${fRc(+x[7]||0)}</span></div><div class="lcd">${esc(x[3]||"Sem fornecedor/cliente")}${x[4]?" · "+esc(x[4]):""}</div><div class="lcd note">${esc(x[5]||"")}${x[6]&&!/^([-#]|life$|health$)/i.test(x[6])?" · "+esc(x[6]):""} · ${esc(x[2]||"")}${x[8]===1?" · Health":" · Life"}${x[9]&&x[9]!=="lançado"?` · <i>CC por ${esc(x[9])}</i>`:""}${x[10]?` · <i>plano antes: ${esc(x[10])}</i>`:""}${x[13]?(x[13]==="sem par"?` · <b class="neg">⚠ transferência sem a contrapartida de mesmo valor</b>`:` · par: lançamento ${esc(String(x[13]))}`):""}</div></div>`).join("")}</div>`; }).join("");
   h+=`<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px"><span class="note" style="margin:0">Fonte: lançamentos confirmados da planilha de gestão</span>${sel.length?`<button type="button" class="btn sm ghost" data-lccsv>Baixar (CSV)</button>`:""}</div>`;
   let d=document.getElementById("mzLc"); if(!d){ d=document.createElement("dialog"); d.id="mzLc"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
   d.innerHTML=h; d.querySelector("[data-lcx]").onclick=()=>d.close();
@@ -1215,6 +1215,8 @@ function secDRE(D){
       if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>{ const nn=n.replace(/ \(repasse\)$/,""), pr=f=>D.cats[f[2]].n===nn, ck="C:"+n; h+=row(n, cats[n], "dcat", ck, 2, pr, fixoCat(D.cats.find(c=>c.n===nn))); if(P.ab[ck]) h+=fornRows(nn,pr); }); });
   });
   h+=`</tbody></table></div></div>`;
+  { const B=S.lanc&&S.lanc[P.emp]; if(B&&B.l&&B.l[0]&&B.l[0].length>13){ const set=new Set(idx.map(i=>D.meses[i])); const sp=B.l.filter(x=>x[13]==="sem par"&&set.has(String(x[1]).slice(0,7))&&passaCx([0,x[8]]));
+    if(sp.length){ const q=qreg("Transferências entre empresas sem contrapartida",f=>f.x[13]==="sem par"); h=h.replace('<div class="tw"><table class="dre">',`<div class="lcw" style="margin:6px 0 10px"><b>⚠ Transferências:</b> ${sp.length} transferência${sp.length>1?"s":""} entre Life e Health sem a entrada/saída de igual valor na outra empresa (${fRc(sp.reduce((a,x)=>a+(+x[7]||0),0))}). <a href="#" class="qk" data-q="${q}" data-mi="-1">Ver e validar</a></div><div class="tw"><table class="dre">`); } } else if(!(S.lanc&&P.emp in S.lanc)) carregarLanc().then(()=>{ if(P.sec==="dre") corpo(); }); }
   // alertas de linearidade (todas as contas fixas, mesmo fechadas)
   { const al=[]; Object.keys(cats).forEach(n=>{ const nn=n.replace(/ \(repasse\)$/,""), c=D.cats.find(c=>c.n===nn); if(fixoCat(c)) gapsDe(cats[n],idx).forEach(i=>al.push([nn,i])); });
     if(al.length){ const por={}; al.forEach(([n,i])=>(por[n]=por[n]||[]).push(mesC(D.meses[i])));

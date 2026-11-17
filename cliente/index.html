@@ -166,7 +166,7 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .dre tr.lc td[data-mzm]{cursor:pointer}.dre tr.lc td[data-mzm]:hover{background:var(--surface-2);text-decoration:underline dotted}
 .lcb{all:unset;cursor:pointer;color:inherit;text-decoration:underline dotted;text-underline-offset:3px}.lcb:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .lcdlg{width:min(640px,96vw);max-height:88vh;border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--surface);color:inherit}
-.qk{cursor:pointer}.dre tr.dforn td{font-size:.8rem;background:color-mix(in srgb,var(--surface-2) 45%,transparent)}.dre tr.clk{cursor:pointer}.dre td.qk:hover,.dre tr.qk:hover td{background:var(--surface-2)}.qn{text-decoration:underline dotted;text-underline-offset:3px}.dre td.qk:hover{text-decoration:underline dotted}
+.qk{cursor:pointer}.dre td.gap{color:#9a5b00;background:#fff4dc;font-weight:700;cursor:help}.dre tr.dforn td{font-size:.8rem;background:color-mix(in srgb,var(--surface-2) 45%,transparent)}.dre tr.clk{cursor:pointer}.dre td.qk:hover,.dre tr.qk:hover td{background:var(--surface-2)}.qn{text-decoration:underline dotted;text-underline-offset:3px}.dre td.qk:hover{text-decoration:underline dotted}
 .lcdlg::backdrop{background:rgba(0,0,0,.55)}.lch{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px}
 .lcm{border-top:1px solid var(--line);padding:8px 0}.lcmh{display:flex;justify-content:space-between;font-size:.92rem;margin-bottom:4px}
 .lci{padding:6px 0 6px 8px;border-left:3px solid var(--line);margin:4px 0}.lcl{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
@@ -1116,7 +1116,7 @@ async function abrirQ(D,id,mi){ const q=QB[id]; if(!q) return;
   if(antes) h+=`<p class="note lcw">O detalhe por lançamento está disponível de ${esc(mesC(D.meses[ini]))} em diante. Os meses anteriores aparecem só no total.</p>`;
   if(!sel.length) h+=`<p class="note">Nenhum lançamento encontrado para este valor no período.</p>`;
   h+=Object.keys(porMes).sort().reverse().map(m=>{ const xs=porMes[m].sort((a,b)=>String(b[1]).localeCompare(String(a[1]))); const st=xs.reduce((a,x)=>a+(+x[7]||0),0);
-    return `<div class="lcm"><div class="lcmh"><b>${esc(mesC(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(fmtDia(x[1]))}</b><span class="${x[7]<0?"neg":""}">${fRc(+x[7]||0)}</span></div><div class="lcd">${esc(x[3]||"Sem fornecedor/cliente")}${x[4]?" · "+esc(x[4]):""}</div><div class="lcd note">${esc(x[5]||"")}${x[6]&&!/^([-#]|life$|health$)/i.test(x[6])?" · "+esc(x[6]):""} · ${esc(x[2]||"")}${x[8]===1?" · Health":" · Life"}</div></div>`).join("")}</div>`; }).join("");
+    return `<div class="lcm"><div class="lcmh"><b>${esc(mesC(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(fmtDia(x[1]))}</b><span class="${x[7]<0?"neg":""}">${fRc(+x[7]||0)}</span></div><div class="lcd">${esc(x[3]||"Sem fornecedor/cliente")}${x[4]?" · "+esc(x[4]):""}</div><div class="lcd note">${esc(x[5]||"")}${x[6]&&!/^([-#]|life$|health$)/i.test(x[6])?" · "+esc(x[6]):""} · ${esc(x[2]||"")}${x[8]===1?" · Health":" · Life"}${x[9]&&x[9]!=="lançado"?` · <i>CC por ${esc(x[9])}</i>`:""}${x[10]?` · <i>plano antes: ${esc(x[10])}</i>`:""}</div></div>`).join("")}</div>`; }).join("");
   h+=`<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px"><span class="note" style="margin:0">Fonte: lançamentos confirmados da planilha de gestão</span>${sel.length?`<button type="button" class="btn sm ghost" data-lccsv>Baixar (CSV)</button>`:""}</div>`;
   let d=document.getElementById("mzLc"); if(!d){ d=document.createElement("dialog"); d.id="mzLc"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
   d.innerHTML=h; d.querySelector("[data-lcx]").onclick=()=>d.close();
@@ -1130,6 +1130,10 @@ function fornDe(D,pred){ const F=lcFatos(D); if(!F) return null; const m={}, nm=
   for(const o of F){ if(o.f[0]<0||o.f[2]<0||!passaCx(o.f)) continue; let ok=false; try{ ok=pred(o.f); }catch(e){} if(!ok) continue; const n0=fornOf(o.x), k=nzs(n0), n=(nm[k] ||= n0.toUpperCase()); (m[n] ||= new Array(D.meses.length).fill(0))[o.f[0]]+=o.f[7]; }
   return m; }
 const precisaLanc=()=>Object.keys(P.ab||{}).some(k=>/^(C|Q):/.test(k)&&P.ab[k]);
+/* linearidade: custo recorrente que some num mês = indício de pagamento não lançado ou lançado em outra conta */
+const fixoCat=c=>!!c&&(c.nat==="F"||/^(P_|A_)/.test(c.g||""));
+function gapsDe(arr,idx){ const nzI=idx.filter(i=>Math.abs(arr[i]||0)>=0.005); const g=new Set(); if(nzI.length<Math.max(3,Math.ceil(idx.length*0.6))) return g;
+  const a=idx.indexOf(nzI[0]), b=idx.length-1; for(let k=a;k<=b;k++){ const i=idx[k]; if(Math.abs(arr[i]||0)<0.005) g.add(i); } return g; }
 function secResumo(D){
   const idx=idxPer(D), {L}=calcDRE(D), rb=soma(L.rb,idx), rl=soma(L.rlq,idx), mc=soma(L.mc,idx), eb=soma(L.eb,idx);
   const desp = L.rb.map((v,i)=>L.rlq[i]-v);
@@ -1157,8 +1161,8 @@ function secDRE(D){
      <div class="row" style="gap:6px"><button class="btn sm ghost" id="dreAbre">Abrir tudo</button><button class="btn sm ghost" id="dreCsv">Baixar planilha (CSV)</button></div></div>
      <p class="note">Toque no nome da linha para abrir as subcontas e em qualquer valor para ver os lançamentos. Valores em R$, pela data do pagamento/recebimento. ${P.ver==="c"?"No consolidado, os repasses entre Life e Health foram retirados.":""}</p>
      <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${cols.map((c,i)=>`<th class="${i>=idx.length?"tp2":""}">${c}</th>`).join("")}<th>Total</th><th>% rec.</th></tr></thead><tbody>`;
-  const row=(nome,arr,cls,key,nivel,pred)=>{ const v=lin(arr), t=soma(arr,idx), q=pred?qreg(nome,pred):null;
-    return `<tr class="${cls}" ${key?`data-ab="${esc(key)}"`:""}>${!key&&q!==null?`<td class="qk" data-q="${q}" data-mi="-1" title="Ver lançamentos" style="padding-left:${8+nivel*16}px"><span class="qn">${esc(nome)}</span></td>`:`<td style="padding-left:${8+nivel*16}px">${key?`<span class="tg">${P.ab[key]?"▾":"▸"}</span>`:""}${esc(nome)}</td>`}${v.map((x,i)=>q!==null&&i<idx.length?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${i>=idx.length?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,t<0?"neg":"",`<b>${fN(t)}</b>`):`<td class="${t<0?"neg":""}"><b>${fN(t)}</b></td>`}<td>${rb?fP(t/rb):"–"}</td></tr>`; };
+  const GAP=[]; const row=(nome,arr,cls,key,nivel,pred,chk)=>{ const v=lin(arr), t=soma(arr,idx), q=pred?qreg(nome,pred):null, gs=chk?gapsDe(arr,idx):new Set(); gs.forEach(i=>GAP.push([nome,i]));
+    return `<tr class="${cls}" ${key?`data-ab="${esc(key)}"`:""}>${!key&&q!==null?`<td class="qk" data-q="${q}" data-mi="-1" title="Ver lançamentos" style="padding-left:${8+nivel*16}px"><span class="qn">${esc(nome)}</span></td>`:`<td style="padding-left:${8+nivel*16}px">${key?`<span class="tg">${P.ab[key]?"▾":"▸"}</span>`:""}${esc(nome)}</td>`}${v.map((x,i)=>i<idx.length&&gs.has(idx[i])?`<td class="gap"${q!==null?` data-q="${q}" data-mi="${idx[i]}"`:""} title="Sem lançamento neste mês num custo que se repete todo mês. Verifique se foi pago ou se entrou em outra conta.">⚠</td>`:q!==null&&i<idx.length?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${i>=idx.length?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,t<0?"neg":"",`<b>${fN(t)}</b>`):`<td class="${t<0?"neg":""}"><b>${fN(t)}</b></td>`}<td>${rb?fP(t/rb):"–"}</td></tr>`; };
   const fornRows=(cat,pr)=>{ const m=fornDe(D,pr), nc=cols.length+3; if(!m) return `<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:56px">Carregando fornecedores…</td></tr>`;
     const ini=D.meses.indexOf((S.lanc[P.emp]||{}).de||"2026-05"); const l=Object.entries(m).sort((a,b)=>soma(a[1],idx)-soma(b[1],idx)).filter(([_,a])=>Math.abs(soma(a,idx))>=0.005);
     if(!l.length) return `<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:56px">Sem lançamentos detalhados no período (detalhe disponível a partir de ${esc(mesC(D.meses[Math.max(0,ini)]))}).</td></tr>`;
@@ -1170,10 +1174,14 @@ function secDRE(D){
     const cls = l.s ? (l.forte?"dt dtf":"dt") : (l.info?"di":"dg");
     h+=row(l.t, L[l.k], cls, l.p?"L:"+l.k:null, 0, l.p?(f=>l.p(D.cats[f[2]].g)):null);
     if (l.p && P.ab["L:"+l.k]) Object.keys(grupos).filter(g=>l.p(g)).sort((a,b)=>soma(grupos[a],idx)-soma(grupos[b],idx)).forEach(g=>{
-      h+=row(D.grupos[g]||g, grupos[g], "dsub", "G:"+g, 1, g==="X_IC"?null:(f=>D.cats[f[2]].g===g));
-      if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>{ const nn=n.replace(/ \(repasse\)$/,""), pr=f=>D.cats[f[2]].n===nn, ck="C:"+n; h+=row(n, cats[n], "dcat", ck, 2, pr); if(P.ab[ck]) h+=fornRows(nn,pr); }); });
+      h+=row(D.grupos[g]||g, grupos[g], "dsub", "G:"+g, 1, g==="X_IC"?null:(f=>D.cats[f[2]].g===g), /^(P_|A_)/.test(g));
+      if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>{ const nn=n.replace(/ \(repasse\)$/,""), pr=f=>D.cats[f[2]].n===nn, ck="C:"+n; h+=row(n, cats[n], "dcat", ck, 2, pr, fixoCat(D.cats.find(c=>c.n===nn))); if(P.ab[ck]) h+=fornRows(nn,pr); }); });
   });
   h+=`</tbody></table></div></div>`;
+  // alertas de linearidade (todas as contas fixas, mesmo fechadas)
+  { const al=[]; Object.keys(cats).forEach(n=>{ const nn=n.replace(/ \(repasse\)$/,""), c=D.cats.find(c=>c.n===nn); if(fixoCat(c)) gapsDe(cats[n],idx).forEach(i=>al.push([nn,i])); });
+    if(al.length){ const por={}; al.forEach(([n,i])=>(por[n]=por[n]||[]).push(mesC(D.meses[i])));
+      h=h.replace('<div class="tw"><table class="dre">',`<div class="lcw" style="margin:6px 0 10px"><b>⚠ Linearidade:</b> ${al.length} mês${al.length>1?"es":""} sem lançamento em custos fixos — provável pagamento não lançado ou lançado em outra conta. ${Object.entries(por).slice(0,8).map(([n,m])=>`<b>${esc(n)}</b>: ${m.join(", ")}`).join(" · ")}${Object.keys(por).length>8?` · e mais ${Object.keys(por).length-8} contas`:""}</div><div class="tw"><table class="dre">`); } }
   // fixo × variável
   const fixo=[], vari=[]; for (let i=0;i<D.meses.length;i++){ fixo.push(-(L.pes[i]+L.adm[i])); vari.push(-(L.cv[i]+L.ded[i])); }
   h+=`<div class="card"><h3 class="pnt">Despesas fixas × variáveis</h3>${grafico(cols,[{nome:"Variáveis (custos da operação e impostos)",v:lin(vari),cor:COR.desp},{nome:"Fixas (pessoal e administrativas)",v:lin(fixo),cor:COR.rec}],{prev:cols.map((c,i)=>i>=idx.length)})}
@@ -1351,9 +1359,9 @@ function quebra(D,a,idx){
   const totA=new Array(nm).fill(0); l.forEach(([_,arr])=>arr.forEach((v,i)=>totA[i]+=v));
   const tit={cat:"Categoria",cc:"Centro de custo",cp:"Cliente / pagador",emp:"Empresa"}[dim], nc=idx.length+3;
   const ini=Math.max(0,D.meses.indexOf((S.lanc&&S.lanc[P.emp]&&S.lanc[P.emp].de)||"2026-05"));
-  const cel=(q,arr,pre)=>idx.map(i=>pre&&i<ini?`<td class="note">·</td>`:qtd(q,i,arr[i]<0?"neg":"",Math.abs(arr[i])<0.005?"–":fN(arr[i]))).join("");
+  const cel=(q,arr,pre,gs)=>idx.map(i=>pre&&i<ini?`<td class="note">·</td>`:gs&&gs.has(i)?`<td class="gap" data-q="${q}" data-mi="${i}" title="Sem lançamento neste mês num custo recorrente">⚠</td>`:qtd(q,i,arr[i]<0?"neg":"",Math.abs(arr[i])<0.005?"–":fN(arr[i]))).join("");
   return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th>${idx.map(i=>`<th>${mesC(D.meses[i])}</th>`).join("")}<th>Total</th><th>%</th></tr></thead><tbody>${l.map(([n,arr,v])=>{ const k="Q:"+(a.id||a.t||dim)+":"+dim+":"+n, pr=f=>ok(f)&&nome(f)===n, q=qreg(n,pr);
-    let h2=`<tr class="clk" data-ab="${esc(k)}"><td><span class="tg">${P.ab[k]?"▾":"▸"}</span>${esc(n)}</td>${cel(q,arr,false)}${qtd(q,-1,v<0?"neg":"",`<b>${fN(v)}</b>`)}<td>${fP(v/tot)}</td></tr>`;
+    let h2=`<tr class="clk" data-ab="${esc(k)}"><td><span class="tg">${P.ab[k]?"▾":"▸"}</span>${esc(n)}</td>${cel(q,arr,false,dim==="cat"&&fixoCat(D.cats.find(c=>c.n===n))?gapsDe(arr,idx):null)}${qtd(q,-1,v<0?"neg":"",`<b>${fN(v)}</b>`)}<td>${fP(v/tot)}</td></tr>`;
     if(P.ab[k]){ const fm=fornDe(D,pr); if(!fm) h2+=`<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:32px">Carregando fornecedores…</td></tr>`; else {
       const fl=Object.entries(fm).map(([fn,ar])=>[fn,ar.map(x=>x*sg),soma(ar,idx)*sg]).filter(x=>Math.abs(x[2])>=0.005).sort((x,y)=>Math.abs(y[2])-Math.abs(x[2]));
       h2+=fl.length?fl.slice(0,40).map(([fn,ar,fv])=>{ const qf=qreg(n+" · "+fn,f=>pr(f)&&nzs(fornOf(f.x))===nzs(fn)); return `<tr class="dforn">${qtd(qf,-1,"",`<span class="qn" style="padding-left:24px;display:inline-block">${esc(fn)}</span>`)}${cel(qf,ar,true)}${qtd(qf,-1,fv<0?"neg":"",`<b>${fN(fv)}</b>`)}<td>${fP(fv/v)}</td></tr>`; }).join("")

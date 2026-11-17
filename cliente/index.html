@@ -1076,7 +1076,7 @@ async function carregarBens(){ S.pnBens=S.pnBens||{}; const r=await sb.from("pn_
 async function carregarLanc(){ S.lanc=S.lanc||{}; S.sug=S.sug||{};
   const [a,b]=await Promise.all([sb.from("ent_paineis").select("dados,atualizado_em").eq("empresa",P.emp).eq("chave","lancamentos").maybeSingle(), sb.from("pn_sugestoes").select("*").eq("empresa",P.emp).order("criado_em",{ascending:false})]);
   S.lanc[P.emp]=(a.data&&a.data.dados)||null; S.sug[P.emp]=b.data||[]; }
-function bensDe(D){ const t=S.pnBens&&S.pnBens[P.emp]; if (t&&t.length) return t.map(b=>({id:b.id,n:b.nome,v:+b.valor,aq:b.aquisicao,vida:+b.vida||5,amb:b.ambulancia,fin:b.financiamento,parc:b.parcelas,emp:b.emp,ativo:b.ativo,baixa:b.baixa,obs:b.obs}));
+function bensDe(D){ const t=S.pnBens&&S.pnBens[P.emp]; if (t&&t.length) return t.map(b=>({id:b.id,n:b.nome,v:+b.valor,aq:b.aquisicao,vida:+b.vida||5,res:+b.residual||0,amb:b.ambulancia,fin:b.financiamento,parc:b.parcelas,emp:b.emp,ativo:b.ativo,baixa:b.baixa,obs:b.obs}));
   return (D.bens||[]).map(b=>({...b, emp:/HEALTH/i.test(b.fin||"")?1:0, ativo:true})); }
 function cab(D, idx, prev){ return [...idx.map(i=>mesC(D.meses[i])), ...(prev?mesesPrev(D).map(mesC):[])]; }
 
@@ -1167,7 +1167,9 @@ function secBP(D){
   const e = P.ver==="c"?null:(P.ver==="h"?1:0), sel=a=>e===null?a[0]+a[1]:a[e];
   const todos=bensDe(D), ben=todos.filter(b=>(e===null||b.emp===e)&&!(b.baixa&&b.baixa<=P.mesBP));
   const [y,m]=P.mesBP.split("-").map(Number);
-  const depDe=b=>{ const [ay,am]=String(b.aq).split("-").map(Number); const k=(y-ay)*12+(m-am); return k<0?null:Math.min(b.v, b.v/(b.vida||5)/12*k); };
+  /* depreciação linear sobre (valor − residual), pela vida útil; para no valor residual */
+  const base=b=>Math.max(0,b.v-(b.res||0)), depAte=(b,yy,mm)=>{ const [ay,am]=String(b.aq).split("-").map(Number); const k=(yy-ay)*12+(mm-am); return k<0?null:Math.min(base(b), base(b)/(b.vida||5)/12*k); };
+  const depDe=b=>depAte(b,y,m);
   const bAtivos=ben.filter(b=>depDe(b)!==null);
   const bruto=bAtivos.reduce((s,b)=>s+b.v,0), dep=bAtivos.reduce((s,b)=>s+depDe(b),0);
   const bPos=bk.map(b=>[b.n,b.m[mi][3]]).filter(x=>x[1]>0), bNeg=bk.map(b=>[b.n,b.m[mi][3]]).filter(x=>x[1]<0);
@@ -1183,7 +1185,7 @@ function secBP(D){
   const pagL=atual?Object.entries(D.pagar.por_mes||{}).map(([k,a])=>["Vencimento "+mesC(k),e===null?a[0]+a[1]:a[e]]).filter(x=>Math.abs(x[1])>=0.5):[];
   const imL=bAtivos.slice().sort((a,b)=>b.v-a.v).map(b=>[b.n+" · "+mesC(b.aq),b.v]), depL=bAtivos.slice().sort((a,b)=>depDe(b)-depDe(a)).map(b=>[b.n,-depDe(b)]);
   const piL=pimpL.map(p=>[p.item+" ("+p.rest+" parcelas restantes)",p.saldo]);
-  const cx=D.meses.map((_,i)=>bk.reduce((s,b)=>s+b.m[i][3],0)), imo=D.meses.map(mm=>{ const [yy,m2]=mm.split("-").map(Number); let v=0; ben.forEach(b=>{ const [ay,am]=String(b.aq).split("-").map(Number); const k=(yy-ay)*12+(m2-am); if(k>=0) v+=b.v-Math.min(b.v,b.v/(b.vida||5)/12*k); }); return v; });
+  const cx=D.meses.map((_,i)=>bk.reduce((s,b)=>s+b.m[i][3],0)), imo=D.meses.map(mm=>{ const [yy,m2]=mm.split("-").map(Number); let v=0; ben.forEach(b=>{ const d=depAte(b,yy,m2); if(d!==null) v+=b.v-d; }); return v; });
   const lista=todos.filter(b=>e===null||b.emp===e).sort((a,b)=>String(b.aq).localeCompare(String(a.aq)));
   const editavel=!!(S.pnBens&&S.pnBens[P.emp]), F=P.bemEd;
   const form=F?`<div class="card stack" id="bemForm" style="border:2px solid var(--brand-2)"><h4 style="margin:0">${F.id?"Editar bem":"Novo bem"}</h4>
@@ -1192,6 +1194,7 @@ function secBP(D){
       <label>Valor (R$)<input id="bfV" inputmode="decimal" value="${F.v!=null?String(F.v).replace(".",","):""}"></label>
       <label>Mês de aquisição<input id="bfA" type="month" value="${esc(F.aq||"")}"></label>
       <label>Vida útil (anos)<input id="bfVi" type="number" min="1" max="50" value="${F.vida||5}"></label>
+      <label>Valor residual (R$)<input id="bfR" inputmode="decimal" value="${F.res?String(F.res).replace(".",","):"0"}" title="Quanto o bem ainda vale no fim da vida útil (venda/sucata). A depreciação é calculada sobre valor − residual."></label>
       <label>Financiamento (banco · linha)<input id="bfF" value="${esc(F.fin||"")}" placeholder="Deixe em branco se foi à vista"></label>
       <label>Parcelas<input id="bfP" type="number" min="0" value="${F.parc??""}"></label>
       <label>Baixa/venda (mês)<input id="bfB" type="month" value="${esc(F.baixa||"")}"></label>
@@ -1209,16 +1212,16 @@ function secBP(D){
     <div class="card"><h3 class="pnt">Evolução: saldo em bancos e imobilizado líquido</h3>${grafico(D.meses.map(mesC),[{nome:"Saldo em bancos",v:cx,cor:COR.rec},{nome:"Imobilizado líquido",v:imo,cor:COR.desp}],{})}</div>
     ${form}
     <div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">Imobilizado · cadastro (${lista.length} bens)</h3>${editavel?`<button class="btn primary sm" id="bemNovo">＋ Novo bem</button>`:`<span class="note">Carregando o cadastro…</span>`}</div>
-      <p class="note">Cadastre aqui os bens da empresa e mantenha os dados em dia: valor, mês de aquisição, vida útil, financiamento e baixa/venda. O balanço acima é recalculado na hora.</p>
-      <div class="tw"><table class="dre lt"><thead><tr><th>Bem</th><th>Empresa</th><th class="n">Valor</th><th>Aquisição</th><th>Vida útil</th><th>Financiamento</th><th>Situação</th>${editavel?"<th></th>":""}</tr></thead><tbody>
-      ${lista.map(b=>`<tr><td>${esc(b.n)}${b.obs?`<div class="note">${esc(b.obs)}</div>`:""}</td><td>${b.emp===1?"Health":"Life"}</td><td class="n">${fN(b.v)}</td><td>${mesC(String(b.aq))}</td><td>${b.vida||5} anos</td><td>${esc(b.fin||"À vista")}${b.parc?` · ${b.parc}x`:""}</td><td>${b.baixa?`<span class="neg">Baixado em ${mesC(b.baixa)}</span>`:"Em uso"}</td>${editavel?`<td><button class="btn sm" data-bem="${b.id}">Editar</button></td>`:""}</tr>`).join("")||`<tr><td colspan="8" class="note">Nenhum bem cadastrado.</td></tr>`}</tbody></table></div></div>`;
+      <p class="note">Cadastre aqui os bens da empresa e mantenha os dados em dia: valor, mês de aquisição, vida útil, valor residual, financiamento e baixa/venda. Depreciação linear mensal sobre (valor − residual), calculada até o mês escolhido no balanço; a depreciação acumulada entra no ativo como redutora do imobilizado. O balanço acima é recalculado na hora.</p>
+      <div class="tw"><table class="dre lt"><thead><tr><th>Bem</th><th>Empresa</th><th class="n">Valor</th><th>Aquisição</th><th>Vida útil</th><th class="n">Valor residual</th><th class="n">Depreciação/mês</th><th class="n">Valor depreciado</th><th class="n">Valor a depreciar</th><th class="n">Valor líquido</th><th>Financiamento</th><th>Situação</th>${editavel?"<th></th>":""}</tr></thead><tbody>${(()=>{ const T=lista.reduce((a,b)=>{ const d=depDe(b)||0; a[0]+=b.v; a[1]+=b.res||0; a[2]+=d; a[3]+=base(b)-d; a[4]+=b.v-d; return a; },[0,0,0,0,0]); return `<tr class="dt"><td>Total (${lista.length} bens) · posição em ${mesC(P.mesBP)}</td><td></td><td class="n">${fN(T[0])}</td><td></td><td></td><td class="n">${fN(T[1])}</td><td></td><td class="n">${fN(T[2])}</td><td class="n">${fN(T[3])}</td><td class="n">${fN(T[4])}</td><td></td><td></td>${editavel?"<td></td>":""}</tr>`; })()}
+      ${lista.map(b=>`<tr><td>${esc(b.n)}${b.obs?`<div class="note">${esc(b.obs)}</div>`:""}</td><td>${b.emp===1?"Health":"Life"}</td><td class="n">${fN(b.v)}</td><td>${mesC(String(b.aq))}</td><td>${b.vida||5} anos</td>${(()=>{ const d=depDe(b)||0, q=base(b)/(b.vida||5)/12; return `<td class="n">${fN(b.res||0)}</td><td class="n">${d>=base(b)-0.005?"<span class='note'>totalmente depreciado</span>":fN(q)}</td><td class="n">${fN(d)}</td><td class="n">${fN(base(b)-d)}</td><td class="n">${fN(b.v-d)}</td>`; })()}<td>${esc(b.fin||"À vista")}${b.parc?` · ${b.parc}x`:""}</td><td>${b.baixa?`<span class="neg">Baixado em ${mesC(b.baixa)}</span>`:"Em uso"}</td>${editavel?`<td><button class="btn sm" data-bem="${b.id}">Editar</button></td>`:""}</tr>`).join("")||`<tr><td colspan="13" class="note">Nenhum bem cadastrado.</td></tr>`}</tbody></table></div></div>`;
 }
 async function salvarBem(){
   const num=s=>{ s=String(s||"").trim().replace(/\s|R\$/g,""); if(s.includes(",")) s=s.replace(/\./g,"").replace(",","."); return +s; };
-  const r={ empresa:P.emp, emp:+$("#bfE").value, nome:$("#bfN").value.trim(), valor:num($("#bfV").value), aquisicao:$("#bfA").value, vida:+$("#bfVi").value||5,
+  const r={ empresa:P.emp, emp:+$("#bfE").value, nome:$("#bfN").value.trim(), valor:num($("#bfV").value), aquisicao:$("#bfA").value, vida:+$("#bfVi").value||5, residual:num($("#bfR").value)||0,
     financiamento:$("#bfF").value.trim()||null, parcelas:$("#bfP").value===""?null:+$("#bfP").value, baixa:$("#bfB").value||null, ambulancia:$("#bfAmb").checked, obs:$("#bfO").value.trim()||null,
     atualizado_por:S.user.id, atualizado_nome:(S.perfil&&S.perfil.nome)||S.user.email, atualizado_em:new Date().toISOString() };
-  if(!r.nome) return toast("Informe a descrição do bem."); if(!(r.valor>0)) return toast("Informe o valor do bem."); if(!/^\d{4}-\d{2}$/.test(r.aquisicao)) return toast("Informe o mês de aquisição.");
+  if(!r.nome) return toast("Informe a descrição do bem."); if(r.residual>r.valor) return toast("O valor residual não pode ser maior que o valor do bem."); if(!(r.valor>0)) return toast("Informe o valor do bem."); if(!/^\d{4}-\d{2}$/.test(r.aquisicao)) return toast("Informe o mês de aquisição.");
   const id=P.bemEd&&P.bemEd.id; const q=id?sb.from("pn_bens").update(r).eq("id",id):sb.from("pn_bens").insert(r);
   const {error}=await q; if(error) return toast("Não foi possível salvar: "+error.message);
   P.bemEd=null; await carregarBens(); toast("Bem salvo."); corpo();

@@ -166,6 +166,7 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .dre tr.lc td[data-mzm]{cursor:pointer}.dre tr.lc td[data-mzm]:hover{background:var(--surface-2);text-decoration:underline dotted}
 .lcb{all:unset;cursor:pointer;color:inherit;text-decoration:underline dotted;text-underline-offset:3px}.lcb:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .lcdlg{width:min(640px,96vw);max-height:88vh;border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--surface);color:inherit}
+.dre td.qk{cursor:pointer}.dre td.qk:hover{background:var(--surface-2);text-decoration:underline dotted}
 .lcdlg::backdrop{background:rgba(0,0,0,.55)}.lch{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px}
 .lcm{border-top:1px solid var(--line);padding:8px 0}.lcmh{display:flex;justify-content:space-between;font-size:.92rem;margin-bottom:4px}
 .lci{padding:6px 0 6px 8px;border-left:3px solid var(--line);margin:4px 0}.lcl{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
@@ -1068,7 +1069,7 @@ function renderPainel(){
   el.querySelectorAll("[data-pns]").forEach(b=>b.onclick=()=>{ P.sec=b.dataset.pns; P.an=null; el.querySelectorAll("[data-pns]").forEach(x=>x.setAttribute("aria-selected", x===b)); corpo(); });
   corpo();
 }
-function corpo(){ const D=pac(), b=$("#pnBody"); b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, lanc:secLanc, an:secAN, pend:secPend})[P.sec](D); ligar(D);
+function corpo(){ QB.length=0; const D=pac(), b=$("#pnBody"); b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, lanc:secLanc, an:secAN, pend:secPend})[P.sec](D); ligar(D);
   if (P.sec==="bp" && !(S.pnBens && P.emp in S.pnBens)) carregarBens().then(corpo);
   if (P.sec==="lanc" && !(S.lanc && P.emp in S.lanc)) carregarLanc().then(corpo); }
 /* ===== imobilizado editável pelo cliente (pn_bens) e sugestões de reclassificação (pn_sugestoes) ===== */
@@ -1091,6 +1092,38 @@ function bensDe(D){ const t=S.pnBens&&S.pnBens[P.emp]; if (t&&t.length) return t
   return (D.bens||[]).map(b=>({...b, emp:/HEALTH/i.test(b.fin||"")?1:0, ativo:true})); }
 function cab(D, idx, prev){ return [...idx.map(i=>mesC(D.meses[i])), ...(prev?mesesPrev(D).map(mesC):[])]; }
 
+/* ===== analítico em todas as telas: qualquer valor abre os lançamentos que o compõem ===== */
+const QB=[]; const qreg=(tit,pred)=>{ QB.push({tit,pred}); return QB.length-1; };
+const qtd=(id,i,cls,html)=>`<td class="${cls} qk" data-q="${id}" data-mi="${i}" title="Ver lançamentos">${html}</td>`;
+const nzs=t=>String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase().replace(/\s+/g," ").trim();
+function lcFatos(D){ const B=S.lanc&&S.lanc[P.emp]; if(!B) return null; if(B.__f&&B.__fD===D) return B.__f;
+  const mi={}; D.meses.forEach((m,i)=>mi[m]=i); const ci={}; D.cats.forEach((c,i)=>{ if(!(c.n in ci)) ci[c.n]=i; });
+  const kc={}; (D.ccs||[]).forEach((c,i)=>kc[nzs(c)]=i); const semCC=(D.ccs||[]).indexOf("Sem centro de custo");
+  const ccOf=c=>{ const n=nzs(c); if(!n||n==="#N/A"||/^-+$/.test(n)) return semCC; if(n==="LIFE") return (D.ccs||[]).indexOf("Life (geral)"); if(n==="HEALTH") return (D.ccs||[]).indexOf("Health (geral)"); if(n in kc) return kc[n]; if(/VTR|SPRINTER|AMB|^[A-Z]{3}-?\d/.test(n)) return (D.ccs||[]).indexOf("Frota (ambulâncias)"); for(const k in kc) if(n.includes(k)||k.includes(n)) return kc[k]; return semCC; };
+  const cpn=(D.cps||[]).map(nzs);
+  B.__f=B.l.map(x=>{ const m=mi[String(x[1]).slice(0,7)]; const t=nzs(x[3]+" "+x[4]); let cp=-1; for(let i=0;i<cpn.length;i++){ const w=cpn[i].split(/[ -]/)[0]; if(w.length>=4&&t.includes(cpn[i].length>6?cpn[i].slice(0,12):w)){ cp=i; break; } }
+    return {x, f:[m==null?-1:m, x[8], x[5] in ci?ci[x[5]]:-1, ccOf(x[6]), cp, 0, 0, +x[7]||0]}; });
+  B.__fD=D; return B.__f; }
+async function abrirQ(D,id,mi){ const q=QB[id]; if(!q) return;
+  if(!(S.lanc&&P.emp in S.lanc)){ toast("Carregando lançamentos…"); await carregarLanc(); }
+  const F=lcFatos(D); if(!F) return toast("Os lançamentos desta empresa ainda não foram publicados.");
+  const idx=mi>=0?[mi]:idxPer(D), set=new Set(idx);
+  const sel=F.filter(o=>o.f[0]>=0&&set.has(o.f[0])&&o.f[2]>=0&&passaCx(o.f)&&(()=>{ try{ return q.pred(o.f); }catch(e){ return false; } })()).map(o=>o.x);
+  const ini=Math.min(...F.map(o=>o.f[0]).filter(v=>v>=0)); const antes=idx.some(i=>i<ini);
+  const per=mi>=0?mesC(D.meses[mi]):perNome(D), tot=sel.reduce((a,x)=>a+(+x[7]||0),0);
+  const porMes={}; sel.forEach(x=>(porMes[x[1].slice(0,7)]=porMes[x[1].slice(0,7)]||[]).push(x));
+  let h=`<div class="lch"><div><div class="eyebrow">${esc(verNome())} · ${esc(per)}</div><h3 style="margin:2px 0 0">${esc(q.tit)}</h3><p class="note" style="margin:2px 0 0">${sel.length} lançamento${sel.length===1?"":"s"} · total <b>${fRc(tot)}</b></p></div><button type="button" class="btn sm ghost" data-lcx aria-label="Fechar">Fechar</button></div>`;
+  if(antes) h+=`<p class="note lcw">O detalhe por lançamento está disponível de ${esc(mesC(D.meses[ini]))} em diante. Os meses anteriores aparecem só no total.</p>`;
+  if(!sel.length) h+=`<p class="note">Nenhum lançamento encontrado para este valor no período.</p>`;
+  h+=Object.keys(porMes).sort().reverse().map(m=>{ const xs=porMes[m].sort((a,b)=>String(b[1]).localeCompare(String(a[1]))); const st=xs.reduce((a,x)=>a+(+x[7]||0),0);
+    return `<div class="lcm"><div class="lcmh"><b>${esc(mesC(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(fmtDia(x[1]))}</b><span class="${x[7]<0?"neg":""}">${fRc(+x[7]||0)}</span></div><div class="lcd">${esc(x[3]||"Sem fornecedor/cliente")}${x[4]?" · "+esc(x[4]):""}</div><div class="lcd note">${esc(x[5]||"")}${x[6]&&!/^([-#]|life$|health$)/i.test(x[6])?" · "+esc(x[6]):""} · ${esc(x[2]||"")}${x[8]===1?" · Health":" · Life"}</div></div>`).join("")}</div>`; }).join("");
+  h+=`<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px"><span class="note" style="margin:0">Fonte: lançamentos confirmados da planilha de gestão</span>${sel.length?`<button type="button" class="btn sm ghost" data-lccsv>Baixar (CSV)</button>`:""}</div>`;
+  let d=document.getElementById("mzLc"); if(!d){ d=document.createElement("dialog"); d.id="mzLc"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
+  d.innerHTML=h; d.querySelector("[data-lcx]").onclick=()=>d.close();
+  const c=d.querySelector("[data-lccsv]"); if(c) c.onclick=()=>{ const f=v=>(+v||0).toFixed(2).replace(".",","); const linhas=[["Data","Conta bancária","Fornecedor/cliente","Descrição","Plano de contas","Centro de custo","Valor","Empresa"],...sel.map(x=>[x[1],x[2],x[3],x[4],x[5],x[6],f(x[7]),x[8]===1?"Health":"Life"])];
+    const csv="﻿"+linhas.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\r\n"); const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${q.tit} ${P.emp} ${per}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
+  d.showModal(); reg("ver_lancamentos", P.emp+" · "+q.tit).catch(()=>{});
+}
 function secResumo(D){
   const idx=idxPer(D), {L}=calcDRE(D), rb=soma(L.rb,idx), rl=soma(L.rlq,idx), mc=soma(L.mc,idx), eb=soma(L.eb,idx);
   const desp = L.rb.map((v,i)=>L.rlq[i]-v);
@@ -1099,14 +1132,14 @@ function secResumo(D){
   const pag=P.ver==="h"?D.pagar.total[1]:P.ver==="l"?D.pagar.total[0]:D.pagar.total[0]+D.pagar.total[1];
   const pv=P.prev, lab=cab(D,idx,pv), pr=[...idx.map(()=>0),...(pv?[1,1,1,1]:[])];
   const sr=[...idx.map(i=>L.rb[i]),...(pv?prevDe(L.rb):[])], sd=[...idx.map(i=>-desp[i]),...(pv?prevDe(desp).map(v=>-v):[])], sres=[...idx.map(i=>L.rlq[i]),...(pv?prevDe(L.rlq):[])];
-  const linhas=Object.entries(calcDRE(D).grupos).filter(([g])=>g.startsWith("R_")).map(([g,a])=>[D.grupos[g],soma(a,idx)]).sort((a,b)=>b[1]-a[1]);
+  const linhas=Object.entries(calcDRE(D).grupos).filter(([g])=>g.startsWith("R_")).map(([g,a])=>[D.grupos[g],soma(a,idx),g]).sort((a,b)=>b[1]-a[1]);
   const mxl=Math.max(...linhas.map(x=>x[1]),1);
   return `<div class="kpis">
       ${kpi("Receita bruta", fR(rb), verNome())}${kpi("Resultado líquido", fR(rl), "margem "+fP(rl/rb))}${kpi("Margem de contribuição", fP(mc/rb), fR(mc))}${kpi("EBITDA", fR(eb), fP(eb/rb)+" da receita")}
       ${kpi("Saldo em bancos", fR(caixa), "fim de "+mesC(D.meses[ult]))}${kpi("A receber em aberto", fR(rec), "a pagar: "+fR(pag))}</div>
     <div class="card"><h3 class="pnt">Receitas, despesas e resultado por mês</h3>${grafico(lab,[{nome:"Receitas",v:sr,cor:COR.rec},{nome:"Despesas",v:sd.map(v=>-v),cor:COR.desp},{nome:"Resultado",v:sres,cor:COR.res,linha:1}],{prev:pr,titulo:"Receitas e despesas por mês"})}
       <p class="note">Despesas = tudo o que entra no resultado (custos, despesas, impostos, financeiro). Empréstimos, investimentos e distribuição de lucros ficam fora.</p></div>
-    <div class="card"><h3 class="pnt">Receita por linha de serviço · ${esc(perNome(D))}</h3><div class="hbars">${linhas.map(([n,v])=>`<div class="hb"><span>${esc(n)}</span><div><i style="width:${Math.max(0,v/mxl*100)}%"></i></div><b>${fR(v)}</b><em>${fP(v/rb)}</em></div>`).join("")}</div></div>`;
+    <div class="card"><h3 class="pnt">Receita por linha de serviço · ${esc(perNome(D))}</h3><div class="hbars">${linhas.map(([n,v,g])=>`<div class="hb qk" data-q="${qreg(n,f=>D.cats[f[2]].g===g)}" data-mi="-1" title="Ver lançamentos" style="cursor:pointer"><span>${esc(n)}</span><div><i style="width:${Math.max(0,v/mxl*100)}%"></i></div><b>${fR(v)}</b><em>${fP(v/rb)}</em></div>`).join("")}</div></div>`;
 }
 const kpi=(t,v,s)=>`<div class="kpi"><span>${esc(t)}</span><b>${esc(v)}</b><em>${esc(s||"")}</em></div>`;
 const perNome = D => ({"12":"últimos 12 meses","2025":"2025","2026":"2026","tudo":"desde jan/25"})[P.per];
@@ -1116,16 +1149,16 @@ function secDRE(D){
   const cols=cab(D,idx,pv), lin=(arr)=>[...idx.map(i=>arr[i]),...(pv?prevDe(arr):[])];
   let h=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">DRE gerencial · ${esc(verNome())} · ${esc(perNome(D))}</h3>
      <div class="row" style="gap:6px"><button class="btn sm ghost" id="dreAbre">Abrir tudo</button><button class="btn sm ghost" id="dreCsv">Baixar planilha (CSV)</button></div></div>
-     <p class="note">Toque numa linha para ver o detalhe. Valores em R$, pela data do pagamento/recebimento. ${P.ver==="c"?"No consolidado, os repasses entre Life e Health foram retirados.":""}</p>
+     <p class="note">Toque no nome da linha para abrir as subcontas e em qualquer valor para ver os lançamentos. Valores em R$, pela data do pagamento/recebimento. ${P.ver==="c"?"No consolidado, os repasses entre Life e Health foram retirados.":""}</p>
      <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${cols.map((c,i)=>`<th class="${i>=idx.length?"tp2":""}">${c}</th>`).join("")}<th>Total</th><th>% rec.</th></tr></thead><tbody>`;
-  const row=(nome,arr,cls,key,nivel)=>{ const v=lin(arr), t=soma(arr,idx);
-    return `<tr class="${cls}" ${key?`data-ab="${esc(key)}"`:""}><td style="padding-left:${8+nivel*16}px">${key?`<span class="tg">${P.ab[key]?"▾":"▸"}</span>`:""}${esc(nome)}</td>${v.map((x,i)=>`<td class="${i>=idx.length?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}<td class="${t<0?"neg":""}"><b>${fN(t)}</b></td><td>${rb?fP(t/rb):"–"}</td></tr>`; };
+  const row=(nome,arr,cls,key,nivel,pred)=>{ const v=lin(arr), t=soma(arr,idx), q=pred?qreg(nome,pred):null;
+    return `<tr class="${cls}" ${key?`data-ab="${esc(key)}"`:""}><td style="padding-left:${8+nivel*16}px">${key?`<span class="tg">${P.ab[key]?"▾":"▸"}</span>`:""}${esc(nome)}</td>${v.map((x,i)=>q!==null&&i<idx.length?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${i>=idx.length?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,t<0?"neg":"",`<b>${fN(t)}</b>`):`<td class="${t<0?"neg":""}"><b>${fN(t)}</b></td>`}<td>${rb?fP(t/rb):"–"}</td></tr>`; };
   DRE.forEach(l=>{
     const cls = l.s ? (l.forte?"dt dtf":"dt") : (l.info?"di":"dg");
-    h+=row(l.t, L[l.k], cls, l.p?"L:"+l.k:null, 0);
+    h+=row(l.t, L[l.k], cls, l.p?"L:"+l.k:null, 0, l.p?(f=>l.p(D.cats[f[2]].g)):null);
     if (l.p && P.ab["L:"+l.k]) Object.keys(grupos).filter(g=>l.p(g)).sort((a,b)=>soma(grupos[a],idx)-soma(grupos[b],idx)).forEach(g=>{
-      h+=row(D.grupos[g]||g, grupos[g], "dsub", "G:"+g, 1);
-      if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>h+=row(n, cats[n], "dcat", null, 2)); });
+      h+=row(D.grupos[g]||g, grupos[g], "dsub", "G:"+g, 1, g==="X_IC"?null:(f=>D.cats[f[2]].g===g));
+      if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>h+=row(n, cats[n], "dcat", null, 2, (nn=>f=>D.cats[f[2]].n===nn)(n.replace(/ \(repasse\)$/,"")))); });
   });
   h+=`</tbody></table></div></div>`;
   // fixo × variável
@@ -1146,16 +1179,17 @@ function secDFC(D){
   const sIni=xv(0), eEnt=xv(1), eSai=xv(2), sFim=xv(3);
   const dE=z().map((_,i)=>rec[i]-eEnt[i]), dS=z().map((_,i)=>pag[i]-eSai[i]), dT=z().map((_,i)=>dE[i]+dS[i]);
   const cols=idx.map(i=>mesC(D.meses[i]));
-  const r=(t,a,c="")=>`<tr class="${c}"><td>${t}</td>${idx.map(i=>`<td class="${a[i]<0?"neg":""}">${fN(a[i])}</td>`).join("")}<td class="${soma(a,idx)<0?"neg":""}"><b>${fN(soma(a,idx))}</b></td></tr>`;
+  const dp=(ds,sg)=>f=>{ let d=D.cats[f[2]].dfc; if(d==="T") d="O"; return ds.includes(d)&&(sg===0?f[7]>=0:sg===1?f[7]<0:true); };
+  const r=(t,a,c="",pred)=>{ const q=pred?qreg(t.replace(/<[^>]+>/g,"")+" (DFC)",pred):null; return `<tr class="${c}"><td>${t}</td>${idx.map(i=>q!==null?qtd(q,i,a[i]<0?"neg":"",fN(a[i])):`<td class="${a[i]<0?"neg":""}">${fN(a[i])}</td>`).join("")}${q!==null?qtd(q,-1,soma(a,idx)<0?"neg":"",`<b>${fN(soma(a,idx))}</b>`):`<td class="${soma(a,idx)<0?"neg":""}"><b>${fN(soma(a,idx))}</b></td>`}</tr>`; };
   const rd=(t,a)=>`<tr><td>${t}</td>${idx.map(i=>`<td><span class="cz ${Math.abs(a[i])<1?"cz-ok":Math.abs(a[i])<1000?"cz-at":"cz-er"}">${Math.abs(a[i])<1?"✓":fN(a[i])}</span></td>`).join("")}<td><b>${fN(soma(a,idx))}</b></td></tr>`;
   const sumA=(x)=>z().map((_,i)=>x[0][i]+x[1][i]);
   const cons=P.ver==="c", qd=idx.filter(i=>Math.abs(dT[i])>=1).length;
   let h=`<div class="card"><h3 class="pnt">Fluxo de caixa (DFC) · ${esc(verNome())}</h3><p class="note">Método direto: somente lançamentos com situação <b>Confirmado</b>. Os demais (Não encontrado, Verificar, Atrasado, Duplicado, transferências) são ignorados.</p>
     <div class="tw"><table class="dre"><thead><tr><th>Atividade</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>
-    <tr class="dg"><td colspan="${cols.length+2}"><b>Atividades operacionais</b></td></tr>${r("Recebimentos",A.O[0])}${r("Pagamentos",A.O[1])}${r("= Caixa das operações",sumA(A.O),"dt")}
-    <tr class="dg"><td colspan="${cols.length+2}"><b>Atividades de investimento</b></td></tr>${r("Recebimentos",A.I[0])}${r("Pagamentos (equipamentos, aplicações)",A.I[1])}${r("= Caixa de investimentos",sumA(A.I),"dt")}
-    <tr class="dg"><td colspan="${cols.length+2}"><b>Atividades de financiamento</b></td></tr>${r("Empréstimos recebidos",A.F[0])}${r("Empréstimos, consórcios e lucros pagos",A.F[1])}${r("= Caixa de financiamentos",sumA(A.F),"dt")}
-    ${r("= Geração de caixa do período",ger,"dt dtf")}`;
+    <tr class="dg"><td colspan="${cols.length+2}"><b>Atividades operacionais</b></td></tr>${r("Recebimentos operacionais",A.O[0],"",dp(["O"],0))}${r("Pagamentos operacionais",A.O[1],"",dp(["O"],1))}${r("= Caixa das operações",sumA(A.O),"dt",dp(["O"],2))}
+    <tr class="dg"><td colspan="${cols.length+2}"><b>Atividades de investimento</b></td></tr>${r("Recebimentos de investimentos",A.I[0],"",dp(["I"],0))}${r("Pagamentos (equipamentos, aplicações)",A.I[1],"",dp(["I"],1))}${r("= Caixa de investimentos",sumA(A.I),"dt",dp(["I"],2))}
+    <tr class="dg"><td colspan="${cols.length+2}"><b>Atividades de financiamento</b></td></tr>${r("Empréstimos recebidos",A.F[0],"",dp(["F"],0))}${r("Empréstimos, consórcios e lucros pagos",A.F[1],"",dp(["F"],1))}${r("= Caixa de financiamentos",sumA(A.F),"dt",dp(["F"],2))}
+    ${r("= Geração de caixa do período",ger,"dt dtf",dp(["O","I","F"],2))}`;
   if (cons) h+=`<tr class="dg"><td colspan="${cols.length+2}"><b>Validação com os bancos (extrato conciliado pela equipe)</b></td></tr>${r("Saldo inicial dos bancos",sIni)}${r("Entradas no extrato",eEnt)}${r("Saídas no extrato",eSai)}${r("Saldo final dos bancos",sFim,"dt")}
     ${rd("Diferença nas entradas (sistema − extrato)",dE)}${rd("Diferença nas saídas (sistema − extrato)",dS)}${rd("Diferença de conciliação",dT)}`;
   h+=`</tbody></table></div>${cons?`<p class="note">${qd?`<b>${qd} ${qd>1?"meses":"mês"} com diferença no período.</b> `:"<b>Todos os meses do período conciliados.</b> "}Entradas e saídas do extrato vêm da aba DFC da planilha, já com os ajustes de transferências entre contas feitos pela equipe.</p>`:`<p class="note">A validação com os bancos é feita no consolidado (Life + Health), porque as transferências entre as contas das duas empresas se anulam ali. Escolha "Consolidado" para ver.</p>`}</div>`;
@@ -1302,12 +1336,13 @@ function quebra(D,a,idx){
     if (a.tipo==="res") ok=a.rec(D,f)||(a.desp(D,f)&&v<0); else ok=a.p(D,f); if(!ok) continue; if(a.tipo==="desp") v=-v; m[nome(f)]=(m[nome(f)]||0)+v; }
   const l=Object.entries(m).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])), tot=l.reduce((s,x)=>s+x[1],0);
   const tit={cat:"Categoria",cc:"Centro de custo",cp:"Cliente / pagador",emp:"Empresa"}[dim];
-  return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th><th>Valor no período</th><th>%</th></tr></thead><tbody>${l.map(([n,v])=>`<tr><td>${esc(n)}</td><td class="${v<0?"neg":""}">${fN(v)}</td><td>${fP(v/tot)}</td></tr>`).join("")}<tr class="dt"><td>Total</td><td>${fN(tot)}</td><td></td></tr></tbody></table></div>`;
+  const ok=f=>a.tipo==="res"?(a.rec(D,f)||(a.desp(D,f)&&f[7]<0)):a.p(D,f);
+  return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th><th>Valor no período</th><th>%</th></tr></thead><tbody>${l.map(([n,v])=>`<tr><td>${esc(n)}</td>${qtd(qreg(n,f=>ok(f)&&nome(f)===n),-1,v<0?"neg":"",fN(v))}<td>${fP(v/tot)}</td></tr>`).join("")}<tr class="dt"><td>Total</td><td>${fN(tot)}</td><td></td></tr></tbody></table></div>`;
 }
 function detAN(D,a){
   const idx=idxPer(D), pv=P.prev, cols=cab(D,idx,pv), prv=cols.map((c,i)=>i>=idx.length), lin=arr=>[...idx.map(i=>arr[i]),...(pv?prevDe(arr):[])];
   let h=`<div class="row" style="gap:8px"><button class="btn sm ghost" data-anv="1" type="button">← Todas as análises</button></div><div class="card"><h3 class="pnt">${esc(a.t)} · ${esc(verNome())}</h3>${a.nota?`<p class="note">${esc(a.nota)}</p>`:""}`;
-  const tab=(rows)=>`<div class="tw"><table class="dre"><thead><tr><th></th>${cols.map((c,i)=>`<th class="${prv[i]?"tp2":""}">${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>${rows.map(([n,arr,c])=>{ const v=lin(arr); return `<tr class="${c||""}"><td>${esc(n)}</td>${v.map((x,i)=>`<td class="${prv[i]?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}<td><b>${fN(soma(arr,idx))}</b></td></tr>`; }).join("")}</tbody></table></div>`;
+  const tab=(rows)=>`<div class="tw"><table class="dre"><thead><tr><th></th>${cols.map((c,i)=>`<th class="${prv[i]?"tp2":""}">${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>${rows.map(([n,arr,c,pr])=>{ const v=lin(arr), q=pr?qreg(a.t+" · "+n,pr):null; return `<tr class="${c||""}"><td>${esc(n)}</td>${v.map((x,i)=>q!==null&&!prv[i]?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${prv[i]?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,"",`<b>${fN(soma(arr,idx))}</b>`):`<td><b>${fN(soma(arr,idx))}</b></td>`}</tr>`; }).join("")}</tbody></table></div>`;
   if (a.tipo==="geral"){
     const {L}=calcDRE(D), rec=L.rb, vari=L.rb.map((_,i)=>-(L.cv[i]+L.ded[i])), fixo=L.rb.map((_,i)=>-(L.pes[i]+L.adm[i])), outros=L.rb.map((_,i)=>-(L.fin[i]+L.nr[i]+L.ir[i]));
     h+=grafico(cols,[{nome:"Receita",v:lin(rec),cor:COR.rec},{nome:"Despesas variáveis + fixas",v:lin(vari.map((v,i)=>-(v+fixo[i]))),cor:COR.desp},{nome:"Resultado líquido",v:lin(L.rlq),cor:COR.res,linha:1}],{prev:prv});
@@ -1316,11 +1351,11 @@ function detAN(D,a){
   } else if (a.tipo==="res"){
     const S2=serieAN(D,a), res=S2.r.map((v,i)=>v+S2.d[i]);
     h+=grafico(cols,[{nome:"Receita",v:lin(S2.r),cor:COR.rec},{nome:"Despesa",v:lin(S2.d),cor:COR.desp},{nome:"Resultado",v:lin(res),cor:COR.res,linha:1}],{prev:prv});
-    h+=tab([["Receita",S2.r],["Despesa",S2.d],["Resultado",res,"dt"]])+`<div class="bpg"><div><h4>De quem veio a receita</h4>${quebra(D,{tipo:"rec",p:a.rec,dim:"cp"},idx)}</div><div><h4>Onde foi a despesa</h4>${quebra(D,{tipo:"desp",p:(D,f)=>a.desp(D,f)&&f[7]<0,dim:a.dim==="cc"?"cc":"cat"},idx)}</div></div>`;
+    h+=tab([["Receita",S2.r,"",f=>a.rec(D,f)],["Despesa",S2.d,"",f=>a.desp(D,f)&&f[7]<0],["Resultado",res,"dt",f=>a.rec(D,f)||(a.desp(D,f)&&f[7]<0)]])+`<div class="bpg"><div><h4>De quem veio a receita</h4>${quebra(D,{tipo:"rec",p:a.rec,dim:"cp"},idx)}</div><div><h4>Onde foi a despesa</h4>${quebra(D,{tipo:"desp",p:(D,f)=>a.desp(D,f)&&f[7]<0,dim:a.dim==="cc"?"cc":"cat"},idx)}</div></div>`;
   } else if (a.tipo==="emp"){
     const pag=serie(D,f=>g_(D,f)==="X_EMPPAG").map(v=>-v), rec=serie(D,f=>g_(D,f)==="X_EMPREC"), jur=serie(D,f=>D.cats[f[2]].n==="Conta Garantida").map(v=>-v);
     h+=grafico(cols,[{nome:"Empréstimos recebidos",v:lin(rec),cor:COR.rec},{nome:"Parcelas pagas (empréstimos e consórcios)",v:lin(pag),cor:COR.desp}],{prev:prv});
-    h+=tab([["Recebidos",rec],["Parcelas pagas",pag],["Juros da conta garantida",jur]]);
+    h+=tab([["Recebidos",rec,"",f=>g_(D,f)==="X_EMPREC"],["Parcelas pagas",pag,"",f=>g_(D,f)==="X_EMPPAG"],["Juros da conta garantida",jur,"",f=>D.cats[f[2]].n==="Conta Garantida"]]);
     const fin=D.bens.filter(b=>b.fin);
     h+=`<h4 style="margin:14px 0 6px">Viaturas financiadas</h4><div class="tw"><table class="dre"><thead><tr><th>Bem</th><th>Valor</th><th>Financiamento</th><th>Parcelas</th></tr></thead><tbody>${fin.map(b=>`<tr><td>${esc(b.n)}</td><td>${fN(b.v)}</td><td>${esc(b.fin)}</td><td>${b.parc??"–"}</td></tr>`).join("")}</tbody></table></div>
       <p class="note">O sistema registra as parcelas pagas, mas não o saldo devedor de cada contrato. Para fechar a "situação atual", peça aos bancos (Bradesco, BB e CEF) o extrato de cada empréstimo; o valor entra no balanço.</p>`;
@@ -1335,8 +1370,8 @@ function detAN(D,a){
   } else {
     const S2=serieAN(D,a);
     h+=grafico(cols,[{nome:a.tipo==="rec"?"Receita":"Gasto",v:lin(S2.s),cor:a.tipo==="rec"?COR.rec:COR.desp}],{prev:prv});
-    h+=tab([[a.tipo==="rec"?"Receita":"Gasto",S2.s,"dt"]]);
-    if (P.ver==="c" && a.dim!=="emp") { const l=serie(D,f=>f[1]===0&&a.p(D,f)), hh=serie(D,f=>f[1]===1&&a.p(D,f)); const sg=a.tipo==="desp"?-1:1; h+=tab([["Arcanjos Life",l.map(v=>v*sg)],["Arcanjos Health",hh.map(v=>v*sg)]]); }
+    h+=tab([[a.tipo==="rec"?"Receita":"Gasto",S2.s,"dt",f=>a.p(D,f)]]);
+    if (P.ver==="c" && a.dim!=="emp") { const l=serie(D,f=>f[1]===0&&a.p(D,f)), hh=serie(D,f=>f[1]===1&&a.p(D,f)); const sg=a.tipo==="desp"?-1:1; h+=tab([["Arcanjos Life",l.map(v=>v*sg),"",f=>f[1]===0&&a.p(D,f)],["Arcanjos Health",hh.map(v=>v*sg),"",f=>f[1]===1&&a.p(D,f)]]); }
     h+=`<h4 style="margin:14px 0 6px">Composição no período</h4>`+quebra(D,a,idx);
   }
   return h+`</div>`;
@@ -1352,6 +1387,7 @@ function secPend(D){
     ${dif.map(([m,v])=>`<tr><td>Conciliação de ${mesC(m)} (consolidado)</td><td>–</td><td>${fN(v)}</td><td>Diferença entre o sistema e o extrato conciliado; conferir na aba DFC.</td></tr>`).join("")}</tbody></table></div></div>`;
 }
 function ligar(D){
+  document.querySelectorAll("#pnBody [data-q]").forEach(td=>td.onclick=e=>{ e.stopPropagation(); abrirQ(D,+td.dataset.q,+td.dataset.mi); });
   const b=$("#pnBody"); if(!b) return;
   b.querySelectorAll("[data-ab]").forEach(tr=>tr.onclick=()=>{ const k=tr.dataset.ab; P.ab[k]=!P.ab[k]; corpo(); });
   const ab=$("#dreAbre"); if (ab) ab.onclick=()=>{ const abrir=!Object.values(P.ab).some(Boolean); P.ab={}; if(abrir){ DRE.forEach(l=>{ if(l.p){ P.ab["L:"+l.k]=1; Object.keys(D.grupos).filter(g=>l.p(g)).forEach(g=>P.ab["G:"+g]=1); } }); } corpo(); };

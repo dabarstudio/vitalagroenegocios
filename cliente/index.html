@@ -179,7 +179,9 @@ table.dre{border-collapse:collapse;width:100%;font-size:.84rem;font-variant-nume
 .dre tr.dtf td{border-top:2px solid var(--brand)}.dre tr.dg td{font-weight:600}.dre tr.di td{color:var(--muted);font-style:italic}
 .dre tr.dsub td{font-size:.82rem}.dre tr.dcat td{font-size:.8rem;color:var(--muted)}.dre tr.dalt td{font-weight:700;color:var(--bad)}
 .dre tr[data-ab]{cursor:pointer}.dre tr[data-ab]:hover td{background:var(--surface-2)}.tg{display:inline-block;width:14px;color:var(--brand)}
-.dre.bp td:first-child{min-width:260px}.bpg{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.bpg h4{margin:4px 0 6px;font-family:var(--display)}
+.dre.bp td:first-child{min-width:260px}.dre.bp tr.ab{cursor:pointer}.dre.bp tr.ab:hover td{background:var(--surface-2)}.dre.bp .car{display:inline-block;width:12px;color:var(--brand-2)}.dre.bp tr.det td{font-size:.8rem;color:var(--muted);padding-left:26px}.dre tr.det td{background:#fafcf9}
+.dre.lt th,.dre.lt td{text-align:left;white-space:normal}.dre.lt td:first-child,.dre.lt th:first-child{min-width:0;white-space:nowrap}.dre.lt td.n,.dre.lt th.n{text-align:right;white-space:nowrap}.dre.lt td{vertical-align:top}.dre.lt .ds{min-width:220px;max-width:420px}
+.bemg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.bemg label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:600}.bemg input,.bemg select{font:inherit;font-weight:400;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}.bemg label.chk{flex-direction:row;align-items:center;align-self:end}.bpg{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.bpg h4{margin:4px 0 6px;font-family:var(--display)}
 .cz{display:inline-block;border-radius:999px;padding:1px 8px;font-size:.78rem;font-weight:700}.cz-ok{background:var(--ok-bg);color:var(--ok)}.cz-at{background:#FFF1D6;color:#7A4B00}.cz-er{background:var(--bad-bg);color:var(--bad)}
 tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface-2)}
 .hbars{display:grid;gap:6px}.hb{display:grid;grid-template-columns:250px 1fr 90px 50px;gap:10px;align-items:center;font-size:.86rem}
@@ -950,7 +952,7 @@ const nfmt = new Intl.NumberFormat("pt-BR",{maximumFractionDigits:0});
 const fN = v => (Math.abs(v)<0.5 ? "–" : nfmt.format(Math.round(v)));
 const fR = v => { const a=Math.abs(v), s=v<0?"−":""; return a>=1e6 ? s+"R$ "+(a/1e6).toFixed(2).replace(".",",")+" mi" : a>=1e3 ? s+"R$ "+nfmt.format(Math.round(a/1e3))+" mil" : s+"R$ "+nfmt.format(Math.round(a)); };
 const fP = v => isFinite(v) ? (v*100).toFixed(1).replace(".",",")+"%" : "–";
-async function carregarPaineis(){ if (!sb) return; const r = await sb.from("ent_paineis").select("empresa,chave,dados,atualizado_em"); S.paineis = r.error ? [] : (r.data||[]).filter(x=>x.dados && (x.dados.fatos || x.dados.tipo==="matriz") && !(x.dados.rascunho && (S.papel==="cliente"||S.papel==="gestor"))).sort((a,b)=>a.empresa.localeCompare(b.empresa,"pt")); }
+async function carregarPaineis(){ if (!sb) return; const r = await sb.from("ent_paineis").select("empresa,chave,dados,atualizado_em").neq("chave","lancamentos"); S.paineis = r.error ? [] : (r.data||[]).filter(x=>x.dados && (x.dados.fatos || x.dados.tipo==="matriz") && !(x.dados.rascunho && (S.papel==="cliente"||S.papel==="gestor"))).sort((a,b)=>a.empresa.localeCompare(b.empresa,"pt")); }
 function pac(){ const l=S.paineis||[]; const x = l.find(p=>p.empresa===P.emp) || l[0]; if (x) P.emp = x.empresa; return x && x.dados; }
 function mesesPrev(D){ const u=D.meses[D.meses.length-1]; let y=+u.slice(0,4), m=+u.slice(5,7); const o=[]; for(let i=0;i<4;i++){ m++; if(m>12){m=1;y++;} o.push(y+"-"+String(m).padStart(2,"0")); } return o; }
 function idxPer(D){ const n=D.meses.length, a=[...Array(n).keys()];
@@ -1050,7 +1052,7 @@ function renderPainel(){
   if (!D) { el.innerHTML=`<div class="card empty">Nenhum painel disponível ainda.</div>`; return; }
   const emps=(S.paineis||[]).map(p=>p.empresa);
   if (D.tipo==="matriz") return renderMatriz(el, D, emps);
-  const secs=[["resumo","Resumo"],["dre","DRE"],["dfc","DFC e conciliação"],["bp","Balanço (BP)"],["an","Análises"],["pend","Pendências"]];
+  const secs=[["resumo","Resumo"],["dre","DRE"],["dfc","DFC e conciliação"],["bp","Balanço (BP)"],["lanc","Lançamentos"],["an","Análises"],["pend","Pendências"]];
   el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
       <p class="note" style="margin:2px 0 0">Dados até ${mesC(D.meses[D.meses.length-1])} · atualizado em ${esc(D.gerado.split(" ")[0].split("-").reverse().join("/"))} · fonte: planilha Gestão BPO (lançamentos confirmados)</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
@@ -1065,7 +1067,17 @@ function renderPainel(){
   el.querySelectorAll("[data-pns]").forEach(b=>b.onclick=()=>{ P.sec=b.dataset.pns; P.an=null; el.querySelectorAll("[data-pns]").forEach(x=>x.setAttribute("aria-selected", x===b)); corpo(); });
   corpo();
 }
-function corpo(){ const D=pac(), b=$("#pnBody"); b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, an:secAN, pend:secPend})[P.sec](D); ligar(D); }
+function corpo(){ const D=pac(), b=$("#pnBody"); b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, lanc:secLanc, an:secAN, pend:secPend})[P.sec](D); ligar(D);
+  if (P.sec==="bp" && !(S.pnBens && P.emp in S.pnBens)) carregarBens().then(corpo);
+  if (P.sec==="lanc" && !(S.lanc && P.emp in S.lanc)) carregarLanc().then(corpo); }
+/* ===== imobilizado editável pelo cliente (pn_bens) e sugestões de reclassificação (pn_sugestoes) ===== */
+const pnEq = () => S.papel==="admin" || S.papel==="equipe";
+async function carregarBens(){ S.pnBens=S.pnBens||{}; const r=await sb.from("pn_bens").select("*").eq("empresa",P.emp).order("aquisicao"); S.pnBens[P.emp]=r.error?null:(r.data||[]); }
+async function carregarLanc(){ S.lanc=S.lanc||{}; S.sug=S.sug||{};
+  const [a,b]=await Promise.all([sb.from("ent_paineis").select("dados,atualizado_em").eq("empresa",P.emp).eq("chave","lancamentos").maybeSingle(), sb.from("pn_sugestoes").select("*").eq("empresa",P.emp).order("criado_em",{ascending:false})]);
+  S.lanc[P.emp]=(a.data&&a.data.dados)||null; S.sug[P.emp]=b.data||[]; }
+function bensDe(D){ const t=S.pnBens&&S.pnBens[P.emp]; if (t&&t.length) return t.map(b=>({id:b.id,n:b.nome,v:+b.valor,aq:b.aquisicao,vida:+b.vida||5,amb:b.ambulancia,fin:b.financiamento,parc:b.parcelas,emp:b.emp,ativo:b.ativo,baixa:b.baixa,obs:b.obs}));
+  return (D.bens||[]).map(b=>({...b, emp:/HEALTH/i.test(b.fin||"")?1:0, ativo:true})); }
 function cab(D, idx, prev){ return [...idx.map(i=>mesC(D.meses[i])), ...(prev?mesesPrev(D).map(mesC):[])]; }
 
 function secResumo(D){
@@ -1152,31 +1164,98 @@ function detBanco(D, bi){
 function secBP(D){
   const nm=D.meses.length; if (!P.mesBP || !D.meses.includes(P.mesBP)) P.mesBP=D.meses[nm-1];
   const mi=D.meses.indexOf(P.mesBP), atual=mi===nm-1, bk=bancosVer(D);
-  const pos=bk.reduce((s,b)=>s+Math.max(0,b.m[mi][3]),0), neg=bk.reduce((s,b)=>s+Math.min(0,b.m[mi][3]),0);
   const e = P.ver==="c"?null:(P.ver==="h"?1:0), sel=a=>e===null?a[0]+a[1]:a[e];
-  const ben=D.bens.filter(b=>e===null||(/HEALTH/i.test(b.fin)?1:0)===e);
+  const todos=bensDe(D), ben=todos.filter(b=>(e===null||b.emp===e)&&!(b.baixa&&b.baixa<=P.mesBP));
   const [y,m]=P.mesBP.split("-").map(Number);
-  let bruto=0, dep=0; ben.forEach(b=>{ const [ay,am]=b.aq.split("-").map(Number); const meses=(y-ay)*12+(m-am); if(meses<0) return; bruto+=b.v; dep+=Math.min(b.v, b.v/b.vida/12*meses); });
+  const depDe=b=>{ const [ay,am]=String(b.aq).split("-").map(Number); const k=(y-ay)*12+(m-am); return k<0?null:Math.min(b.v, b.v/(b.vida||5)/12*k); };
+  const bAtivos=ben.filter(b=>depDe(b)!==null);
+  const bruto=bAtivos.reduce((s,b)=>s+b.v,0), dep=bAtivos.reduce((s,b)=>s+depDe(b),0);
+  const bPos=bk.map(b=>[b.n,b.m[mi][3]]).filter(x=>x[1]>0), bNeg=bk.map(b=>[b.n,b.m[mi][3]]).filter(x=>x[1]<0);
+  const pos=bPos.reduce((s,x)=>s+x[1],0), neg=bNeg.reduce((s,x)=>s+x[1],0);
   const rec=atual?sel(D.receber.total):null, pag=atual?sel(D.pagar.total):null;
-  const pimp=D.parc.filter(p=>p.tipo==="Parcelamento de impostos"&&(e===null||p.emp===e)).reduce((s,p)=>s+p.saldo,0);
+  const pimpL=D.parc.filter(p=>p.tipo==="Parcelamento de impostos"&&(e===null||p.emp===e)), pimp=pimpL.reduce((s,p)=>s+p.saldo,0);
   const fin=ben.filter(b=>b.fin);
   const ativo=pos+(rec||0)+bruto-dep, passivo=-neg+(pag||0)+(atual?pimp:0), pl=ativo-passivo;
-  const ln=(t,v,c="")=>`<tr class="${c}"><td>${t}</td><td class="${v<0?"neg":""}">${v==null?"<span class='note'>só na posição atual</span>":fN(v)}</td></tr>`;
-  // evolução
-  const cx=D.meses.map((_,i)=>bk.reduce((s,b)=>s+b.m[i][3],0)), imo=D.meses.map(mm=>{ const [yy,m2]=mm.split("-").map(Number); let v=0; ben.forEach(b=>{ const [ay,am]=b.aq.split("-").map(Number); const k=(yy-ay)*12+(m2-am); if(k>=0) v+=b.v-Math.min(b.v,b.v/b.vida/12*k); }); return v; });
+  const ab=k=>!!P.ab["BP:"+k];
+  const ln=(t,v,c="",k=null,n=0)=>`<tr class="${c}${k?" ab":""}" ${k&&n?`data-ab="BP:${k}" title="Clique para ver o analítico"`:""}><td>${k&&n?`<span class="car">${ab(k)?"▾":"▸"}</span> `:""}${t}${k&&n?` <span class="note">(${n})</span>`:""}</td><td class="${v<0?"neg":""}">${v==null?"<span class='note'>só na posição atual</span>":fN(v)}</td></tr>`;
+  const det=(k,l)=>ab(k)?l.slice(0,60).map(([n,v])=>`<tr class="det"><td>${esc(n)}</td><td class="${v<0?"neg":""}">${fN(v)}</td></tr>`).join("")+(l.length>60?`<tr class="det"><td class="note">+ ${l.length-60} itens (veja a lista completa no imobilizado abaixo)</td><td></td></tr>`:""):"";
+  const recL=atual?(D.receber.clientes||[]).map(c=>[c[0],e===null?c[1]+c[2]:c[1+e]]).filter(x=>Math.abs(x[1])>=0.5).sort((a,b)=>b[1]-a[1]):[];
+  const pagL=atual?Object.entries(D.pagar.por_mes||{}).map(([k,a])=>["Vencimento "+mesC(k),e===null?a[0]+a[1]:a[e]]).filter(x=>Math.abs(x[1])>=0.5):[];
+  const imL=bAtivos.slice().sort((a,b)=>b.v-a.v).map(b=>[b.n+" · "+mesC(b.aq),b.v]), depL=bAtivos.slice().sort((a,b)=>depDe(b)-depDe(a)).map(b=>[b.n,-depDe(b)]);
+  const piL=pimpL.map(p=>[p.item+" ("+p.rest+" parcelas restantes)",p.saldo]);
+  const cx=D.meses.map((_,i)=>bk.reduce((s,b)=>s+b.m[i][3],0)), imo=D.meses.map(mm=>{ const [yy,m2]=mm.split("-").map(Number); let v=0; ben.forEach(b=>{ const [ay,am]=String(b.aq).split("-").map(Number); const k=(yy-ay)*12+(m2-am); if(k>=0) v+=b.v-Math.min(b.v,b.v/(b.vida||5)/12*k); }); return v; });
+  const lista=todos.filter(b=>e===null||b.emp===e).sort((a,b)=>String(b.aq).localeCompare(String(a.aq)));
+  const editavel=!!(S.pnBens&&S.pnBens[P.emp]), F=P.bemEd;
+  const form=F?`<div class="card stack" id="bemForm" style="border:2px solid var(--brand-2)"><h4 style="margin:0">${F.id?"Editar bem":"Novo bem"}</h4>
+      <div class="bemg"><label>Descrição<input id="bfN" value="${esc(F.n||"")}" placeholder="Ex.: VTR 27 – Ambulância Sprinter"></label>
+      <label>Empresa<select id="bfE"><option value="0" ${F.emp!==1?"selected":""}>Arcanjos Life</option><option value="1" ${F.emp===1?"selected":""}>Arcanjos Health</option></select></label>
+      <label>Valor (R$)<input id="bfV" inputmode="decimal" value="${F.v!=null?String(F.v).replace(".",","):""}"></label>
+      <label>Mês de aquisição<input id="bfA" type="month" value="${esc(F.aq||"")}"></label>
+      <label>Vida útil (anos)<input id="bfVi" type="number" min="1" max="50" value="${F.vida||5}"></label>
+      <label>Financiamento (banco · linha)<input id="bfF" value="${esc(F.fin||"")}" placeholder="Deixe em branco se foi à vista"></label>
+      <label>Parcelas<input id="bfP" type="number" min="0" value="${F.parc??""}"></label>
+      <label>Baixa/venda (mês)<input id="bfB" type="month" value="${esc(F.baixa||"")}"></label>
+      <label class="chk"><input type="checkbox" id="bfAmb" ${F.amb?"checked":""}><span>É ambulância/viatura</span></label>
+      <label style="grid-column:1/-1">Observação<input id="bfO" value="${esc(F.obs||"")}"></label></div>
+      <div class="row" style="gap:8px"><button class="btn primary" id="bfSalvar">Salvar</button><button class="btn" id="bfCanc">Cancelar</button></div></div>`:"";
   return `<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">Balanço patrimonial gerencial · ${esc(verNome())}</h3>
-     <label class="note">Posição no fim de <select id="bpMes">${D.meses.map(mm=>`<option value="${mm}" ${mm===P.mesBP?"selected":""}>${mesC(mm)}</option>`).join("")}</select></label></div>
+     <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm" id="bpAbre">${Object.keys(P.ab).some(k=>k.startsWith("BP:")&&P.ab[k])?"Recolher analítico":"Expandir analítico"}</button><label class="note">Posição no fim de <select id="bpMes">${D.meses.map(mm=>`<option value="${mm}" ${mm===P.mesBP?"selected":""}>${mesC(mm)}</option>`).join("")}</select></label></div></div>
     <div class="bpg"><div><h4>Ativo</h4><table class="dre bp"><tbody>
-      ${ln("Caixa e bancos (saldos positivos)",pos)}${ln("Contas a receber em aberto",rec)}${ln("Imobilizado (viaturas e equipamentos)",bruto)}${ln("(−) Depreciação acumulada",-dep)}${ln("<b>Total do ativo</b>",ativo,"dt")}</tbody></table></div>
+      ${ln("Caixa e bancos (saldos positivos)",pos,"","cx",bPos.length)}${det("cx",bPos)}${ln("Contas a receber em aberto",rec,"","rec",recL.length)}${det("rec",recL)}${ln("Imobilizado (viaturas e equipamentos)",bruto,"","im",imL.length)}${det("im",imL)}${ln("(−) Depreciação acumulada",-dep,"","dep",depL.length)}${det("dep",depL)}${ln("<b>Total do ativo</b>",ativo,"dt")}</tbody></table></div>
     <div><h4>Passivo e patrimônio líquido</h4><table class="dre bp"><tbody>
-      ${ln("Saldos bancários negativos (conta garantida)",-neg)}${ln("Contas a pagar em aberto",pag)}${ln("Parcelamentos de impostos (saldo)",atual?pimp:null)}${ln("Financiamentos de viaturas",0,"")}
+      ${ln("Saldos bancários negativos (conta garantida)",-neg,"","neg",bNeg.length)}${det("neg",bNeg.map(([n,v])=>[n,-v]))}${ln("Contas a pagar em aberto",pag,"","pag",pagL.length)}${det("pag",pagL)}${ln("Parcelamentos de impostos (saldo)",atual?pimp:null,"","pi",atual?piL.length:0)}${atual?det("pi",piL):""}${ln("Financiamentos de viaturas",0,"")}
       ${ln("<b>Total do passivo</b>",passivo,"dt")}${ln("Patrimônio líquido (por diferença)",pl,"dt dtf")}</tbody></table></div></div>
-    <p class="note">Balanço gerencial montado com o que existe na planilha: saldos dos extratos, contas a receber e a pagar do sistema (posição de hoje), patrimônio com depreciação linear pela vida útil. <b>Falta o saldo devedor dos ${fin.length} financiamentos de viaturas</b> (BNDES, FCO e CDC); assim que o banco informar, ele entra no passivo.</p></div>
+    <p class="note">Clique em uma linha com ▸ para ver o analítico. Balanço gerencial montado com o que existe na planilha: saldos dos extratos, contas a receber e a pagar do sistema (posição de hoje), imobilizado com depreciação linear pela vida útil. <b>Falta o saldo devedor dos ${fin.length} financiamentos de viaturas</b> (BNDES, FCO e CDC); assim que o banco informar, ele entra no passivo.</p></div>
     <div class="card"><h3 class="pnt">Evolução: saldo em bancos e imobilizado líquido</h3>${grafico(D.meses.map(mesC),[{nome:"Saldo em bancos",v:cx,cor:COR.rec},{nome:"Imobilizado líquido",v:imo,cor:COR.desp}],{})}</div>
-    <div class="card"><h3 class="pnt">Bens financiados</h3><div class="tw"><table class="dre"><thead><tr><th>Bem</th><th>Valor</th><th>Aquisição</th><th>Financiamento</th><th>Parcelas</th></tr></thead><tbody>
-      ${fin.map(b=>`<tr><td>${esc(b.n)}</td><td>${fN(b.v)}</td><td>${mesC(b.aq)}</td><td>${esc(b.fin)}</td><td>${b.parc??"–"}</td></tr>`).join("")||`<tr><td colspan="5" class="note">Nenhum.</td></tr>`}</tbody></table></div></div>`;
+    ${form}
+    <div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">Imobilizado · cadastro (${lista.length} bens)</h3>${editavel?`<button class="btn primary sm" id="bemNovo">＋ Novo bem</button>`:`<span class="note">Carregando o cadastro…</span>`}</div>
+      <p class="note">Cadastre aqui os bens da empresa e mantenha os dados em dia: valor, mês de aquisição, vida útil, financiamento e baixa/venda. O balanço acima é recalculado na hora.</p>
+      <div class="tw"><table class="dre lt"><thead><tr><th>Bem</th><th>Empresa</th><th class="n">Valor</th><th>Aquisição</th><th>Vida útil</th><th>Financiamento</th><th>Situação</th>${editavel?"<th></th>":""}</tr></thead><tbody>
+      ${lista.map(b=>`<tr><td>${esc(b.n)}${b.obs?`<div class="note">${esc(b.obs)}</div>`:""}</td><td>${b.emp===1?"Health":"Life"}</td><td class="n">${fN(b.v)}</td><td>${mesC(String(b.aq))}</td><td>${b.vida||5} anos</td><td>${esc(b.fin||"À vista")}${b.parc?` · ${b.parc}x`:""}</td><td>${b.baixa?`<span class="neg">Baixado em ${mesC(b.baixa)}</span>`:"Em uso"}</td>${editavel?`<td><button class="btn sm" data-bem="${b.id}">Editar</button></td>`:""}</tr>`).join("")||`<tr><td colspan="8" class="note">Nenhum bem cadastrado.</td></tr>`}</tbody></table></div></div>`;
 }
-
+async function salvarBem(){
+  const num=s=>{ s=String(s||"").trim().replace(/\s|R\$/g,""); if(s.includes(",")) s=s.replace(/\./g,"").replace(",","."); return +s; };
+  const r={ empresa:P.emp, emp:+$("#bfE").value, nome:$("#bfN").value.trim(), valor:num($("#bfV").value), aquisicao:$("#bfA").value, vida:+$("#bfVi").value||5,
+    financiamento:$("#bfF").value.trim()||null, parcelas:$("#bfP").value===""?null:+$("#bfP").value, baixa:$("#bfB").value||null, ambulancia:$("#bfAmb").checked, obs:$("#bfO").value.trim()||null,
+    atualizado_por:S.user.id, atualizado_nome:(S.perfil&&S.perfil.nome)||S.user.email, atualizado_em:new Date().toISOString() };
+  if(!r.nome) return toast("Informe a descrição do bem."); if(!(r.valor>0)) return toast("Informe o valor do bem."); if(!/^\d{4}-\d{2}$/.test(r.aquisicao)) return toast("Informe o mês de aquisição.");
+  const id=P.bemEd&&P.bemEd.id; const q=id?sb.from("pn_bens").update(r).eq("id",id):sb.from("pn_bens").insert(r);
+  const {error}=await q; if(error) return toast("Não foi possível salvar: "+error.message);
+  P.bemEd=null; await carregarBens(); toast("Bem salvo."); corpo();
+}
+/* Lançamentos: lista dos lançamentos confirmados + sugestão de plano de contas / centro de custo */
+function secLanc(D){
+  const B=S.lanc&&S.lanc[P.emp], sug=(S.sug&&S.sug[P.emp])||[];
+  if (B===undefined) return `<div class="card note">Carregando lançamentos…</div>`;
+  if (!B) return `<div class="card empty">A lista de lançamentos ainda não foi publicada para esta empresa.</div>`;
+  const e = P.ver==="c"?null:(P.ver==="h"?1:0), L=B.l.filter(x=>e===null||x[8]===e);
+  const meses=[...new Set(L.map(x=>x[1].slice(0,7)))].sort().reverse(); if(!P.lm||!meses.includes(P.lm)) P.lm=meses[0];
+  const q=(P.lq||"").toLowerCase(), planos=[...new Set([...B.l.map(x=>x[5]),...D.cats.map(c=>c.n)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt"));
+  const ccs=[...new Set([...(D.ccs||[]).filter(c=>c!=="Sem centro de custo"),...B.l.map(x=>x[6]).filter(c=>c&&!/^[-#]/.test(c))])].sort((a,b)=>a.localeCompare(b,"pt"));
+  const F=L.filter(x=>(P.lm==="todos"||x[1].startsWith(P.lm))&&(!P.lp||x[5]===P.lp)&&(!q||(x[3]+" "+x[4]+" "+x[2]+" "+x[5]+" "+x[6]+" "+x[0]).toLowerCase().includes(q)));
+  const pend=sug.filter(s=>s.status==="pendente").map(s=>s.cod), mostra=F.slice(0,300);
+  const dt=d=>d.slice(8,10)+"/"+d.slice(5,7)+"/"+d.slice(2,4);
+  const stc={pendente:"Pendente",aplicada:"Aplicada",recusada:"Recusada",cancelada:"Cancelada"};
+  const sugHTML=sug.length?`<div class="card"><h3 class="pnt">Sugestões de alteração (${sug.filter(s=>s.status==="pendente").length} pendentes)</h3><div class="tw"><table class="dre lt"><thead><tr><th>Data</th><th>Lançamento</th><th class="n">Valor</th><th>Plano de contas</th><th>Centro de custo</th><th>Quem pediu</th><th>Situação</th></tr></thead><tbody>
+    ${sug.map(s=>`<tr><td>${s.data?dt(s.data):""}</td><td>${esc(s.descricao||"")}${s.comentario?`<div class="note">“${esc(s.comentario)}”</div>`:""}</td><td class="n ${s.valor<0?"neg":""}">${fN(+s.valor||0)}</td>
+      <td>${s.plano_novo?`${esc(s.plano_atual||"–")} → <b>${esc(s.plano_novo)}</b>`:"<span class='note'>sem alteração</span>"}</td><td>${s.cc_novo?`${esc(s.cc_atual||"–")} → <b>${esc(s.cc_novo)}</b>`:"<span class='note'>sem alteração</span>"}</td>
+      <td>${esc(s.criado_nome||"")}<div class="note">${new Date(s.criado_em).toLocaleDateString("pt-BR")}</div></td>
+      <td><b class="${s.status==="recusada"?"neg":""}">${stc[s.status]}</b>${s.resposta?`<div class="note">${esc(s.resposta)}</div>`:""}
+        ${s.status==="pendente"?(pnEq()?`<div class="row" style="gap:4px;margin-top:4px"><button class="btn sm" data-sres="${s.id}" data-st="aplicada">Aplicada</button><button class="btn sm" data-sres="${s.id}" data-st="recusada">Recusar</button></div>`:(s.criado_por===S.user.id?`<button class="btn sm" data-sres="${s.id}" data-st="cancelada" style="margin-top:4px">Cancelar</button>`:"")):""}</td></tr>`).join("")}</tbody></table></div></div>`:"";
+  const op=(l,v)=>l.map(x=>`<option ${x===v?"selected":""}>${esc(x)}</option>`).join("");
+  return `${sugHTML}<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">Lançamentos confirmados · ${esc(verNome())}</h3>
+    <div class="pnf"><label>Mês<select id="lnMes">${meses.map(m=>`<option value="${m}" ${m===P.lm?"selected":""}>${mesC(m)}</option>`).join("")}<option value="todos" ${P.lm==="todos"?"selected":""}>Todos</option></select></label>
+    <label>Plano de contas<select id="lnPl"><option value="">Todos</option>${op([...new Set(L.map(x=>x[5]))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"pt")),P.lp)}</select></label>
+    <label>Buscar<input id="lnQ" value="${esc(P.lq||"")}" placeholder="Fornecedor, descrição, valor…"></label></div></div>
+    <p class="note">Viu um lançamento com plano de contas ou centro de custo errado? Clique em <b>Sugerir alteração</b>: a equipe da Vital recebe o pedido, corrige no sistema e marca como aplicada. Mostrando ${mostra.length} de ${F.length} lançamentos · base de ${esc(B.gerado.split(" ")[0].split("-").reverse().join("/"))}.</p>
+    <div class="tw"><table class="dre lt"><thead><tr><th>Data</th><th>Descrição</th><th>Conta</th><th>Plano de contas</th><th>Centro de custo</th><th class="n">Valor</th><th></th></tr></thead><tbody>
+    ${mostra.map(x=>`<tr><td>${dt(x[1])}</td><td class="ds">${esc(x[3]||"")}${x[3]&&x[4]?"<br>":""}<span class="note">${esc(x[4])}</span></td><td>${esc(x[2])}</td><td>${esc(x[5])}</td><td>${esc(x[6]&&!/^[-#]/.test(x[6])?x[6]:"–")}</td><td class="n ${x[7]<0?"neg":""}">${fN(x[7])}</td>
+      <td>${pend.includes(String(x[0]))?`<span class="note">Sugestão pendente</span>`:`<button class="btn sm" style="white-space:nowrap" data-sug="${x[0]}" title="Sugerir outro plano de contas ou centro de custo">Sugerir</button>`}</td></tr>
+      ${String(P.sugCod)===String(x[0])?`<tr class="det"><td colspan="7"><div class="bemg"><label>Novo plano de contas<select id="sgP"><option value="">(manter: ${esc(x[5])})</option>${op(planos.filter(p=>p!==x[5]))}</select></label>
+        <label>Novo centro de custo<select id="sgC"><option value="">(manter: ${esc(x[6]&&!/^[-#]/.test(x[6])?x[6]:"sem centro")})</option>${op(ccs.filter(c=>c!==x[6]))}</select></label>
+        <label style="grid-column:1/-1">Comentário<input id="sgO" placeholder="Ex.: esse gasto é da viatura VTR 21, no Hospital Brasília"></label></div>
+        <div class="row" style="gap:8px;margin-top:6px"><button class="btn primary sm" id="sgEnv">Enviar sugestão</button><button class="btn sm" id="sgCan">Cancelar</button></div></td></tr>`:""}`).join("")||`<tr><td colspan="7" class="note">Nenhum lançamento encontrado.</td></tr>`}</tbody></table></div></div>`;
+}
 function secAN(D){
   if (P.an) return detAN(D, AN.find(a=>a.id===P.an));
   const idx=idxPer(D);
@@ -1257,9 +1336,27 @@ function ligar(D){
   const cs=$("#dreCsv"); if (cs) cs.onclick=()=>baixarDRE(D);
   b.querySelectorAll("[data-banco]").forEach(tr=>tr.onclick=()=>{ $("#concDet").innerHTML=detBanco(D,+tr.dataset.banco); $("#concDet").scrollIntoView({behavior:"smooth",block:"nearest"}); });
   const bm=$("#bpMes"); if (bm) bm.onchange=e=>{ P.mesBP=e.target.value; corpo(); };
+  const ba=$("#bpAbre"); if (ba) ba.onclick=()=>{ const abrir=!Object.keys(P.ab).some(k=>k.startsWith("BP:")&&P.ab[k]); ["cx","rec","im","dep","neg","pag","pi"].forEach(k=>P.ab["BP:"+k]=abrir); corpo(); };
+  const bn=$("#bemNovo"); if (bn) bn.onclick=()=>{ P.bemEd={emp:P.ver==="h"?1:0,vida:5}; corpo(); setTimeout(()=>{ const f=$("#bemForm"); if(f){ f.scrollIntoView({behavior:"smooth",block:"center"}); $("#bfN").focus(); } },50); };
+  b.querySelectorAll("[data-bem]").forEach(x=>x.onclick=()=>{ P.bemEd=bensDe(D).find(k=>k.id===x.dataset.bem)||null; corpo(); setTimeout(()=>{ const f=$("#bemForm"); if(f) f.scrollIntoView({behavior:"smooth",block:"center"}); },50); });
+  const bs=$("#bfSalvar"); if (bs) bs.onclick=salvarBem; const bc=$("#bfCanc"); if (bc) bc.onclick=()=>{ P.bemEd=null; corpo(); };
+  const lm=$("#lnMes"); if (lm) lm.onchange=e=>{ P.lm=e.target.value; corpo(); };
+  const lp=$("#lnPl"); if (lp) lp.onchange=e=>{ P.lp=e.target.value; corpo(); };
+  const lq=$("#lnQ"); if (lq) { lq.oninput=()=>{ clearTimeout(P.lqT); P.lqT=setTimeout(()=>{ P.lq=lq.value; corpo(); const n=$("#lnQ"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },350); }; }
+  b.querySelectorAll("[data-sug]").forEach(x=>x.onclick=()=>{ P.sugCod=x.dataset.sug; corpo(); });
+  const sc=$("#sgCan"); if (sc) sc.onclick=()=>{ P.sugCod=null; corpo(); };
+  const se=$("#sgEnv"); if (se) se.onclick=async()=>{ const B=S.lanc[P.emp], x=B.l.find(r=>String(r[0])===String(P.sugCod)); const pn=$("#sgP").value, cn=$("#sgC").value, ob=$("#sgO").value.trim();
+    if(!pn&&!cn) return toast("Escolha o novo plano de contas e/ou o novo centro de custo.");
+    se.disabled=true; const {error}=await sb.from("pn_sugestoes").insert({ empresa:P.emp, cod:String(x[0]), data:x[1], conta:x[2], descricao:(x[3]?x[3]+" · ":"")+x[4], valor:x[7], plano_atual:x[5], plano_novo:pn||null, cc_atual:x[6]&&!/^[-#]/.test(x[6])?x[6]:null, cc_novo:cn||null, comentario:ob||null, criado_nome:(S.perfil&&S.perfil.nome)||S.user.email });
+    if(error){ se.disabled=false; return toast("Não foi possível enviar: "+error.message); } P.sugCod=null; await carregarLanc(); toast("Sugestão enviada à equipe da Vital."); corpo(); };
+  b.querySelectorAll("[data-sres]").forEach(x=>x.onclick=async()=>{ const st=x.dataset.st; const row=x.closest("td"); let resp=null;
+    if(st==="recusada"){ resp=(row.querySelector(".srResp")||{}).value; if(!row.querySelector(".srResp")){ row.insertAdjacentHTML("beforeend",`<input class="srResp" placeholder="Motivo (opcional)" style="margin-top:4px;width:100%"><button class="btn sm" style="margin-top:4px" data-ok>Confirmar recusa</button>`); row.querySelector("[data-ok]").onclick=()=>{ resolverSug(x.dataset.sres,"recusada",row.querySelector(".srResp").value); }; return; } }
+    resolverSug(x.dataset.sres,st,resp); });
   b.querySelectorAll("[data-an]").forEach(x=>x.onclick=()=>{ P.an=x.dataset.an; corpo(); window.scrollTo({top:0}); });
   b.querySelectorAll("[data-anv]").forEach(x=>x.onclick=()=>{ P.an=null; corpo(); });
 }
+async function resolverSug(id,st,resp){ const u={status:st}; if(st!=="cancelada"){ u.resposta=resp||null; u.resolvido_por=S.user.id; u.resolvido_nome=(S.perfil&&S.perfil.nome)||S.user.email; u.resolvido_em=new Date().toISOString(); }
+  const {error}=await sb.from("pn_sugestoes").update(u).eq("id",id); if(error) return toast("Não foi possível atualizar: "+error.message); await carregarLanc(); corpo(); }
 function baixarDRE(D){
   const idx=idxPer(D), {L,grupos,cats}=calcDRE(D), linhas=[["Conta",...idx.map(i=>D.meses[i]),"Total"]];
   const add=(n,a)=>linhas.push([n,...idx.map(i=>(a[i]||0).toFixed(2).replace(".",",")),soma(a,idx).toFixed(2).replace(".",",")]);

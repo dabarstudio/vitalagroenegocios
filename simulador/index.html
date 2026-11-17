@@ -219,7 +219,7 @@ footer{max-width:1100px;margin:0 auto;padding-block:0 30px;padding-left:max(16px
       <div class="field full"><label for="sNome">Nome</label><div class="inp"><input id="sNome" type="text" style="font-family:var(--f-body)"></div></div>
       <div class="field full"><label for="sCid">Município do prestador</label><div class="inp"><input id="sCid" type="text" list="cidList" autocomplete="off" placeholder="Digite e escolha na lista" style="font-family:var(--f-body)"></div><datalist id="cidList"></datalist><p class="hint" id="cidInfo"></p></div>
       <div class="field full"><label for="sReg">Regime tributário</label>
-        <select id="sReg"><option value="SN">Simples Nacional</option><option value="LP">Lucro Presumido</option><option value="LR">Lucro Real</option></select></div>
+        <select id="sReg"><option value="SN">Simples Nacional</option><option value="LP">Lucro Presumido</option><option value="LR">Lucro Real</option><option value="PF">Pessoa física (autônomo)</option></select></div>
       <div class="field full"><label for="sAno">Ano-base</label>
         <select id="sAno"><option value="2027">2027 · CBS, sem PIS/COFINS</option><option value="2026">2026 · PIS/COFINS, CBS em teste</option></select></div>
       <div class="field full"><label for="sAtv">Atividade</label>
@@ -865,8 +865,24 @@ function calc(d){
   var lucro=receita-totMat-outrasDesp-d.folha-enc-iss-icms-lrPc.pis-lrPc.cof;
   var lrIr=irpjCsll(Math.max(0,lucro),Math.max(0,lucro)), lr=regRows(lrIr,"Lucro Real",lrPc,true);
   lp.ir=lpIr; lr.ir=lrIr; lr.lucro=lucro; lr.outrasDesp=outrasDesp;
+  // Pessoa física (autônomo, carnê-leão): IRPF progressivo sobre o livro caixa + INSS contribuinte individual + ISS + IBS/CBS
+  var pf=(function(){ var TETO=8475.55, ivaP=y26?0:(blocos.cbs.pagar+blocos.uf.pagar+blocos.mun.pagar), encPF=cpp+rat+terc;
+    var nano=!y26&&receita*12<=40500; if(nano) ivaP=0;
+    var lc=Math.max(0,receita-totMat-outrasDesp-d.folha-encPF-iss-icms-ivaP);
+    var inssB=Math.min(lc,TETO), inss=inssB*0.20, base=Math.max(0,lc-inss);
+    var F=[[2428.80,0,0],[2826.65,0.075,182.16],[3751.05,0.15,394.16],[4664.68,0.225,675.49],[Infinity,0.275,908.73]], f=F.find(function(x){return base<=x[0]});
+    var ir0=Math.max(0,base*f[1]-f[2]), red=base<=5000?Math.min(ir0,312.89):(base<=7350?Math.max(0,978.62-0.133145*base):0), irpf=Math.max(0,ir0-red);
+    var r=[{t:"IRPF carnê-leão (tabela progressiva"+(red>0?", com a redução da Lei 15.270/2025":"")+")",bc:base,aliq:base?irpf/base:0,val:irpf},
+      {t:"INSS contribuinte individual (20%, até o teto de R$ 8.475,55)",bc:inssB,aliq:0.20,val:inss},
+      {t:"INSS patronal sobre empregados (CPP + RAT + Terceiros)",bc:d.folha,aliq:d.folha?encPF/d.folha:0,val:encPF}];
+    if(com) r.push({t:"ICMS (vendas − compras)",bc:receita,aliq:d.icmsS/100,val:icms}); else r.push({t:"ISS (muitos municípios cobram valor fixo anual do autônomo)",bc:receita,aliq:d.iss/100,val:iss});
+    if(y26) r.push({t:"CBS 0,9% e IBS 0,1% (teste, compensáveis)",bc:receita,aliq:0.01,val:0});
+    else if(nano) r.push({t:"IBS/CBS: não contribuinte (nanoempreendedor, receita até R$ 40.500/ano)",bc:receita,aliq:0,val:0});
+    else r.push({t:"CBS (débito − crédito)",bc:null,aliq:al.cbs,val:blocos.cbs.pagar},{t:"IBS UF (débito − crédito)",bc:null,aliq:al.uf,val:blocos.uf.pagar},{t:"IBS Município (débito − crédito)",bc:null,aliq:al.mun,val:blocos.mun.pagar});
+    var tot=r.reduce(function(a,x){return a+x.val},0); r.push({t:"Total Pessoa física",bc:receita,aliq:receita?tot/receita:0,val:tot,total:true});
+    return {rows:r,total:tot,lc:lc,inss:inss,base:base,irpf:irpf,red:red,nano:nano}; })();
   return {receita:receita,totMat:totMat,totDesp:totDesp,enc:enc,rbt12:rbt12,fsr12:fsr12,fr:fr,anexo:anexo,fx:fx,L:L,efet:efet,das:das,rep:rep,
-    ivaDual:ivaDual,dasHib:dasHib,repRows:repRows,fr28:fr28,lp:lp,lr:lr,iss:iss,icms:icms,cpp:cpp,rat:rat,terc:terc,credPC:credPC,y26:y26,com:com,deb:deb,cred:cred,credNone:credNone,al:al,blocos:blocos,hibTotal:hibTotal,puro:das,dif:y26?0:das-hibTotal};
+    ivaDual:ivaDual,dasHib:dasHib,repRows:repRows,fr28:fr28,lp:lp,lr:lr,pf:pf,iss:iss,icms:icms,cpp:cpp,rat:rat,terc:terc,credPC:credPC,y26:y26,com:com,deb:deb,cred:cred,credNone:credNone,al:al,blocos:blocos,hibTotal:hibTotal,puro:das,dif:y26?0:das-hibTotal};
 }
 
 var last=null;
@@ -930,7 +946,7 @@ function render(){
   $("sNotes").innerHTML=n.map(function(x){return '<li'+(x[0]?' class="w"':'')+'>'+esc(x[1])+'</li>'}).join("");
   // comparativo de regimes
   var fora="IRPJ, CSLL, "+(c.y26?"PIS, COFINS, ":"")+"CPP, RAT, Terceiros, "+(c.com?"ICMS":"ISS")+(c.y26?"":", CBS e IBS");
-  var opts=[["SN","Simples Puro",c.puro,"DAS do mês"],["SN","Simples Híbrido",c.hibTotal,"DAS + IBS/CBS por fora"],["LP","Lucro Presumido",c.lp.total,fora],["LR","Lucro Real",c.lr.total,fora]];
+  var opts=[["SN","Simples Puro",c.puro,"DAS do mês"],["SN","Simples Híbrido",c.hibTotal,"DAS + IBS/CBS por fora"],["LP","Lucro Presumido",c.lp.total,fora],["LR","Lucro Real",c.lr.total,fora],["PF","Pessoa física (autônomo)",c.pf.total,"IRPF + INSS + "+(c.com?"ICMS":"ISS")+(c.y26?"":" + IBS/CBS")]];
   var vals=opts.filter(function(o){return o[2]!=null}).map(function(o){return o[2]});
   var mx=Math.max.apply(null,vals)||1, mn=Math.min.apply(null,vals);
   $("cmp").innerHTML=opts.map(function(o){ if(o[2]==null) return '<div class="cr" style="cursor:default;opacity:.7"><span class="nm">'+o[1]+'<br><span class="sub">disponível a partir de 2027</span></span><span class="vl">–</span></div>';
@@ -946,14 +962,16 @@ function render(){
   $("ivaTitle").textContent=sn?"IBS e CBS no Simples Híbrido":"IBS e CBS no regime regular";
   $("fIss").hidden=c.com; $("fIcmsS").hidden=!c.com; $("fIcmsE").hidden=!c.com;
   if(!sn){
-    var R=d.reg==="LP"?c.lp:c.lr;
-    $("lxTitle").textContent="Apuração · "+(d.reg==="LP"?"Lucro Presumido":"Lucro Real");
+    var R=d.reg==="LP"?c.lp:d.reg==="PF"?c.pf:c.lr;
+    $("lxTitle").textContent="Apuração · "+(d.reg==="LP"?"Lucro Presumido":d.reg==="PF"?"Pessoa física (autônomo, carnê-leão)":"Lucro Real");
     $("lxBadge").innerHTML='<span class="badge">'+brl.format(R.total)+'</span>';
     $("tbLx").innerHTML=R.rows.map(function(r){ return '<tr'+(r.total?' class="res"':'')+'><td>'+r.t+'</td><td>'+(r.bc==null?"débito − crédito":brl.format(r.bc))+'</td><td>'+pct(r.aliq,r.total?2:2)+'</td><td>'+brl.format(r.val)+'</td></tr>' }).join("");
+    if(d.reg==="PF") kv("kvLx",[["Receita bruta do mês",brl.format(c.receita)],["(−) Despesas do livro caixa (material, despesas, folha, encargos, ISS, IBS/CBS)",brl.format(c.receita-c.pf.lc)],["= Rendimento líquido do livro caixa",brl.format(c.pf.lc)],["(−) INSS pago (dedutível)",brl.format(c.pf.inss)],["= Base do IRPF",brl.format(c.pf.base)],["IRPF do mês"+(c.pf.red>0?" (já com a redução de "+brl.format(c.pf.red)+")":""),brl.format(c.pf.irpf)],["Total de tributos",brl.format(c.pf.total),1]]); else
     if(d.reg==="LP") kv("kvLx",[["Receita bruta do mês",brl.format(c.receita)],["Base presumida IRPJ ("+num.format(d.presI)+"%)",brl.format(c.lp.ir.bI)],["Base presumida CSLL ("+num.format(d.presC)+"%)",brl.format(c.lp.ir.bC)],["Total de tributos",brl.format(c.lp.total),1]]);
     else kv("kvLx",[["Receita bruta do mês",brl.format(c.receita)],["(−) Material aplicado",brl.format(c.totMat)],["(−) Despesas",brl.format(c.lr.outrasDesp)],["(−) Folha e encargos",brl.format(d.folha+c.enc)],["(−) "+(c.com?"ICMS":"ISS"),brl.format(c.com?c.icms:c.iss)]].concat(c.y26?[["(−) PIS e COFINS",brl.format(c.lr.pc.pis+c.lr.pc.cof)]]:[]).concat([["Lucro real do mês (antes de IRPJ e CSLL)",brl.format(c.lr.lucro),1],["Total de tributos",brl.format(c.lr.total),1]]));
     var m=[];
     if(d.reg==="LR"&&c.lr.lucro<0) m.push([1,"Lucro real negativo no mês: não há IRPJ nem CSLL, e o prejuízo pode ser compensado em períodos seguintes, limitado a 30% do lucro de cada período."]);
+    if(d.reg==="PF") m.push([0,"Pessoa física: o profissional recebe direto no CPF e recolhe o IRPF todo mês pelo carnê-leão, com a tabela progressiva (até 27,5%), deduzindo as despesas do livro caixa. Paga também INSS de 20% como contribuinte individual (até o teto) e ISS. Na pessoa jurídica, os tributos acima são da empresa; o lucro distribuído ao sócio é isento até R$ 50 mil por mês por empresa (Lei 15.270/2025), por isso a comparação mostra o custo total de tributos de cada forma de atuar."],[1,"Confira com o município como é cobrado o ISS do autônomo (valor fixo anual ou percentual). Despesas pessoais não entram no livro caixa; aluguel, folha, material e despesas da atividade entram."]);
     if(d.reg==="LP") m.push([0,"Lucro Presumido: IRPJ e CSLL calculados sobre a receita × percentual de presunção, sem considerar as despesas reais. Apuração trimestral, aqui mostrada em valor mensal."]);
     else m.push([0,"Lucro Real: IRPJ e CSLL sobre o lucro contábil ajustado. Aqui o lucro é estimado como receita − material − despesas − folha e encargos − "+(c.com?"ICMS":"ISS")+"."]);
     if(c.y26) m.push([0,"2026: PIS e COFINS ainda são devidos — "+(d.reg==="LP"?"cumulativos no Lucro Presumido (0,65% + 3% sobre a receita)":"não cumulativos no Lucro Real (1,65% + 7,6% sobre a receita menos "+brl.format(c.credPC)+" de compras e despesas com crédito)")+". CBS de 0,9% e IBS de 0,1% são destacados em teste e compensáveis, sem custo."]);
@@ -1062,8 +1080,8 @@ window.VITAL_REP.simples=function(){
   iva.push(["Crédito total",null].concat(T.map(function(t){return c.blocos[t].cred})));
   iva.push(["A pagar (débito − crédito)",null].concat(T.map(function(t){return c.blocos[t].pagar})));
   var credLbl={"0":"Integral","0.3":"Red. 30%","0.6":"Red. 60%","0.7":"Red. 70%","x":"Sem crédito"}, redL={"0":"Integral","0.3":"Red. 30%","0.6":"Red. 60%","1":"Alíq. zero"};
-  var regNome={SN:"Simples Nacional",LP:"Lucro Presumido",LR:"Lucro Real"}[d.reg];
-  var cmpRows=[["Simples Puro",c.puro]].concat(c.y26?[]:[["Simples Híbrido",c.hibTotal]]).concat([["Lucro Presumido",c.lp.total],["Lucro Real",c.lr.total]]);
+  var regNome={SN:"Simples Nacional",LP:"Lucro Presumido",LR:"Lucro Real",PF:"Pessoa física (autônomo)"}[d.reg];
+  var cmpRows=[["Simples Puro",c.puro]].concat(c.y26?[]:[["Simples Híbrido",c.hibTotal]]).concat([["Lucro Presumido",c.lp.total],["Lucro Real",c.lr.total],["Pessoa física (autônomo)",c.pf.total]]);
   var mn=Math.min.apply(null,cmpRows.map(function(r){return r[1]}));
   var blocks=[
       {title:"Comparativo de regimes (tributos do mês · "+d.ano+")", table:{head:["Regime","Total do mês","% da receita",""],types:["txt","brl","pct","txt"],rows:cmpRows.map(function(r){return [r[0],r[1],c.receita?r[1]/c.receita:0,r[1]===mn?"Mais barato":""]})}},
@@ -1096,10 +1114,12 @@ window.VITAL_REP.simples=function(){
     comp:{"Simples Puro":c.repRows.filter(function(r){return r.t!=="Total do DAS"}).map(function(r){return {t:r.t,val:r.val}}),
       "Simples Híbrido":semIva.concat([{t:"CBS",val:c.blocos.cbs.pagar},{t:"IBS UF",val:c.blocos.uf.pagar},{t:"IBS Município",val:c.blocos.mun.pagar}]),
       "Lucro Presumido":c.lp.rows.filter(function(r){return !r.total}).map(function(r){return {t:r.t,val:r.val}}),
-      "Lucro Real":c.lr.rows.filter(function(r){return !r.total}).map(function(r){return {t:r.t,val:r.val}})}};
-  if(d.reg!=="SN"){ var R=d.reg==="LP"?c.lp:c.lr;
+      "Lucro Real":c.lr.rows.filter(function(r){return !r.total}).map(function(r){return {t:r.t,val:r.val}}),
+      "Pessoa física (autônomo)":c.pf.rows.filter(function(r){return !r.total}).map(function(r){return {t:r.t,val:r.val}})}};
+  if(d.reg!=="SN"){ var R=d.reg==="LP"?c.lp:d.reg==="PF"?c.pf:c.lr;
     blocks.push({title:"Apuração · "+regNome, table:{head:["Tributo","Base de cálculo","Alíquota","Valor"],types:["txt","brl","pct","brl"],rows:R.rows.map(function(r){return [r.t,r.bc==null?"débito − crédito":r.bc,r.aliq,r.val]})}});
-    if(d.reg==="LP") blocks.push({title:"Bases presumidas", kv:[["Presunção IRPJ",d.presI/100,"pct"],["Base IRPJ",c.lp.ir.bI,"brl"],["Presunção CSLL",d.presC/100,"pct"],["Base CSLL",c.lp.ir.bC,"brl"]]});
+    if(d.reg==="PF") blocks.push({title:"Livro caixa e IRPF do mês", kv:[["Receita bruta",c.receita,"brl"],["(−) Despesas dedutíveis",c.receita-c.pf.lc,"brl"],["= Rendimento líquido",c.pf.lc,"brl"],["(−) INSS",c.pf.inss,"brl"],["= Base do IRPF",c.pf.base,"brl"],["IRPF",c.pf.irpf,"brl"]]});
+    else if(d.reg==="LP") blocks.push({title:"Bases presumidas", kv:[["Presunção IRPJ",d.presI/100,"pct"],["Base IRPJ",c.lp.ir.bI,"brl"],["Presunção CSLL",d.presC/100,"pct"],["Base CSLL",c.lp.ir.bC,"brl"]]});
     else blocks.push({title:"Lucro real estimado do mês", kv:[["Receita bruta",c.receita,"brl"],["(−) Material aplicado",c.totMat,"brl"],["(−) Despesas",c.lr.outrasDesp,"brl"],["(−) Folha e encargos",d.folha+c.enc,"brl"],["(−) "+(c.com?"ICMS":"ISS"),c.com?c.icms:c.iss,"brl"],["(−) PIS e COFINS",c.lr.pc.pis+c.lr.pc.cof,"brl"],["Lucro antes de IRPJ e CSLL",c.lr.lucro,"brl"]]});
     if(!c.y26) blocks.push({title:"IBS e CBS no regime regular (CBS "+pct(c.al.cbs)+" · IBS UF "+pct(c.al.uf)+" · IBS Mun. "+pct(c.al.mun)+")", table:{head:["Linha","Base de cálculo","CBS","IBS UF","IBS Município"],types:["txt","brl","brl","brl","brl"],rows:iva}});
     blocks.push({title:"Premissas", kv:[["CBS",c.al.cbs,"pct"],["IBS UF",c.al.uf,"pct"],["IBS Município",c.al.mun,"pct"],["Presunção IRPJ",d.presI/100,"pct"],["Presunção CSLL",d.presC/100,"pct"],[c.com?"ICMS nas vendas":"ISS",(c.com?d.icmsS:d.iss)/100,"pct"],["CPP",d.cpp/100,"pct"],["RAT ajustado",d.rat/100,"pct"],["Terceiros",d.terc/100,"pct"]]});

@@ -166,7 +166,7 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .dre tr.lc td[data-mzm]{cursor:pointer}.dre tr.lc td[data-mzm]:hover{background:var(--surface-2);text-decoration:underline dotted}
 .lcb{all:unset;cursor:pointer;color:inherit;text-decoration:underline dotted;text-underline-offset:3px}.lcb:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .lcdlg{width:min(640px,96vw);max-height:88vh;border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--surface);color:inherit}
-.qk{cursor:pointer}.dre td.qk:hover,.dre tr.qk:hover td{background:var(--surface-2)}.qn{text-decoration:underline dotted;text-underline-offset:3px}.dre td.qk:hover{text-decoration:underline dotted}
+.qk{cursor:pointer}.dre tr.dforn td{font-size:.8rem;background:color-mix(in srgb,var(--surface-2) 45%,transparent)}.dre tr.clk{cursor:pointer}.dre td.qk:hover,.dre tr.qk:hover td{background:var(--surface-2)}.qn{text-decoration:underline dotted;text-underline-offset:3px}.dre td.qk:hover{text-decoration:underline dotted}
 .lcdlg::backdrop{background:rgba(0,0,0,.55)}.lch{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px}
 .lcm{border-top:1px solid var(--line);padding:8px 0}.lcmh{display:flex;justify-content:space-between;font-size:.92rem;margin-bottom:4px}
 .lci{padding:6px 0 6px 8px;border-left:3px solid var(--line);margin:4px 0}.lcl{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
@@ -1071,7 +1071,7 @@ function renderPainel(){
 }
 function corpo(){ QB.length=0; const D=pac(), b=$("#pnBody"); b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, lanc:secLanc, an:secAN, pend:secPend})[P.sec](D); ligar(D);
   if (P.sec==="bp" && !(S.pnBens && P.emp in S.pnBens)) carregarBens().then(corpo);
-  if (P.sec==="lanc" && !(S.lanc && P.emp in S.lanc)) carregarLanc().then(corpo); }
+  if ((P.sec==="lanc"||precisaLanc()) && !(S.lanc && P.emp in S.lanc)) carregarLanc().then(corpo); }
 /* ===== imobilizado editável pelo cliente (pn_bens) e sugestões de reclassificação (pn_sugestoes) ===== */
 const pnEq = () => S.papel==="admin" || S.papel==="equipe";
 async function carregarBens(){ S.pnBens=S.pnBens||{}; const r=await sb.from("pn_bens").select("*").eq("empresa",P.emp).order("aquisicao"); S.pnBens[P.emp]=r.error?null:(r.data||[]); }
@@ -1102,7 +1102,7 @@ function lcFatos(D){ const B=S.lanc&&S.lanc[P.emp]; if(!B) return null; if(B.__f
   const ccOf=c=>{ const n=nzs(c); if(!n||n==="#N/A"||/^-+$/.test(n)) return semCC; if(n==="LIFE") return (D.ccs||[]).indexOf("Life (geral)"); if(n==="HEALTH") return (D.ccs||[]).indexOf("Health (geral)"); if(n in kc) return kc[n]; if(/VTR|SPRINTER|AMB|^[A-Z]{3}-?\d/.test(n)) return (D.ccs||[]).indexOf("Frota (ambulâncias)"); for(const k in kc) if(n.includes(k)||k.includes(n)) return kc[k]; return semCC; };
   const cpn=(D.cps||[]).map(nzs);
   B.__f=B.l.map(x=>{ const m=mi[String(x[1]).slice(0,7)]; const t=nzs(x[3]+" "+x[4]); let cp=-1; for(let i=0;i<cpn.length;i++){ const w=cpn[i].split(/[ -]/)[0]; if(w.length>=4&&t.includes(cpn[i].length>6?cpn[i].slice(0,12):w)){ cp=i; break; } }
-    return {x, f:[m==null?-1:m, x[8], x[5] in ci?ci[x[5]]:-1, ccOf(x[6]), cp, 0, 0, +x[7]||0]}; });
+    const f=[m==null?-1:m, x[8], x[5] in ci?ci[x[5]]:-1, ccOf(x[6]), cp, 0, 0, +x[7]||0]; f.x=x; return {x, f}; });
   B.__fD=D; return B.__f; }
 async function abrirQ(D,id,mi){ const q=QB[id]; if(!q) return;
   if(!(S.lanc&&P.emp in S.lanc)){ toast("Carregando lançamentos…"); await carregarLanc(); }
@@ -1124,6 +1124,12 @@ async function abrirQ(D,id,mi){ const q=QB[id]; if(!q) return;
     const csv="﻿"+linhas.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\r\n"); const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${q.tit} ${P.emp} ${per}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
   d.showModal(); reg("ver_lancamentos", P.emp+" · "+q.tit).catch(()=>{});
 }
+const fornOf=x=>{ let e=String(x[3]||"").trim(); if(!e){ e=String(x[4]||"").replace(/^.*?\bDES[:.]\s*/i,"").replace(/\s+\d{2}\/\d{2}.*$/,"").trim(); } return e||"Sem fornecedor"; };
+/* fornecedores que compõem um valor: {nome:[valor por mês]} a partir dos lançamentos */
+function fornDe(D,pred){ const F=lcFatos(D); if(!F) return null; const m={}, nm={};
+  for(const o of F){ if(o.f[0]<0||o.f[2]<0||!passaCx(o.f)) continue; let ok=false; try{ ok=pred(o.f); }catch(e){} if(!ok) continue; const n0=fornOf(o.x), k=nzs(n0), n=(nm[k] ||= n0.toUpperCase()); (m[n] ||= new Array(D.meses.length).fill(0))[o.f[0]]+=o.f[7]; }
+  return m; }
+const precisaLanc=()=>Object.keys(P.ab||{}).some(k=>/^(C|Q):/.test(k)&&P.ab[k]);
 function secResumo(D){
   const idx=idxPer(D), {L}=calcDRE(D), rb=soma(L.rb,idx), rl=soma(L.rlq,idx), mc=soma(L.mc,idx), eb=soma(L.eb,idx);
   const desp = L.rb.map((v,i)=>L.rlq[i]-v);
@@ -1153,12 +1159,19 @@ function secDRE(D){
      <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${cols.map((c,i)=>`<th class="${i>=idx.length?"tp2":""}">${c}</th>`).join("")}<th>Total</th><th>% rec.</th></tr></thead><tbody>`;
   const row=(nome,arr,cls,key,nivel,pred)=>{ const v=lin(arr), t=soma(arr,idx), q=pred?qreg(nome,pred):null;
     return `<tr class="${cls}" ${key?`data-ab="${esc(key)}"`:""}>${!key&&q!==null?`<td class="qk" data-q="${q}" data-mi="-1" title="Ver lançamentos" style="padding-left:${8+nivel*16}px"><span class="qn">${esc(nome)}</span></td>`:`<td style="padding-left:${8+nivel*16}px">${key?`<span class="tg">${P.ab[key]?"▾":"▸"}</span>`:""}${esc(nome)}</td>`}${v.map((x,i)=>q!==null&&i<idx.length?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${i>=idx.length?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,t<0?"neg":"",`<b>${fN(t)}</b>`):`<td class="${t<0?"neg":""}"><b>${fN(t)}</b></td>`}<td>${rb?fP(t/rb):"–"}</td></tr>`; };
+  const fornRows=(cat,pr)=>{ const m=fornDe(D,pr), nc=cols.length+3; if(!m) return `<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:56px">Carregando fornecedores…</td></tr>`;
+    const ini=D.meses.indexOf((S.lanc[P.emp]||{}).de||"2026-05"); const l=Object.entries(m).sort((a,b)=>soma(a[1],idx)-soma(b[1],idx)).filter(([_,a])=>Math.abs(soma(a,idx))>=0.005);
+    if(!l.length) return `<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:56px">Sem lançamentos detalhados no período (detalhe disponível a partir de ${esc(mesC(D.meses[Math.max(0,ini)]))}).</td></tr>`;
+    return l.slice(0,40).map(([fn,a])=>{ const q=qreg(cat+" · "+fn,f=>pr(f)&&nzs(fornOf(f.x))===nzs(fn)), t=soma(a,idx);
+      return `<tr class="dforn">${qtd(q,-1,"",`<span class="qn" style="padding-left:40px;display:inline-block">${esc(fn)}</span>`)}${idx.map(i=>i<ini?`<td class="note">·</td>`:qtd(q,i,a[i]<0?"neg":"",Math.abs(a[i])<0.005?"–":fN(a[i]))).join("")}${pv?"<td class='tp2'></td>".repeat(4):""}${qtd(q,-1,t<0?"neg":"",`<b>${fN(t)}</b>`)}<td>${rb?fP(t/rb):"–"}</td></tr>`; }).join("")
+      +(l.length>40?`<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:56px">+ ${l.length-40} fornecedores menores</td></tr>`:"")
+      +(idx.some(i=>i<ini)?`<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:56px">Por fornecedor a partir de ${esc(mesC(D.meses[ini]))}; meses anteriores marcados com ·</td></tr>`:""); };
   DRE.forEach(l=>{
     const cls = l.s ? (l.forte?"dt dtf":"dt") : (l.info?"di":"dg");
     h+=row(l.t, L[l.k], cls, l.p?"L:"+l.k:null, 0, l.p?(f=>l.p(D.cats[f[2]].g)):null);
     if (l.p && P.ab["L:"+l.k]) Object.keys(grupos).filter(g=>l.p(g)).sort((a,b)=>soma(grupos[a],idx)-soma(grupos[b],idx)).forEach(g=>{
       h+=row(D.grupos[g]||g, grupos[g], "dsub", "G:"+g, 1, g==="X_IC"?null:(f=>D.cats[f[2]].g===g));
-      if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>h+=row(n, cats[n], "dcat", null, 2, (nn=>f=>D.cats[f[2]].n===nn)(n.replace(/ \(repasse\)$/,"")))); });
+      if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>{ const nn=n.replace(/ \(repasse\)$/,""), pr=f=>D.cats[f[2]].n===nn, ck="C:"+n; h+=row(n, cats[n], "dcat", ck, 2, pr); if(P.ab[ck]) h+=fornRows(nn,pr); }); });
   });
   h+=`</tbody></table></div></div>`;
   // fixo × variável
@@ -1337,7 +1350,10 @@ function quebra(D,a,idx){
   const l=Object.entries(m).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])), tot=l.reduce((s,x)=>s+x[1],0);
   const tit={cat:"Categoria",cc:"Centro de custo",cp:"Cliente / pagador",emp:"Empresa"}[dim];
   const ok=f=>a.tipo==="res"?(a.rec(D,f)||(a.desp(D,f)&&f[7]<0)):a.p(D,f);
-  return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th><th>Valor no período</th><th>%</th></tr></thead><tbody>${l.map(([n,v])=>`<tr class="qk" data-q="${qreg(n,f=>ok(f)&&nome(f)===n)}" data-mi="-1" title="Ver lançamentos"><td><span class="qn">${esc(n)}</span></td><td class="${v<0?"neg":""}">${fN(v)}</td><td>${fP(v/tot)}</td></tr>`).join("")}<tr class="dt"><td>Total</td><td>${fN(tot)}</td><td></td></tr></tbody></table></div>`;
+  return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th><th>Valor no período</th><th>%</th></tr></thead><tbody>${l.map(([n,v])=>{ const k="Q:"+(a.id||a.t||dim)+":"+dim+":"+n, pr=f=>ok(f)&&nome(f)===n; let h2=`<tr class="clk" data-ab="${esc(k)}"><td><span class="tg">${P.ab[k]?"▾":"▸"}</span>${esc(n)}</td>${qtd(qreg(n,pr),-1,v<0?"neg":"",fN(v))}<td>${fP(v/tot)}</td></tr>`;
+    if(P.ab[k]){ const m=fornDe(D,pr); if(!m) h2+=`<tr class="dforn"><td colspan="3" class="note" style="padding-left:32px">Carregando fornecedores…</td></tr>`; else { const sg=a.tipo==="desp"?-1:1; const fl=Object.entries(m).map(([fn,arr])=>[fn,soma(arr,idx)*sg]).filter(x=>Math.abs(x[1])>=0.005).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1]));
+      h2+=fl.length?fl.slice(0,40).map(([fn,fv])=>`<tr class="dforn">${qtd(qreg(n+" · "+fn,f=>pr(f)&&nzs(fornOf(f.x))===nzs(fn)),-1,"",`<span class="qn" style="padding-left:24px;display:inline-block">${esc(fn)}</span>`)}<td class="${fv<0?"neg":""}">${fN(fv)}</td><td>${fP(fv/v)}</td></tr>`).join(""):`<tr class="dforn"><td colspan="3" class="note" style="padding-left:32px">Sem lançamentos detalhados no período (detalhe a partir de mai/26).</td></tr>`; } }
+    return h2; }).join("")}<tr class="dt"><td>Total</td><td>${fN(tot)}</td><td></td></tr></tbody></table></div>`;
 }
 function detAN(D,a){
   const idx=idxPer(D), pv=P.prev, cols=cab(D,idx,pv), prv=cols.map((c,i)=>i>=idx.length), lin=arr=>[...idx.map(i=>arr[i]),...(pv?prevDe(arr):[])];

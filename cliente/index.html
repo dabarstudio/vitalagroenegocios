@@ -1017,6 +1017,16 @@ function calcDRE(D){
   for (const f of D.fatos){ if(!passaCx(f)) continue; const c=D.cats[f[2]], g=(f[5]||c.g==="X_IC")?"X_IC":c.g; const lin=DRE.find(l=>l.p&&l.p(g)); if(!lin) continue;
     const cn=g==="X_IC"?c.n+" (repasse)":c.n;
     (L[lin.k] ||= new Array(nm).fill(0))[f[0]]+=f[7]; (grupos[g] ||= new Array(nm).fill(0))[f[0]]+=f[7]; (cats[cn] ||= new Array(nm).fill(0))[f[0]]+=f[7]; }
+  // fatura de cartão: o que não foi detalhado item a item no mês entra como despesa (senão o gasto some do resultado)
+  { const fat=new Array(nm).fill(0), it=new Array(nm).fill(0);
+    for (const f of D.fatos){ if(!passaCx(f)||f[5]) continue; const c=D.cats[f[2]]; if(c.g==="X_CARTAO") fat[f[0]]+=-f[7]; else if(f[6]&&f[7]<0) it[f[0]]+=-f[7]; }
+    let cf=0, ci=0, A=0; const add=new Array(nm).fill(0);
+    for(let i=0;i<nm;i++){ cf+=fat[i]; ci+=it[i]; const a=Math.max(A, cf-ci); add[i]=a-A; A=a; }
+    if(add.some(v=>v>0.005)){ const g="C_CARTAO", cn="Cartão de crédito · fatura sem detalhamento", lx=DRE.find(l=>l.k==="fx"), la=DRE.find(l=>l.k==="cv");
+      D.grupos[g]="Cartão de crédito · gastos operacionais (fatura sem itens lançados)";
+      for(let i=0;i<nm;i++){ const v=add[i]; if(!v) continue;
+        (L[la.k] ||= new Array(nm).fill(0))[i]-=v; (grupos[g] ||= new Array(nm).fill(0))[i]-=v; (cats[cn] ||= new Array(nm).fill(0))[i]-=v;
+        (L[lx.k] ||= new Array(nm).fill(0))[i]+=v; (grupos.X_CARTAO ||= new Array(nm).fill(0))[i]+=v; const kx=D.cats.find(c=>c.g==="X_CARTAO"); if(kx&&cats[kx.n]) cats[kx.n][i]+=v; } } }
   DRE.forEach(l=>{ if (l.s) { L[l.k]=new Array(nm).fill(0); l.s.forEach(k=>(L[k]||[]).forEach((v,i)=>L[l.k][i]+=v)); } else L[l.k] ||= new Array(nm).fill(0); });
   return {L, grupos, cats};
 }
@@ -1212,7 +1222,7 @@ function secDRE(D){
     h+=row(l.t, L[l.k], cls, l.p?"L:"+l.k:null, 0, l.p?(f=>l.p(D.cats[f[2]].g)):null);
     if (l.p && P.ab["L:"+l.k]) Object.keys(grupos).filter(g=>l.p(g)).sort((a,b)=>soma(grupos[a],idx)-soma(grupos[b],idx)).forEach(g=>{
       h+=row(D.grupos[g]||g, grupos[g], "dsub", "G:"+g, 1, g==="X_IC"?null:(f=>D.cats[f[2]].g===g), /^(P_|A_)/.test(g));
-      if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>{ const nn=n.replace(/ \(repasse\)$/,""), pr=f=>D.cats[f[2]].n===nn, ck="C:"+n; h+=row(n, cats[n], "dcat", ck, 2, pr, fixoCat(D.cats.find(c=>c.n===nn))); if(P.ab[ck]) h+=fornRows(nn,pr); }); });
+      if (P.ab["G:"+g]) Object.keys(cats).filter(n=>g==="X_IC"?n.endsWith(" (repasse)"):g==="C_CARTAO"?n.startsWith("Cartão de crédito · fatura"):D.cats.some(c=>c.n===n&&c.g===g)).sort((a,b)=>soma(cats[a],idx)-soma(cats[b],idx)).forEach(n=>{ const nn=n.replace(/ \(repasse\)$/,""), pr=n.startsWith("Cartão de crédito · fatura")?(f=>D.cats[f[2]].g==="X_CARTAO"):(f=>D.cats[f[2]].n===nn), ck="C:"+n; h+=row(n, cats[n], "dcat", ck, 2, pr, fixoCat(D.cats.find(c=>c.n===nn))); if(P.ab[ck]) h+=fornRows(nn,pr); }); });
   });
   h+=`</tbody></table></div></div>`;
   { const B=S.lanc&&S.lanc[P.emp]; if(B&&B.l&&B.l[0]&&B.l[0].length>13){ const set=new Set(idx.map(i=>D.meses[i])); const sp=B.l.filter(x=>x[13]==="sem par"&&set.has(String(x[1]).slice(0,7))&&passaCx([0,x[8]]));

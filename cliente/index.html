@@ -1343,17 +1343,24 @@ function resumoAN(D,a,idx){
 function s2(D,a){ const S2=serieAN(D,a); const arr=S2.s||(S2.r&&S2.r.map((v,i)=>v+S2.d[i])); if(!arr) return ""; const idx=idxPer(D), v=idx.map(i=>arr[i]); const mx=Math.max(...v.map(Math.abs),1);
   return `<svg class="spk" viewBox="0 0 120 28" aria-hidden="true">${v.map((x,i)=>`<rect x="${i*(120/v.length)+1}" y="${x>=0?14-x/mx*13:14}" width="${120/v.length-2}" height="${Math.max(1,Math.abs(x)/mx*13)}" rx="1.5" style="fill:${a.tipo==="desp"?COR.desp:x>=0?COR.rec:COR.desp}"/>`).join("")}</svg>`; }
 function quebra(D,a,idx){
-  const dim=a.dim||"cat", nome=f=>dim==="cc"?D.ccs[f[3]]:dim==="cp"?(f[4]>=0?D.cps[f[4]]:"Demais clientes"):dim==="emp"?D.emp[f[1]]:D.cats[f[2]].n, m={};
-  const set=new Set(idx);
-  for (const f of D.fatos){ if(!passa(f)||!set.has(f[0])) continue; let ok=false, v=f[7];
-    if (a.tipo==="res") ok=a.rec(D,f)||(a.desp(D,f)&&v<0); else ok=a.p(D,f); if(!ok) continue; if(a.tipo==="desp") v=-v; m[nome(f)]=(m[nome(f)]||0)+v; }
-  const l=Object.entries(m).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])), tot=l.reduce((s,x)=>s+x[1],0);
-  const tit={cat:"Categoria",cc:"Centro de custo",cp:"Cliente / pagador",emp:"Empresa"}[dim];
+  const dim=a.dim||"cat", nome=f=>dim==="cc"?D.ccs[f[3]]:dim==="cp"?(f[4]>=0?D.cps[f[4]]:"Demais clientes"):dim==="emp"?D.emp[f[1]]:D.cats[f[2]].n, m={}, nm=D.meses.length;
+  const set=new Set(idx), sg=a.tipo==="desp"?-1:1;
   const ok=f=>a.tipo==="res"?(a.rec(D,f)||(a.desp(D,f)&&f[7]<0)):a.p(D,f);
-  return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th><th>Valor no período</th><th>%</th></tr></thead><tbody>${l.map(([n,v])=>{ const k="Q:"+(a.id||a.t||dim)+":"+dim+":"+n, pr=f=>ok(f)&&nome(f)===n; let h2=`<tr class="clk" data-ab="${esc(k)}"><td><span class="tg">${P.ab[k]?"▾":"▸"}</span>${esc(n)}</td>${qtd(qreg(n,pr),-1,v<0?"neg":"",fN(v))}<td>${fP(v/tot)}</td></tr>`;
-    if(P.ab[k]){ const m=fornDe(D,pr); if(!m) h2+=`<tr class="dforn"><td colspan="3" class="note" style="padding-left:32px">Carregando fornecedores…</td></tr>`; else { const sg=a.tipo==="desp"?-1:1; const fl=Object.entries(m).map(([fn,arr])=>[fn,soma(arr,idx)*sg]).filter(x=>Math.abs(x[1])>=0.005).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1]));
-      h2+=fl.length?fl.slice(0,40).map(([fn,fv])=>`<tr class="dforn">${qtd(qreg(n+" · "+fn,f=>pr(f)&&nzs(fornOf(f.x))===nzs(fn)),-1,"",`<span class="qn" style="padding-left:24px;display:inline-block">${esc(fn)}</span>`)}<td class="${fv<0?"neg":""}">${fN(fv)}</td><td>${fP(fv/v)}</td></tr>`).join(""):`<tr class="dforn"><td colspan="3" class="note" style="padding-left:32px">Sem lançamentos detalhados no período (detalhe a partir de mai/26).</td></tr>`; } }
-    return h2; }).join("")}<tr class="dt"><td>Total</td><td>${fN(tot)}</td><td></td></tr></tbody></table></div>`;
+  for (const f of D.fatos){ if(!passa(f)||!set.has(f[0])) continue; if(!ok(f)) continue; (m[nome(f)] ||= new Array(nm).fill(0))[f[0]]+=f[7]*sg; }
+  const l=Object.entries(m).map(([n,arr])=>[n,arr,soma(arr,idx)]).sort((x,y)=>Math.abs(y[2])-Math.abs(x[2])), tot=l.reduce((s,x)=>s+x[2],0);
+  const totA=new Array(nm).fill(0); l.forEach(([_,arr])=>arr.forEach((v,i)=>totA[i]+=v));
+  const tit={cat:"Categoria",cc:"Centro de custo",cp:"Cliente / pagador",emp:"Empresa"}[dim], nc=idx.length+3;
+  const ini=Math.max(0,D.meses.indexOf((S.lanc&&S.lanc[P.emp]&&S.lanc[P.emp].de)||"2026-05"));
+  const cel=(q,arr,pre)=>idx.map(i=>pre&&i<ini?`<td class="note">·</td>`:qtd(q,i,arr[i]<0?"neg":"",Math.abs(arr[i])<0.005?"–":fN(arr[i]))).join("");
+  return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th>${idx.map(i=>`<th>${mesC(D.meses[i])}</th>`).join("")}<th>Total</th><th>%</th></tr></thead><tbody>${l.map(([n,arr,v])=>{ const k="Q:"+(a.id||a.t||dim)+":"+dim+":"+n, pr=f=>ok(f)&&nome(f)===n, q=qreg(n,pr);
+    let h2=`<tr class="clk" data-ab="${esc(k)}"><td><span class="tg">${P.ab[k]?"▾":"▸"}</span>${esc(n)}</td>${cel(q,arr,false)}${qtd(q,-1,v<0?"neg":"",`<b>${fN(v)}</b>`)}<td>${fP(v/tot)}</td></tr>`;
+    if(P.ab[k]){ const fm=fornDe(D,pr); if(!fm) h2+=`<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:32px">Carregando fornecedores…</td></tr>`; else {
+      const fl=Object.entries(fm).map(([fn,ar])=>[fn,ar.map(x=>x*sg),soma(ar,idx)*sg]).filter(x=>Math.abs(x[2])>=0.005).sort((x,y)=>Math.abs(y[2])-Math.abs(x[2]));
+      h2+=fl.length?fl.slice(0,40).map(([fn,ar,fv])=>{ const qf=qreg(n+" · "+fn,f=>pr(f)&&nzs(fornOf(f.x))===nzs(fn)); return `<tr class="dforn">${qtd(qf,-1,"",`<span class="qn" style="padding-left:24px;display:inline-block">${esc(fn)}</span>`)}${cel(qf,ar,true)}${qtd(qf,-1,fv<0?"neg":"",`<b>${fN(fv)}</b>`)}<td>${fP(fv/v)}</td></tr>`; }).join("")
+        +(fl.length>40?`<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:32px">+ ${fl.length-40} fornecedores menores</td></tr>`:"")
+        +(idx.some(i=>i<ini)?`<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:32px">Por fornecedor a partir de ${esc(mesC(D.meses[ini]))}; meses anteriores marcados com ·</td></tr>`:"")
+        :`<tr class="dforn"><td colspan="${nc}" class="note" style="padding-left:32px">Sem lançamentos detalhados no período (detalhe a partir de ${esc(mesC(D.meses[ini]))}).</td></tr>`; } }
+    return h2; }).join("")}<tr class="dt"><td>Total</td>${idx.map(i=>`<td class="${totA[i]<0?"neg":""}">${fN(totA[i])}</td>`).join("")}<td><b>${fN(tot)}</b></td><td></td></tr></tbody></table></div>`;
 }
 function detAN(D,a){
   const idx=idxPer(D), pv=P.prev, cols=cab(D,idx,pv), prv=cols.map((c,i)=>i>=idx.length), lin=arr=>[...idx.map(i=>arr[i]),...(pv?prevDe(arr):[])];

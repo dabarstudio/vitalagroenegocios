@@ -1170,7 +1170,8 @@ window.VITAL_VIS=function(doc,rep,H){
   var REG={"Simples Puro":[v.y26?"Simples Nacional":"Simples Nacional","modelo tradicional: tudo numa guia só (DAS)"],
     "Simples Híbrido":["Simples Híbrido","Simples + novo imposto (CBS/IBS) pago à parte"],
     "Lucro Presumido":["Lucro Presumido","imposto calculado sobre um lucro estimado"],
-    "Lucro Real":["Lucro Real","imposto calculado sobre o lucro de verdade"]};
+    "Lucro Real":["Lucro Real","imposto calculado sobre o lucro de verdade"],
+    "Pessoa física (autônomo)":["Pessoa física","autônomo no CPF: IRPF (carnê-leão) + INSS + ISS"]};
   function friendly(t){ var s=String(t);
     var map=[[/^IRPJ adicional/,"Imposto de Renda adicional","IRPJ adicional"],[/^IRPJ/,"Imposto de Renda da empresa","IRPJ"],[/^CSLL/,"Contribuição sobre o lucro","CSLL"],
       [/^CPP/,"INSS da empresa","CPP"],[/^RAT/,"Seguro de acidente de trabalho","RAT"],[/^Terceiros/,"Sistema S, Incra e salário-educação","Terceiros"],
@@ -1237,14 +1238,14 @@ window.VITAL_VIS=function(doc,rep,H){
   y+=4;
 
   // três ideias-chave
-  y=section(y,"Em 1 minuto");
   var cards=[];
   cards.push(["Quanto sobra no mês", sobra>=0?"Depois de pagar impostos ("+REG[best.n][0]+") e despesas, sobram cerca de "+brl.format(sobra)+" por mês, ou "+pc(v.receita?sobra/v.receita:0)+" do faturamento.":"Com os números informados, impostos e despesas passam do faturamento em "+brl.format(-sobra)+" por mês. Vale revisar custos e preço."]);
   var why;
   if(/Simples/.test(best.n)){
     if(v.atv==="R") why=v.fr>=0.28?"A folha de pagamento equivale a "+pc(v.fr)+" do faturamento, acima dos 28% exigidos. Por isso sua empresa usa a tabela mais barata do Simples.":"A folha equivale a só "+pc(v.fr)+" do faturamento (abaixo de 28%), o que joga a empresa na tabela mais cara do Simples. Veja a oportunidade na página 3.";
     else why="No Simples quase todos os tributos são pagos numa guia única, com alíquota efetiva de "+pc(v.efet,2)+" sobre o faturamento.";
-  } else why="Com o seu faturamento e as suas despesas, pagar imposto sobre o lucro sai mais barato do que no Simples Nacional.";
+  } else if(/Pessoa/.test(best.n)) why="Com esse faturamento, atuar como pessoa física (carnê-leão + INSS + ISS) sai mais barato do que abrir empresa. Vale rever se o faturamento crescer.";
+  else why="Com o seu faturamento e as suas despesas, pagar imposto sobre o lucro sai mais barato do que no Simples Nacional.";
   cards.push(["Por que essa opção", why]);
   var att;
   if(!v.y26&&v.sn&&v.sn.hib!=null){ att=v.sn.hib<v.sn.puro?"O Simples Híbrido sai mais barato porque o crédito das suas compras abate o novo imposto. Em troca, exige controle mensal das notas fiscais."
@@ -1254,7 +1255,7 @@ window.VITAL_VIS=function(doc,rep,H){
   var gap=5, cw=(CW-2*gap)/3, chh=0;
   font(8.4,"normal"); cards.forEach(function(c){ chh=Math.max(chh,wrapH(c[1],cw-10,8.4)) });
   var ch=chh+22;
-  if(y+ch>BOT){ doc.addPage(); y=slim("Resumo","Em 1 minuto") }
+  if(y+ch+8>BOT){ doc.addPage(); y=slim("Resumo","Em 1 minuto") } else y=section(y,"Em 1 minuto");
   cards.forEach(function(c,i){ var x=M+i*(cw+gap); rr(x,y,cw,ch,4,C.white,C.line);
     circle(x+9,y+9,4.6,i===2?C.amb:C.g); font(9,"bold"); T(C.white); tx(String(i+1),x+9,y+10.6,{align:"center"});
     font(9.6,"bold"); T(C.ink); tx(c[0],x+16,y+10.4);
@@ -1436,6 +1437,7 @@ window.VITAL_VIS=function(doc,rep,H){
     ["Lucro Presumido","O governo presume um percentual de lucro sobre o faturamento e cobra imposto sobre ele."],
     ["Lucro Real","O imposto é calculado sobre o lucro de verdade, apurado na contabilidade."],
     ["Lucro isento","Parte do lucro da empresa que o sócio recebe sem pagar Imposto de Renda."],
+    ["Carnê-leão","Guia mensal do Imposto de Renda de quem recebe como pessoa física, sem empresa. Calculada pela tabela progressiva, até 27,5%."],
     ["DIRPF","A declaração anual de Imposto de Renda da pessoa física. É o documento que os bancos usam para comprovar renda."]];
   var gw2=(CW-8)/2;
   for(var gi=0;gi<gl.length;gi+=2){ var rowH=0;

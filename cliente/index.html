@@ -166,7 +166,7 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .dre tr.lc td[data-mzm]{cursor:pointer}.dre tr.lc td[data-mzm]:hover{background:var(--surface-2);text-decoration:underline dotted}
 .lcb{all:unset;cursor:pointer;color:inherit;text-decoration:underline dotted;text-underline-offset:3px}.lcb:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .lcdlg{width:min(640px,96vw);max-height:88vh;border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--surface);color:inherit}
-.dre td.qk{cursor:pointer}.dre td.qk:hover{background:var(--surface-2);text-decoration:underline dotted}
+.qk{cursor:pointer}.dre td.qk:hover,.dre tr.qk:hover td{background:var(--surface-2)}.qn{text-decoration:underline dotted;text-underline-offset:3px}.dre td.qk:hover{text-decoration:underline dotted}
 .lcdlg::backdrop{background:rgba(0,0,0,.55)}.lch{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px}
 .lcm{border-top:1px solid var(--line);padding:8px 0}.lcmh{display:flex;justify-content:space-between;font-size:.92rem;margin-bottom:4px}
 .lci{padding:6px 0 6px 8px;border-left:3px solid var(--line);margin:4px 0}.lcl{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
@@ -1152,7 +1152,7 @@ function secDRE(D){
      <p class="note">Toque no nome da linha para abrir as subcontas e em qualquer valor para ver os lançamentos. Valores em R$, pela data do pagamento/recebimento. ${P.ver==="c"?"No consolidado, os repasses entre Life e Health foram retirados.":""}</p>
      <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${cols.map((c,i)=>`<th class="${i>=idx.length?"tp2":""}">${c}</th>`).join("")}<th>Total</th><th>% rec.</th></tr></thead><tbody>`;
   const row=(nome,arr,cls,key,nivel,pred)=>{ const v=lin(arr), t=soma(arr,idx), q=pred?qreg(nome,pred):null;
-    return `<tr class="${cls}" ${key?`data-ab="${esc(key)}"`:""}><td style="padding-left:${8+nivel*16}px">${key?`<span class="tg">${P.ab[key]?"▾":"▸"}</span>`:""}${esc(nome)}</td>${v.map((x,i)=>q!==null&&i<idx.length?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${i>=idx.length?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,t<0?"neg":"",`<b>${fN(t)}</b>`):`<td class="${t<0?"neg":""}"><b>${fN(t)}</b></td>`}<td>${rb?fP(t/rb):"–"}</td></tr>`; };
+    return `<tr class="${cls}" ${key?`data-ab="${esc(key)}"`:""}>${!key&&q!==null?`<td class="qk" data-q="${q}" data-mi="-1" title="Ver lançamentos" style="padding-left:${8+nivel*16}px"><span class="qn">${esc(nome)}</span></td>`:`<td style="padding-left:${8+nivel*16}px">${key?`<span class="tg">${P.ab[key]?"▾":"▸"}</span>`:""}${esc(nome)}</td>`}${v.map((x,i)=>q!==null&&i<idx.length?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${i>=idx.length?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,t<0?"neg":"",`<b>${fN(t)}</b>`):`<td class="${t<0?"neg":""}"><b>${fN(t)}</b></td>`}<td>${rb?fP(t/rb):"–"}</td></tr>`; };
   DRE.forEach(l=>{
     const cls = l.s ? (l.forte?"dt dtf":"dt") : (l.info?"di":"dg");
     h+=row(l.t, L[l.k], cls, l.p?"L:"+l.k:null, 0, l.p?(f=>l.p(D.cats[f[2]].g)):null);
@@ -1180,7 +1180,7 @@ function secDFC(D){
   const dE=z().map((_,i)=>rec[i]-eEnt[i]), dS=z().map((_,i)=>pag[i]-eSai[i]), dT=z().map((_,i)=>dE[i]+dS[i]);
   const cols=idx.map(i=>mesC(D.meses[i]));
   const dp=(ds,sg)=>f=>{ let d=D.cats[f[2]].dfc; if(d==="T") d="O"; return ds.includes(d)&&(sg===0?f[7]>=0:sg===1?f[7]<0:true); };
-  const r=(t,a,c="",pred)=>{ const q=pred?qreg(t.replace(/<[^>]+>/g,"")+" (DFC)",pred):null; return `<tr class="${c}"><td>${t}</td>${idx.map(i=>q!==null?qtd(q,i,a[i]<0?"neg":"",fN(a[i])):`<td class="${a[i]<0?"neg":""}">${fN(a[i])}</td>`).join("")}${q!==null?qtd(q,-1,soma(a,idx)<0?"neg":"",`<b>${fN(soma(a,idx))}</b>`):`<td class="${soma(a,idx)<0?"neg":""}"><b>${fN(soma(a,idx))}</b></td>`}</tr>`; };
+  const r=(t,a,c="",pred)=>{ const q=pred?qreg(t.replace(/<[^>]+>/g,"")+" (DFC)",pred):null; return `<tr class="${c}">${q!==null?qtd(q,-1,"",`<span class="qn">${t}</span>`):`<td>${t}</td>`}${idx.map(i=>q!==null?qtd(q,i,a[i]<0?"neg":"",fN(a[i])):`<td class="${a[i]<0?"neg":""}">${fN(a[i])}</td>`).join("")}${q!==null?qtd(q,-1,soma(a,idx)<0?"neg":"",`<b>${fN(soma(a,idx))}</b>`):`<td class="${soma(a,idx)<0?"neg":""}"><b>${fN(soma(a,idx))}</b></td>`}</tr>`; };
   const rd=(t,a)=>`<tr><td>${t}</td>${idx.map(i=>`<td><span class="cz ${Math.abs(a[i])<1?"cz-ok":Math.abs(a[i])<1000?"cz-at":"cz-er"}">${Math.abs(a[i])<1?"✓":fN(a[i])}</span></td>`).join("")}<td><b>${fN(soma(a,idx))}</b></td></tr>`;
   const sumA=(x)=>z().map((_,i)=>x[0][i]+x[1][i]);
   const cons=P.ver==="c", qd=idx.filter(i=>Math.abs(dT[i])>=1).length;
@@ -1337,12 +1337,12 @@ function quebra(D,a,idx){
   const l=Object.entries(m).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1])), tot=l.reduce((s,x)=>s+x[1],0);
   const tit={cat:"Categoria",cc:"Centro de custo",cp:"Cliente / pagador",emp:"Empresa"}[dim];
   const ok=f=>a.tipo==="res"?(a.rec(D,f)||(a.desp(D,f)&&f[7]<0)):a.p(D,f);
-  return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th><th>Valor no período</th><th>%</th></tr></thead><tbody>${l.map(([n,v])=>`<tr><td>${esc(n)}</td>${qtd(qreg(n,f=>ok(f)&&nome(f)===n),-1,v<0?"neg":"",fN(v))}<td>${fP(v/tot)}</td></tr>`).join("")}<tr class="dt"><td>Total</td><td>${fN(tot)}</td><td></td></tr></tbody></table></div>`;
+  return `<div class="tw"><table class="dre"><thead><tr><th>${tit}</th><th>Valor no período</th><th>%</th></tr></thead><tbody>${l.map(([n,v])=>`<tr class="qk" data-q="${qreg(n,f=>ok(f)&&nome(f)===n)}" data-mi="-1" title="Ver lançamentos"><td><span class="qn">${esc(n)}</span></td><td class="${v<0?"neg":""}">${fN(v)}</td><td>${fP(v/tot)}</td></tr>`).join("")}<tr class="dt"><td>Total</td><td>${fN(tot)}</td><td></td></tr></tbody></table></div>`;
 }
 function detAN(D,a){
   const idx=idxPer(D), pv=P.prev, cols=cab(D,idx,pv), prv=cols.map((c,i)=>i>=idx.length), lin=arr=>[...idx.map(i=>arr[i]),...(pv?prevDe(arr):[])];
   let h=`<div class="row" style="gap:8px"><button class="btn sm ghost" data-anv="1" type="button">← Todas as análises</button></div><div class="card"><h3 class="pnt">${esc(a.t)} · ${esc(verNome())}</h3>${a.nota?`<p class="note">${esc(a.nota)}</p>`:""}`;
-  const tab=(rows)=>`<div class="tw"><table class="dre"><thead><tr><th></th>${cols.map((c,i)=>`<th class="${prv[i]?"tp2":""}">${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>${rows.map(([n,arr,c,pr])=>{ const v=lin(arr), q=pr?qreg(a.t+" · "+n,pr):null; return `<tr class="${c||""}"><td>${esc(n)}</td>${v.map((x,i)=>q!==null&&!prv[i]?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${prv[i]?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,"",`<b>${fN(soma(arr,idx))}</b>`):`<td><b>${fN(soma(arr,idx))}</b></td>`}</tr>`; }).join("")}</tbody></table></div>`;
+  const tab=(rows)=>`<div class="tw"><table class="dre"><thead><tr><th></th>${cols.map((c,i)=>`<th class="${prv[i]?"tp2":""}">${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>${rows.map(([n,arr,c,pr])=>{ const v=lin(arr), q=pr?qreg(a.t+" · "+n,pr):null; return `<tr class="${c||""}">${q!==null?qtd(q,-1,"",`<span class="qn">${esc(n)}</span>`):`<td>${esc(n)}</td>`}${v.map((x,i)=>q!==null&&!prv[i]?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${prv[i]?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,"",`<b>${fN(soma(arr,idx))}</b>`):`<td><b>${fN(soma(arr,idx))}</b></td>`}</tr>`; }).join("")}</tbody></table></div>`;
   if (a.tipo==="geral"){
     const {L}=calcDRE(D), rec=L.rb, vari=L.rb.map((_,i)=>-(L.cv[i]+L.ded[i])), fixo=L.rb.map((_,i)=>-(L.pes[i]+L.adm[i])), outros=L.rb.map((_,i)=>-(L.fin[i]+L.nr[i]+L.ir[i]));
     h+=grafico(cols,[{nome:"Receita",v:lin(rec),cor:COR.rec},{nome:"Despesas variáveis + fixas",v:lin(vari.map((v,i)=>-(v+fixo[i]))),cor:COR.desp},{nome:"Resultado líquido",v:lin(L.rlq),cor:COR.res,linha:1}],{prev:prv});

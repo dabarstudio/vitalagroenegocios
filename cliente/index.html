@@ -1346,7 +1346,8 @@ function secLanc(D){
   const meses=[...new Set(L.map(x=>x[1].slice(0,7)))].sort().reverse(); if(!P.lm||!meses.includes(P.lm)) P.lm=meses[0];
   const q=(P.lq||"").toLowerCase(), planos=[...new Set([...B.l.map(x=>x[5]),...D.cats.map(c=>c.n)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt"));
   const ccs=[...new Set([...(D.ccs||[]).filter(c=>c!=="Sem centro de custo"),...B.l.map(x=>x[6]).filter(c=>c&&!/^[-#]/.test(c))])].sort((a,b)=>a.localeCompare(b,"pt"));
-  const F=L.filter(x=>(P.lm==="todos"||x[1].startsWith(P.lm))&&(!P.lp||x[5]===P.lp)&&(!q||(x[3]+" "+x[4]+" "+x[2]+" "+x[5]+" "+x[6]+" "+x[0]).toLowerCase().includes(q)));
+  const fornL=[...new Set(L.map(x=>fornOf(x)).filter(f=>f&&f!=="Sem fornecedor"))].sort((a,b)=>a.localeCompare(b,"pt"));
+  const F=L.filter(x=>(P.lm==="todos"||x[1].startsWith(P.lm))&&(!P.lp||x[5]===P.lp)&&(!P.lc||x[6]===P.lc)&&(!P.lf||nzs(fornOf(x))===nzs(P.lf))&&(!q||(x[3]+" "+x[4]+" "+x[2]+" "+x[5]+" "+x[6]+" "+x[0]).toLowerCase().includes(q)));
   const pend=sug.filter(s=>s.status==="pendente").map(s=>s.cod), mostra=F.slice(0,300);
   const dt=d=>d.slice(8,10)+"/"+d.slice(5,7)+"/"+d.slice(2,4);
   const stc={pendente:"Pendente",aplicada:"Aplicada",recusada:"Recusada",cancelada:"Cancelada"};
@@ -1360,15 +1361,24 @@ function secLanc(D){
   return `${sugHTML}<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">Lançamentos confirmados · ${esc(verNome())}</h3>
     <div class="pnf"><label>Mês<select id="lnMes">${meses.map(m=>`<option value="${m}" ${m===P.lm?"selected":""}>${mesC(m)}</option>`).join("")}<option value="todos" ${P.lm==="todos"?"selected":""}>Todos</option></select></label>
     <label>Plano de contas<select id="lnPl"><option value="">Todos</option>${op([...new Set(L.map(x=>x[5]))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"pt")),P.lp)}</select></label>
+    <label>Fornecedor / cliente<input id="lnF" list="lnFL" value="${esc(P.lf||"")}" placeholder="Todos"><datalist id="lnFL">${fornL.map(f=>`<option value="${esc(f)}">`).join("")}</datalist></label>
+    <label>Centro de custo<select id="lnC"><option value="">Todos</option>${op([...new Set(L.map(x=>x[6]))].filter(c=>c&&!/^[-#]/.test(c)).sort((a,b)=>a.localeCompare(b,"pt")),P.lc)}</select></label>
     <label>Buscar<input id="lnQ" value="${esc(P.lq||"")}" placeholder="Fornecedor, descrição, valor…"></label></div></div>
     <p class="note">Viu um lançamento com plano de contas ou centro de custo errado? Clique em <b>Sugerir alteração</b>: a equipe da Vital recebe o pedido, corrige no sistema e marca como aplicada. Mostrando ${mostra.length} de ${F.length} lançamentos · base de ${esc(B.gerado.split(" ")[0].split("-").reverse().join("/"))}.</p>
-    <div class="tw"><table class="dre lt"><thead><tr><th>Data</th><th>Descrição</th><th>Conta</th><th>Plano de contas</th><th>Centro de custo</th><th class="n">Valor</th><th></th></tr></thead><tbody>
-    ${mostra.map(x=>`<tr><td>${dt(x[1])}</td><td class="ds">${esc(x[3]||"")}${x[3]&&x[4]?"<br>":""}<span class="note">${esc(x[4])}</span></td><td>${esc(x[2])}</td><td>${esc(x[5])}</td><td>${esc(x[6]&&!/^[-#]/.test(x[6])?x[6]:"–")}</td><td class="n ${x[7]<0?"neg":""}">${fN(x[7])}</td>
+    ${(()=>{ P.sel=P.sel||new Set(); const nSel=F.filter(x=>P.sel.has(String(x[0]))).length, tot=F.filter(x=>P.sel.has(String(x[0]))).reduce((a,x)=>a+(+x[7]||0),0);
+      return `<div class="lcw" style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin:6px 0 10px">
+      <div style="flex:1 1 220px"><b>Reclassificação em massa</b><div class="note" style="margin:2px 0 0">${nSel} selecionado${nSel===1?"":"s"}${nSel?` · ${fRc(tot)}`:""} · <a href="#" id="lnTodos">selecionar os ${F.length} filtrados</a> · <a href="#" id="lnNenhum">limpar</a></div></div>
+      <label style="display:flex;flex-direction:column;gap:2px;font-size:.8rem;flex:1 1 200px">Novo plano de contas<select id="lnBP"><option value="">(manter)</option>${op(planos)}</select></label>
+      <label style="display:flex;flex-direction:column;gap:2px;font-size:.8rem;flex:1 1 180px">Novo centro de custo<select id="lnBC"><option value="">(manter)</option>${op(ccs)}</select></label>
+      <label style="display:flex;flex-direction:column;gap:2px;font-size:.8rem;flex:2 1 220px">Comentário<input id="lnBO" placeholder="Ex.: todos os pagamentos da APSCO são Médicos"></label>
+      <div class="row" style="gap:6px"><button class="btn sm" id="lnBS" ${nSel?"":"disabled"}>Enviar ${nSel||""} sugest${nSel===1?"ão":"ões"}</button>${S.papel==="admin"?`<button class="btn primary sm" id="lnBA" ${nSel?"":"disabled"} title="Aplica no painel (lançamentos e DRE) e registra como sugestão aplicada">Aplicar agora</button>`:""}</div></div>`; })()}
+    <div class="tw"><table class="dre lt"><thead><tr><th><input type="checkbox" id="lnAllPg" title="Selecionar os mostrados"></th><th>Data</th><th>Descrição</th><th>Conta</th><th>Plano de contas</th><th>Centro de custo</th><th class="n">Valor</th><th></th></tr></thead><tbody>
+    ${mostra.map(x=>`<tr><td><input type="checkbox" data-ck="${x[0]}" ${P.sel&&P.sel.has(String(x[0]))?"checked":""}></td><td>${dt(x[1])}</td><td class="ds">${esc(x[3]||"")}${x[3]&&x[4]?"<br>":""}<span class="note">${esc(x[4])}</span></td><td>${esc(x[2])}</td><td>${esc(x[5])}</td><td>${esc(x[6]&&!/^[-#]/.test(x[6])?x[6]:"–")}</td><td class="n ${x[7]<0?"neg":""}">${fN(x[7])}</td>
       <td>${pend.includes(String(x[0]))?`<span class="note">Sugestão pendente</span>`:`<button class="btn sm" style="white-space:nowrap" data-sug="${x[0]}" title="Sugerir outro plano de contas ou centro de custo">Sugerir</button>`}</td></tr>
-      ${String(P.sugCod)===String(x[0])?`<tr class="det"><td colspan="7"><div class="bemg"><label>Novo plano de contas<select id="sgP"><option value="">(manter: ${esc(x[5])})</option>${op(planos.filter(p=>p!==x[5]))}</select></label>
+      ${String(P.sugCod)===String(x[0])?`<tr class="det"><td colspan="8"><div class="bemg"><label>Novo plano de contas<select id="sgP"><option value="">(manter: ${esc(x[5])})</option>${op(planos.filter(p=>p!==x[5]))}</select></label>
         <label>Novo centro de custo<select id="sgC"><option value="">(manter: ${esc(x[6]&&!/^[-#]/.test(x[6])?x[6]:"sem centro")})</option>${op(ccs.filter(c=>c!==x[6]))}</select></label>
         <label style="grid-column:1/-1">Comentário<input id="sgO" placeholder="Ex.: esse gasto é da viatura VTR 21, no Hospital Brasília"></label></div>
-        <div class="row" style="gap:8px;margin-top:6px"><button class="btn primary sm" id="sgEnv">Enviar sugestão</button><button class="btn sm" id="sgCan">Cancelar</button></div></td></tr>`:""}`).join("")||`<tr><td colspan="7" class="note">Nenhum lançamento encontrado.</td></tr>`}</tbody></table></div></div>`;
+        <div class="row" style="gap:8px;margin-top:6px"><button class="btn primary sm" id="sgEnv">Enviar sugestão</button><button class="btn sm" id="sgCan">Cancelar</button></div></td></tr>`:""}`).join("")||`<tr><td colspan="8" class="note">Nenhum lançamento encontrado.</td></tr>`}</tbody></table></div></div>`;
 }
 function secAN(D){
   if (P.an) return detAN(D, AN.find(a=>a.id===P.an));
@@ -1478,6 +1488,14 @@ function ligar(D){
     if(!(P.bemEd&&P.bemEd.id)) aplica(); else dica(); } const bc=$("#bfCanc"); if (bc) bc.onclick=()=>{ P.bemEd=null; corpo(); };
   const lm=$("#lnMes"); if (lm) lm.onchange=e=>{ P.lm=e.target.value; corpo(); };
   const lp=$("#lnPl"); if (lp) lp.onchange=e=>{ P.lp=e.target.value; corpo(); };
+  const lc=$("#lnC"); if (lc) lc.onchange=e=>{ P.lc=e.target.value; corpo(); };
+  const lf=$("#lnF"); if (lf) lf.onchange=e=>{ P.lf=e.target.value.trim(); setTimeout(corpo,0); };
+  b.querySelectorAll("[data-ck]").forEach(c=>c.onchange=()=>{ P.sel=P.sel||new Set(); c.checked?P.sel.add(c.dataset.ck):P.sel.delete(c.dataset.ck); corpo(); });
+  const lap=$("#lnAllPg"); if (lap) lap.onchange=()=>{ P.sel=P.sel||new Set(); b.querySelectorAll("[data-ck]").forEach(c=>lap.checked?P.sel.add(c.dataset.ck):P.sel.delete(c.dataset.ck)); corpo(); };
+  const lt=$("#lnTodos"); if (lt) lt.onclick=ev=>{ ev.preventDefault(); lnFiltrados().forEach(x=>P.sel.add(String(x[0]))); corpo(); };
+  const ln0=$("#lnNenhum"); if (ln0) ln0.onclick=ev=>{ ev.preventDefault(); P.sel=new Set(); corpo(); };
+  const lbs=$("#lnBS"); if (lbs) lbs.onclick=()=>reclassMassa(D,false);
+  const lba=$("#lnBA"); if (lba) lba.onclick=()=>reclassMassa(D,true);
   const lq=$("#lnQ"); if (lq) { lq.oninput=()=>{ clearTimeout(P.lqT); P.lqT=setTimeout(()=>{ P.lq=lq.value; corpo(); const n=$("#lnQ"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },350); }; }
   b.querySelectorAll("[data-sug]").forEach(x=>x.onclick=()=>{ P.sugCod=x.dataset.sug; corpo(); });
   const sc=$("#sgCan"); if (sc) sc.onclick=()=>{ P.sugCod=null; corpo(); };
@@ -1490,6 +1508,40 @@ function ligar(D){
     resolverSug(x.dataset.sres,st,resp); });
   b.querySelectorAll("[data-an]").forEach(x=>x.onclick=()=>{ P.an=x.dataset.an; corpo(); window.scrollTo({top:0}); });
   b.querySelectorAll("[data-anv]").forEach(x=>x.onclick=()=>{ P.an=null; corpo(); });
+}
+function lnFiltrados(){ const B=S.lanc[P.emp]; const e=P.ver==="c"?null:(P.ver==="h"?1:0), q=(P.lq||"").toLowerCase();
+  return B.l.filter(x=>(e===null||x[8]===e)&&(P.lm==="todos"||x[1].startsWith(P.lm))&&(!P.lp||x[5]===P.lp)&&(!P.lc||x[6]===P.lc)&&(!P.lf||nzs(fornOf(x))===nzs(P.lf))&&(!q||(x[3]+" "+x[4]+" "+x[2]+" "+x[5]+" "+x[6]+" "+x[0]).toLowerCase().includes(q))); }
+async function reclassMassa(D,aplicar){
+  const B=S.lanc[P.emp], pn=$("#lnBP").value, cn=$("#lnBC").value, ob=$("#lnBO").value.trim();
+  const sel=B.l.filter(x=>P.sel.has(String(x[0])));
+  if(!sel.length) return toast("Selecione os lançamentos.");
+  if(!pn&&!cn) return toast("Escolha o novo plano de contas e/ou o novo centro de custo.");
+  const alvo=sel.filter(x=>(pn&&pn!==x[5])||(cn&&cn!==x[6])); if(!alvo.length) return toast("Os selecionados já estão nesse plano/centro.");
+  if(!confirm(`${aplicar?"Aplicar agora":"Enviar sugestão"} para ${alvo.length} lançamento(s)?\n${pn?"Plano → "+pn+"\n":""}${cn?"Centro de custo → "+cn:""}`)) return;
+  const nome=(S.perfil&&S.perfil.nome)||S.user.email, agora=new Date().toISOString();
+  const rows=alvo.map(x=>({ empresa:P.emp, cod:String(x[0]), data:x[1], conta:x[2], descricao:(x[3]?x[3]+" · ":"")+x[4], valor:x[7], plano_atual:x[5], plano_novo:pn&&pn!==x[5]?pn:null, cc_atual:x[6]&&!/^[-#]/.test(x[6])?x[6]:null, cc_novo:cn&&cn!==x[6]?cn:null, comentario:(ob?ob+" · ":"")+`em massa (${alvo.length})`, criado_nome:nome,
+  }));
+  const ids=[]; for(let i=0;i<rows.length;i+=200){ const {data,error}=await sb.from("pn_sugestoes").insert(rows.slice(i,i+200)).select("id"); if(error) return toast("Não foi possível registrar: "+error.message); (data||[]).forEach(d=>ids.push(d.id)); }
+  if(aplicar&&ids.length){ for(let i=0;i<ids.length;i+=200){ await sb.from("pn_sugestoes").update({status:"aplicada", resposta:"Aplicada em massa no painel", resolvido_por:S.user.id, resolvido_nome:nome, resolvido_em:agora}).in("id",ids.slice(i,i+200)); } }
+  if(aplicar){
+    // 1) lançamentos
+    const mapa=new Map(alvo.map(x=>[String(x[0]),x])); const antes=new Map(alvo.map(x=>[String(x[0]),[x[5],x[6]]]));
+    B.l.forEach(x=>{ if(mapa.has(String(x[0]))){ if(pn) { if(!x[10]) x[10]=x[5]; x[5]=pn; } if(cn){ if(!x[11]) x[11]=x[6]; x[6]=cn; x[9]="reclassificado em massa"; } } });
+    const {__f,__fD,...Bl}=B; delete B.__f; delete B.__fD;
+    let r=await sb.from("ent_paineis").update({dados:Bl}).eq("empresa",P.emp).eq("chave","lancamentos"); if(r.error) return toast("Erro ao gravar lançamentos: "+r.error.message);
+    // 2) DRE (fatos): move o valor do plano/centro antigo para o novo
+    const pd=S.paineis.find(p=>p.empresa===P.emp&&(!p.chave||p.chave==="financeiro"))||S.paineis.find(p=>p.empresa===P.emp); const DD=pd&&pd.dados;
+    if(DD&&DD.fatos){ const mi={}; DD.meses.forEach((m,i)=>mi[m]=i); const ci={}; DD.cats.forEach((c,i)=>{ if(!(c.n in ci)) ci[c.n]=i; });
+      const kc=n=>{ let i=DD.ccs.indexOf(n); if(i<0){ DD.ccs.push(n); i=DD.ccs.length-1; } return i; };
+      const ag={}; let fora=0;
+      alvo.forEach(x=>{ const [p0,c0]=antes.get(String(x[0])); const m=mi[String(x[1]).slice(0,7)]; if(m==null||!(p0 in ci)){ fora++; return; } const p1=pn||p0; if(!(p1 in ci)){ fora++; return; }
+        const k0=DD.ccs.indexOf(c0); if(k0<0){ fora++; return; } const k=[m,x[8],ci[p0],k0,ci[p1],kc(cn||c0)].join("|"); (ag[k] ||= [0,0]); ag[k][0]+=+x[7]||0; ag[k][1]++; });
+      Object.entries(ag).forEach(([k,[v,n]])=>{ const [m,e,c0,k0,c1,k1]=k.split("|").map(Number); const t=DD.fatos.filter(f=>f[0]===m&&f[1]===e&&f[2]===c0&&f[3]===k0).sort((a,b)=>(a[5]+a[6])-(b[5]+b[6])||Math.abs(b[7])-Math.abs(a[7]))[0];
+        if(!t){ fora+=n; return; } DD.fatos.push([m,e,c0,k0,t[4],t[5],t[6],-v,0],[m,e,c1,k1,t[4],t[5],t[6],v,n]); });
+      const {error}=await sb.from("ent_paineis").update({dados:DD}).eq("empresa",P.emp).eq("chave","financeiro"); if(error) toast("Lançamentos gravados; DRE não atualizada: "+error.message);
+      else toast(`${alvo.length} lançamento(s) reclassificados${fora?` (${fora} fora do período da DRE)`:""}.`); }
+  } else toast(`${alvo.length} sugestão(ões) enviadas para a equipe da Vital.`);
+  P.sel=new Set(); await carregarLanc(); corpo();
 }
 async function resolverSug(id,st,resp){ const u={status:st}; if(st!=="cancelada"){ u.resposta=resp||null; u.resolvido_por=S.user.id; u.resolvido_nome=(S.perfil&&S.perfil.nome)||S.user.email; u.resolvido_em=new Date().toISOString(); }
   const {error}=await sb.from("pn_sugestoes").update(u).eq("id",id); if(error) return toast("Não foi possível atualizar: "+error.message); await carregarLanc(); corpo(); }

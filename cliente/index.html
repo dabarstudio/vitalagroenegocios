@@ -1029,6 +1029,7 @@ const AN = [
  {id:"ceasa", gr:"Resultados e despesas", t:"Resultado do Ceasa", tipo:"res", rec:(D,f)=>f[4]>=0&&D.cps[f[4]]==="Ceasa-DF", desp:(D,f)=>D.ccs[f[3]]==="Ceasa", dim:"cat", nota:"Receita: pagamentos das Centrais de Abastecimento (Ceasa-DF). Despesa: centro de custo Ceasa."},
  {id:"amb", gr:"Resultados e despesas", t:"Ambulâncias: contrato e frota", tipo:"res", rec:(D,f)=>["R_PLANO","R_LOCAC"].includes(g_(D,f)), desp:(D,f)=>D.ccs[f[3]]==="Frota (ambulâncias)", dim:"cat",
    nota:"Receita: Plano Ambulância + locação de equipamentos/veículos. Despesa: tudo lançado no centro de custo de uma viatura (VTR/Sprinter). Confirme com a Silvana qual é o contrato da ambulância para refinarmos."},
+ {id:"vtr", gr:"Resultados e despesas", t:"Gastos por ambulância (VTR)", tipo:"desp", vtr:true, p:(D,f)=>D.ccs[f[3]]==="Frota (ambulâncias)", dim:"cat"},
  {id:"manut", gr:"Resultados e despesas", t:"Gasto com manutenção", tipo:"desp", p:(D,f)=>g_(D,f)==="C_MANUT", dim:"cat"},
  {id:"comb", gr:"Resultados e despesas", t:"Gasto com combustível", tipo:"desp", p:(D,f)=>D.cats[f[2]].n==="Combustivel e translados", dim:"cc"},
  {id:"farm", gr:"Resultados e despesas", t:"Medicamentos e insumos de farmácia", tipo:"desp", p:(D,f)=>g_(D,f)==="C_FARM", dim:"cat"},
@@ -1134,6 +1135,42 @@ const precisaLanc=()=>Object.keys(P.ab||{}).some(k=>/^(C|Q):/.test(k)&&P.ab[k]);
 const fixoCat=c=>!!c&&(c.nat==="F"||/^(P_|A_)/.test(c.g||""));
 function gapsDe(arr,idx){ const nzI=idx.filter(i=>Math.abs(arr[i]||0)>=0.005); const g=new Set(); if(nzI.length<Math.max(3,Math.ceil(idx.length*0.6))) return g;
   const a=idx.indexOf(nzI[0]), b=idx.length-1; for(let k=a;k<=b;k++){ const i=idx[k]; if(Math.abs(arr[i]||0)<0.005) g.add(i); } return g; }
+/* ===== gastos por ambulância: custo direto (lançamentos com placa/VTR) + rateio da frota sem placa + depreciação ===== */
+const depAteG=(b,yy,mm)=>{ const bs=Math.max(0,b.v-(b.res||0)); const [ay,am]=String(b.aq).split("-").map(Number); const k=(yy-ay)*12+(mm-am); return k<0?null:Math.min(bs, bs/(b.vida||5)/12*k); };
+const FROTA_CAT=new Set(["Combustivel e translados","Manuntençao de veiculos","Veículos_Detran IPVA","PEDÁGIOS/ ESTACIONAMENTO","Manutenção/Instalação equipamentos/material/móvel/peça"]);
+function detVTR(D,a){
+  const idx=idxPer(D), cols=idx.map(i=>mesC(D.meses[i]));
+  let h=`<div class="row" style="gap:8px"><button class="btn sm ghost" data-anv="1" type="button">← Todas as análises</button></div><div class="card"><h3 class="pnt">Gastos por ambulância · ${esc(verNome())} · ${esc(perNome(D))}</h3>`;
+  if(!(S.lanc&&P.emp in S.lanc)||!(S.pnBens&&P.emp in S.pnBens)){ if(!(S.lanc&&P.emp in S.lanc)) carregarLanc().then(corpo); if(!(S.pnBens&&P.emp in S.pnBens)) carregarBens().then(corpo); return h+`<p class="note">Carregando lançamentos e frota…</p></div>`; }
+  const F=lcFatos(D)||[], set=new Set(idx);
+  const vt=bensDe(D).filter(b=>b.amb&&b.ativo!==false).map(b=>({...b, k:(String(b.n).match(/VTR\s*\d+/i)||[b.n])[0].toUpperCase().replace(/\s+/," ")})).sort((x,y)=>parseInt(x.k.replace(/\D/g,""))-parseInt(y.k.replace(/\D/g,"")));
+  const dir={}, cat={}, sem=new Array(D.meses.length).fill(0); vt.forEach(v=>{dir[v.k]=new Array(D.meses.length).fill(0); cat[v.k]={};});
+  let semN=0;
+  for(const o of F){ const f=o.f; if(f[0]<0||!set.has(f[0])||f[7]>=0||!passaCx(f)) continue; const k=String(o.x[12]||"").toUpperCase();
+    if(k&&dir[k]){ dir[k][f[0]]+=-f[7]; cat[k][o.x[5]]=(cat[k][o.x[5]]||0)-f[7]; }
+    else if(FROTA_CAT.has(o.x[5])&&(o.x[6]==="Frota (ambulâncias)"||/Combust|Manunten|Detran|PED/.test(o.x[5]))){ sem[f[0]]+=-f[7]; semN++; } }
+  const ativo=(v,i)=>{ const [y,m]=String(v.aq).split("-").map(Number), [Y,M]=D.meses[i].split("-").map(Number); return (Y-y)*12+(M-m)>=0&&!(v.baixa&&v.baixa<=D.meses[i]); };
+  const rat={}, dep={}; vt.forEach(v=>{ rat[v.k]=new Array(D.meses.length).fill(0); dep[v.k]=new Array(D.meses.length).fill(0); });
+  idx.forEach(i=>{ const at=vt.filter(v=>ativo(v,i)); at.forEach(v=>{ rat[v.k][i]=sem[i]/(at.length||1); const [yy,mm]=D.meses[i].split("-").map(Number); const d1=depAteG(v,yy,mm)||0, d0=depAteG(v,mm===1?yy-1:yy,mm===1?12:mm-1)||0; dep[v.k][i]=Math.max(0,d1-d0); }); });
+  const totDir=vt.reduce((s,v)=>s+soma(dir[v.k],idx),0), totSem=soma(sem,idx), cobre=totDir+totSem?totDir/(totDir+totSem):0;
+  h+=`<div class="kpis">${kpi("Custo direto identificado", fR(totDir), "lançamentos com placa ou VTR")}${kpi("Frota sem placa (rateada)", fR(totSem), "combustível, peças e serviços sem viatura")}${kpi("Identificado por viatura", fP(cobre), "do custo da frota")}</div>`;
+  if(cobre<0.6) h+=`<p class="lcw">⚠ Só ${fP(cobre)} do custo da frota tem a viatura informada. O restante (principalmente combustível da Rede Quality e oficinas) foi <b>rateado igualmente</b> entre as ambulâncias ativas no mês. Para o custo real por ambulância: informar a placa/VTR no centro de custo de cada lançamento no GestãoClick e pedir à Rede Quality o relatório de abastecimento por placa.</p>`;
+  h+=`<p class="note">Toque no nome da viatura ou em qualquer valor para ver os lançamentos.</p><div class="tw"><table class="dre"><thead><tr><th>Custo direto por mês</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>`;
+  vt.forEach(v=>{ const q=qreg(v.k+" · custo direto",f=>String(f.x[12]||"").toUpperCase()===v.k&&f[7]<0), t=soma(dir[v.k],idx);
+    h+=`<tr>${qtd(q,-1,"",`<span class="qn">${esc(v.k)}</span> <span class="note">${esc(String(v.n).replace(/^VTR\s*\d+\s*/i,"").replace(/-?\s*AMBUL.*$/i,""))}</span>`)}${idx.map(i=>qtd(q,i,"",dir[v.k][i]?fN(dir[v.k][i]):"–")).join("")}${qtd(q,-1,"",`<b>${fN(t)}</b>`)}</tr>`; });
+  { const q=qreg("Frota sem placa/VTR",f=>!f.x[12]&&FROTA_CAT.has(f.x[5])&&f[7]<0); h+=`<tr class="dsub">${qtd(q,-1,"",`<span class="qn">Frota sem placa (a ratear)</span>`)}${idx.map(i=>qtd(q,i,"",fN(sem[i]))).join("")}${qtd(q,-1,"",`<b>${fN(totSem)}</b>`)}</tr>`; }
+  h+=`</tbody></table></div></div>`;
+  // custo total por ambulância
+  const mesesAt=v=>idx.filter(i=>ativo(v,i)).length||1;
+  const linhas=vt.map(v=>{ const d=soma(dir[v.k],idx), r=soma(rat[v.k],idx), p=soma(dep[v.k],idx); return {v,d,r,p,t:d+r+p,m:(d+r+p)/mesesAt(v)}; }).sort((x,y)=>y.t-x.t);
+  const T=linhas.reduce((s,l)=>({d:s.d+l.d,r:s.r+l.r,p:s.p+l.p,t:s.t+l.t}),{d:0,r:0,p:0,t:0});
+  h+=`<div class="card"><h3 class="pnt">Custo total por ambulância no período</h3><p class="note">Direto + rateio da frota sem placa + depreciação (do cadastro de bens). A parcela do financiamento é informativa: ela é dívida, não custo; o custo do veículo entra pela depreciação.</p><div class="tw"><table class="dre"><thead><tr><th>Viatura</th><th>Direto</th><th>Rateio frota</th><th>Depreciação</th><th>Custo total</th><th>Custo médio/mês</th><th>Principais gastos diretos</th><th>Financiamento</th></tr></thead><tbody>`
+   +linhas.map(l=>{ const qd=qreg(l.v.k+" · custo direto",f=>String(f.x[12]||"").toUpperCase()===l.v.k&&f[7]<0), qr=qreg("Frota sem placa (rateada entre as viaturas)",f=>!f.x[12]&&FROTA_CAT.has(f.x[5])&&f[7]<0); return `<tr>${qtd(qd,-1,"",`<b class="qn">${esc(l.v.k)}</b>`)}${qtd(qd,-1,"",fN(l.d))}${qtd(qr,-1,"",fN(l.r))}<td>${fN(l.p)}</td><td><b>${fN(l.t)}</b></td><td>${fN(l.m)}</td><td class="note" style="text-align:left">${Object.entries(cat[l.v.k]).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n,x])=>esc(n.replace("Manuntençao de veiculos","Manutenção").replace("Veículos_Detran IPVA","IPVA/licenciamento").replace("Aquisição equipamentos/material/móvel/peça","Peças/equipamentos"))+" "+fN(x)).join(" · ")||"–"}</td><td class="note" style="text-align:left">${esc(l.v.fin||"À vista")}${l.v.parc?" · "+l.v.parc+"x":""}</td></tr>`; }).join("")
+   +`<tr class="dt"><td>Total frota</td><td>${fN(T.d)}</td><td>${fN(T.r)}</td><td>${fN(T.p)}</td><td><b>${fN(T.t)}</b></td><td>${fN(T.t/idx.length)}</td><td></td><td></td></tr></tbody></table></div>`;
+  const top=linhas[0], med=T.t/(linhas.length||1);
+  if(top) h+=`<p class="note">Leitura de CFO: a <b>${esc(top.v.k)}</b> é a mais cara no período (${fR(top.t)}, ${fP(top.t/(T.t||1))} da frota; média da frota ${fR(med)} por viatura). Viaturas com custo direto alto e idade avançada são candidatas a venda/substituição; compare com a receita de locação e plano ambulância na análise "Ambulâncias: contrato e frota".</p>`;
+  return h+`</div>`;
+}
 function secResumo(D){
   const idx=idxPer(D), {L}=calcDRE(D), rb=soma(L.rb,idx), rl=soma(L.rlq,idx), mc=soma(L.mc,idx), eb=soma(L.eb,idx);
   const desp = L.rb.map((v,i)=>L.rlq[i]-v);
@@ -1371,6 +1408,7 @@ function quebra(D,a,idx){
     return h2; }).join("")}<tr class="dt"><td>Total</td>${idx.map(i=>`<td class="${totA[i]<0?"neg":""}">${fN(totA[i])}</td>`).join("")}<td><b>${fN(tot)}</b></td><td></td></tr></tbody></table></div>`;
 }
 function detAN(D,a){
+  if (a.vtr) return detVTR(D,a);
   const idx=idxPer(D), pv=P.prev, cols=cab(D,idx,pv), prv=cols.map((c,i)=>i>=idx.length), lin=arr=>[...idx.map(i=>arr[i]),...(pv?prevDe(arr):[])];
   let h=`<div class="row" style="gap:8px"><button class="btn sm ghost" data-anv="1" type="button">← Todas as análises</button></div><div class="card"><h3 class="pnt">${esc(a.t)} · ${esc(verNome())}</h3>${a.nota?`<p class="note">${esc(a.nota)}</p>`:""}`;
   const tab=(rows)=>`<div class="tw"><table class="dre"><thead><tr><th></th>${cols.map((c,i)=>`<th class="${prv[i]?"tp2":""}">${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>${rows.map(([n,arr,c,pr])=>{ const v=lin(arr), q=pr?qreg(a.t+" · "+n,pr):null; return `<tr class="${c||""}">${q!==null?qtd(q,-1,"",`<span class="qn">${esc(n)}</span>`):`<td>${esc(n)}</td>`}${v.map((x,i)=>q!==null&&!prv[i]?qtd(q,idx[i],x<0?"neg":"",fN(x)):`<td class="${prv[i]?"tp2":""}${x<0?" neg":""}">${fN(x)}</td>`).join("")}${q!==null?qtd(q,-1,"",`<b>${fN(soma(arr,idx))}</b>`):`<td><b>${fN(soma(arr,idx))}</b></td>`}</tr>`; }).join("")}</tbody></table></div>`;

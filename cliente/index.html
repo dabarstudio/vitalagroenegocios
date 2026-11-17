@@ -161,7 +161,7 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .gleg i.iprev{background:repeating-linear-gradient(45deg,var(--muted) 0 2px,transparent 2px 5px);border:1px dashed var(--muted)}
 .gtip{position:absolute;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.82rem;display:grid;gap:3px;box-shadow:0 6px 18px rgba(0,0,0,.12);pointer-events:none;min-width:170px}
 .gtip span{display:flex;align-items:center;gap:6px}.gtip i{width:10px;height:10px;border-radius:2px;display:inline-block}
-.tw{overflow:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;max-height:min(78vh,calc(100dvh - 200px));overscroll-behavior:contain}
+.tw{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;overscroll-behavior-x:contain;scrollbar-width:auto;scrollbar-color:#8aa892 #eef3ee;touch-action:pan-x pan-y}.tw::-webkit-scrollbar{height:12px;width:12px}.tw::-webkit-scrollbar-thumb{background:#8aa892;border-radius:8px;border:3px solid #eef3ee}.tw::-webkit-scrollbar-track{background:#eef3ee;border-radius:8px}
 .dre thead th{z-index:2;box-shadow:0 1px 0 var(--line)}.dre thead th:first-child{z-index:3}
 .dre tr.lc td[data-mzm]{cursor:pointer}.dre tr.lc td[data-mzm]:hover{background:var(--surface-2);text-decoration:underline dotted}
 .lcb{all:unset;cursor:pointer;color:inherit;text-decoration:underline dotted;text-underline-offset:3px}.lcb:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
@@ -1154,21 +1154,27 @@ function detVTR(D,a){
   if(!(S.lanc&&P.emp in S.lanc)||!(S.pnBens&&P.emp in S.pnBens)){ if(!(S.lanc&&P.emp in S.lanc)) carregarLanc().then(corpo); if(!(S.pnBens&&P.emp in S.pnBens)) carregarBens().then(corpo); return h+`<p class="note">Carregando lançamentos e frota…</p></div>`; }
   const F=lcFatos(D)||[], set=new Set(idx);
   const vt=bensDe(D).filter(b=>b.amb&&b.ativo!==false).map(b=>({...b, k:(String(b.n).match(/VTR\s*\d+/i)||[b.n])[0].toUpperCase().replace(/\s+/," ")})).sort((x,y)=>parseInt(x.k.replace(/\D/g,""))-parseInt(y.k.replace(/\D/g,"")));
-  const dir={}, cat={}, sem=new Array(D.meses.length).fill(0); vt.forEach(v=>{dir[v.k]=new Array(D.meses.length).fill(0); cat[v.k]={};});
+  const dir={}, cat={}, cm={}, sem=new Array(D.meses.length).fill(0), semc={}; vt.forEach(v=>{dir[v.k]=new Array(D.meses.length).fill(0); cat[v.k]={}; cm[v.k]={};});
   let semN=0;
   for(const o of F){ const f=o.f; if(f[0]<0||!set.has(f[0])||f[7]>=0||!passaCx(f)) continue; const k=String(o.x[12]||"").toUpperCase();
-    if(k&&dir[k]){ dir[k][f[0]]+=-f[7]; cat[k][o.x[5]]=(cat[k][o.x[5]]||0)-f[7]; }
-    else if(FROTA_CAT.has(o.x[5])&&(o.x[6]==="Frota (ambulâncias)"||/Combust|Manunten|Detran|PED/.test(o.x[5]))){ sem[f[0]]+=-f[7]; semN++; } }
+    if(k&&dir[k]){ dir[k][f[0]]+=-f[7]; cat[k][o.x[5]]=(cat[k][o.x[5]]||0)-f[7]; (cm[k][o.x[5]] ||= new Array(D.meses.length).fill(0))[f[0]]+=-f[7]; }
+    else if(FROTA_CAT.has(o.x[5])&&(o.x[6]==="Frota (ambulâncias)"||/Combust|Manunten|Detran|PED/.test(o.x[5]))){ sem[f[0]]+=-f[7]; semN++; (semc[o.x[5]] ||= new Array(D.meses.length).fill(0))[f[0]]+=-f[7]; } }
   const ativo=(v,i)=>{ const [y,m]=String(v.aq).split("-").map(Number), [Y,M]=D.meses[i].split("-").map(Number); return (Y-y)*12+(M-m)>=0&&!(v.baixa&&v.baixa<=D.meses[i]); };
   const rat={}, dep={}; vt.forEach(v=>{ rat[v.k]=new Array(D.meses.length).fill(0); dep[v.k]=new Array(D.meses.length).fill(0); });
   idx.forEach(i=>{ const at=vt.filter(v=>ativo(v,i)); at.forEach(v=>{ rat[v.k][i]=sem[i]/(at.length||1); const [yy,mm]=D.meses[i].split("-").map(Number); const d1=depAteG(v,yy,mm)||0, d0=depAteG(v,mm===1?yy-1:yy,mm===1?12:mm-1)||0; dep[v.k][i]=Math.max(0,d1-d0); }); });
   const totDir=vt.reduce((s,v)=>s+soma(dir[v.k],idx),0), totSem=soma(sem,idx), cobre=totDir+totSem?totDir/(totDir+totSem):0;
   h+=`<div class="kpis">${kpi("Custo direto identificado", fR(totDir), "lançamentos com placa ou VTR")}${kpi("Frota sem placa (rateada)", fR(totSem), "combustível, peças e serviços sem viatura")}${kpi("Identificado por viatura", fP(cobre), "do custo da frota")}</div>`;
   if(cobre<0.6) h+=`<p class="lcw">⚠ Só ${fP(cobre)} do custo da frota tem a viatura informada. O restante (principalmente combustível da Rede Quality e oficinas) foi <b>rateado igualmente</b> entre as ambulâncias ativas no mês. Para o custo real por ambulância: informar a placa/VTR no centro de custo de cada lançamento no GestãoClick e pedir à Rede Quality o relatório de abastecimento por placa.</p>`;
-  h+=`<p class="note">Toque no nome da viatura ou em qualquer valor para ver os lançamentos.</p><div class="tw"><table class="dre"><thead><tr><th>Custo direto por mês</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>`;
+  h+=`<p class="note">Toque no nome da viatura para abrir conta a conta, mês a mês; toque em qualquer valor para ver os lançamentos. <a href="#" id="vtAbre">${vt.every(v=>P.ab["V:"+v.k])?"Fechar todas":"Abrir todas"}</a></p><div class="tw"><table class="dre"><thead><tr><th>Custo direto por mês</th>${cols.map(c=>`<th>${c}</th>`).join("")}<th>Total</th></tr></thead><tbody>`;
   vt.forEach(v=>{ const q=qreg(v.k+" · custo direto",f=>String(f.x[12]||"").toUpperCase()===v.k&&f[7]<0), t=soma(dir[v.k],idx);
-    h+=`<tr>${qtd(q,-1,"",`<span class="qn">${esc(v.k)}</span> <span class="note">${esc(String(v.n).replace(/^VTR\s*\d+\s*/i,"").replace(/-?\s*AMBUL.*$/i,""))}</span>`)}${idx.map(i=>qtd(q,i,"",dir[v.k][i]?fN(dir[v.k][i]):"–")).join("")}${qtd(q,-1,"",`<b>${fN(t)}</b>`)}</tr>`; });
-  { const q=qreg("Frota sem placa/VTR",f=>!f.x[12]&&FROTA_CAT.has(f.x[5])&&f[7]<0); h+=`<tr class="dsub">${qtd(q,-1,"",`<span class="qn">Frota sem placa (a ratear)</span>`)}${idx.map(i=>qtd(q,i,"",fN(sem[i]))).join("")}${qtd(q,-1,"",`<b>${fN(totSem)}</b>`)}</tr>`; }
+    const ab=P.ab["V:"+v.k];
+    h+=`<tr class="clk dsub" data-ab="V:${esc(v.k)}"><td><span class="tg">${ab?"▾":"▸"}</span><b>${esc(v.k)}</b> <span class="note">${esc(String(v.n).replace(/^VTR\s*\d+\s*/i,"").replace(/-?\s*AMBUL.*$/i,""))}</span></td>${idx.map(i=>qtd(q,i,"",dir[v.k][i]?fN(dir[v.k][i]):"–")).join("")}${qtd(q,-1,"",`<b>${fN(t)}</b>`)}</tr>`;
+    if(ab){ const ls=Object.entries(cm[v.k]).sort((a,b)=>soma(b[1],idx)-soma(a[1],idx));
+      h+=ls.length?ls.map(([pl,arr])=>{ const qp=qreg(v.k+" · "+pl,f=>String(f.x[12]||"").toUpperCase()===v.k&&f.x[5]===pl&&f[7]<0); return `<tr class="dforn">${qtd(qp,-1,"",`<span class="qn" style="padding-left:22px;display:inline-block">${esc(pl)}</span>`)}${idx.map(i=>qtd(qp,i,"",arr[i]?fN(arr[i]):"–")).join("")}${qtd(qp,-1,"",`<b>${fN(soma(arr,idx))}</b>`)}</tr>`; }).join("")
+        +`<tr class="dforn"><td class="note" style="padding-left:22px">+ rateio da frota sem placa</td>${idx.map(i=>`<td class="note">${rat[v.k][i]?fN(rat[v.k][i]):"–"}</td>`).join("")}<td class="note">${fN(soma(rat[v.k],idx))}</td></tr><tr class="dforn"><td class="note" style="padding-left:22px">+ depreciação</td>${idx.map(i=>`<td class="note">${dep[v.k][i]?fN(dep[v.k][i]):"–"}</td>`).join("")}<td class="note">${fN(soma(dep[v.k],idx))}</td></tr>`
+        :`<tr class="dforn"><td colspan="${idx.length+2}" class="note" style="padding-left:22px">Sem lançamentos com a placa/VTR no período.</td></tr>`; } });
+  { const q=qreg("Frota sem placa/VTR",f=>!f.x[12]&&FROTA_CAT.has(f.x[5])&&f[7]<0); h+=`<tr class="dsub clk" data-ab="V:SEM"><td><span class="tg">${P.ab["V:SEM"]?"▾":"▸"}</span><b>Frota sem placa (a ratear)</b></td>${idx.map(i=>qtd(q,i,"",fN(sem[i]))).join("")}${qtd(q,-1,"",`<b>${fN(totSem)}</b>`)}</tr>`;
+    if(P.ab["V:SEM"]) h+=Object.entries(semc).sort((a,b)=>soma(b[1],idx)-soma(a[1],idx)).map(([pl,arr])=>{ const qp=qreg("Frota sem placa · "+pl,f=>!f.x[12]&&f.x[5]===pl&&f[7]<0&&FROTA_CAT.has(f.x[5])); return `<tr class="dforn">${qtd(qp,-1,"",`<span class="qn" style="padding-left:22px;display:inline-block">${esc(pl)}</span>`)}${idx.map(i=>qtd(qp,i,"",arr[i]?fN(arr[i]):"–")).join("")}${qtd(qp,-1,"",`<b>${fN(soma(arr,idx))}</b>`)}</tr>`; }).join(""); }
   h+=`</tbody></table></div></div>`;
   // custo total por ambulância
   const mesesAt=v=>idx.filter(i=>ativo(v,i)).length||1;
@@ -1478,6 +1484,7 @@ function secPend(D){
     ${dif.map(([m,v])=>`<tr><td>Conciliação de ${mesC(m)} (consolidado)</td><td>–</td><td>${fN(v)}</td><td>Diferença entre o sistema e o extrato conciliado; conferir na aba DFC.</td></tr>`).join("")}</tbody></table></div></div>`;
 }
 function ligar(D){
+  const va=document.getElementById("vtAbre"); if(va) va.onclick=ev=>{ ev.preventDefault(); const ks=[...document.querySelectorAll('[data-ab^="V:"]')].map(t=>t.dataset.ab); const todas=ks.every(k=>P.ab[k]); ks.forEach(k=>P.ab[k]=!todas); corpo(); };
   document.querySelectorAll("#pnBody [data-q]").forEach(td=>td.onclick=e=>{ e.stopPropagation(); abrirQ(D,+td.dataset.q,+td.dataset.mi); });
   const b=$("#pnBody"); if(!b) return;
   b.querySelectorAll("[data-ab]").forEach(tr=>tr.onclick=()=>{ const k=tr.dataset.ab; P.ab[k]=!P.ab[k]; corpo(); });

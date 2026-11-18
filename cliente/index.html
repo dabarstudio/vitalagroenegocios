@@ -1601,7 +1601,22 @@ function mzLinha(D,k){ for (const t of D.tabs) if (t.meses) { const l=t.linhas.f
 function mzSerie(D,k){ const x=mzLinha(D,k); if(!x) return null; const idx=mzIdx(x.t); return {lab:idx.map(i=>mesC(x.t.cols[i])), v:idx.map(i=>+x.l.v[i]||0), idx, t:x.t, l:x.l}; }
 const mzPerNome = () => MZ.per==="12" ? "últimos 12 meses" : MZ.per==="tudo" ? "todo o período" : MZ.per;
 
+/* ===== dados complementares criptografados (lançamentos e abas grandes): chave guardada no painel, protegida pelo acesso ===== */
+async function mzExt(D){
+  const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+  const r=await fetch(new URL("../"+D.ext.u, location.href), {cache:"no-cache"}); if(!r.ok) throw new Error("arquivo de dados indisponível");
+  const buf=new Uint8Array(await r.arrayBuffer()), key=await crypto.subtle.importKey("raw", b64(D.ext.k), "AES-GCM", false, ["decrypt"]);
+  const raw=await crypto.subtle.decrypt({name:"AES-GCM", iv:buf.slice(0,12)}, key, buf.slice(12));
+  const txt=await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).text(), X=JSON.parse(txt);
+  const rm=new Set([...(X.remove||[]), ...(X.tabs||[]).map(t=>t.titulo)]);
+  const pos=D.tabs.findIndex(t=>rm.has(t.titulo)); const resto=D.tabs.filter(t=>!rm.has(t.titulo));
+  const novos=X.tabs||[]; const dre=novos.filter(t=>t.sec==="dre"), out=novos.filter(t=>t.sec!=="dre");
+  D.tabs=[...dre, ...resto.filter(t=>t.sec==="dre"), ...resto.filter(t=>t.sec!=="dre"), ...out];
+  if (X.lanc) D.lanc=X.lanc; D.__ext=true;
+}
 function renderMatriz(el, D, emps){
+  if (D.ext && !D.__ext && !D.__extErr) { el.innerHTML=`<div class="card"><p class="note" style="margin:0">Carregando lançamentos do painel…</p></div>`;
+    mzExt(D).catch(e=>{ D.__extErr=String(e.message||e); console.warn("mzExt",e); }).finally(()=>renderMatriz(el,D,emps)); return; }
   const secs=[["resumo","Resumo"],...["dre","dfc","bp"].filter(s=>D.tabs.some(t=>t.sec===s)).map(s=>[s,{dre:"DRE",dfc:"DFC",bp:"Balanço (BP)"}[s]])];
   if (D.tabs.some(t=>t.ativ==="Agricultura")) secs.push(["safra","Propriedade e safra"]);
   if (!secs.some(s=>s[0]===MZ.sec)) MZ.sec="resumo";
@@ -1749,7 +1764,7 @@ function mzCult(D,t,ti,j){
   let h=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">${esc(t.cols[j])} · ${esc(t.titulo)}</h3>
     <div class="row" style="gap:6px"><button class="btn sm ghost" data-mzab="${ti}">Abrir tudo</button><button class="btn sm ghost" data-mzcsv="${ti}">Baixar planilha (CSV)</button></div></div>
     <div class="kpis" style="margin:12px 0">${c}</div>
-    <p class="note">Toque numa linha com ▸ para abrir o grupo.${SC?"":" Sem volume em sacas nas notas desta cultura: R$/sc e sc/ha ficam em branco."}</p>
+    <p class="note">Toque no ▸ para abrir o grupo; toque no nome ou no valor em R$ para ver os lançamentos que formam o número.${SC?"":" Sem volume em sacas nas notas desta cultura: R$/sc e sc/ha ficam em branco."}</p>
     <div class="tw"><table class="dre"><thead><tr><th>Descrição</th><th>R$</th><th>R$/ha</th><th>R$/sc</th><th>sc/ha</th></tr></thead><tbody>`;
   let sec=null;
   t.linhas.forEach((l,i)=>{
@@ -1757,7 +1772,8 @@ function mzCult(D,t,ti,j){
     if (pai[i]>=0 && !MZ.ab[ti+":"+pai[i]]) return;
     const v=l.v[j]; if (v==null || typeof v==="string") return; if (Math.abs(v)<0.005 && l.t==="item") return;
     const cls = l.t==="tot"?"dt dtf": l.t==="grp"?"dg":"dcat", tg=l.t==="grp"?`<span class="tg">${MZ.ab[ti+":"+i]?"▾":"▸"}</span> `:"", nv=l.t==="item"?1:0;
-    h+=`<tr class="${cls}" ${l.t==="grp"?`data-mzg="${ti}:${i}"`:""}><td style="padding-left:${8+nv*16}px">${tg}${esc(l.n)}</td>${nC(v)}${nC(A?v/A:null)}${SC?nC(v/SC):"<td>–</td>"}${SC&&PL&&A?nC(v/PL/A):"<td>–</td>"}</tr>`;
+    const lc=mzLcDe(D,t,l);
+    h+=`<tr class="${cls}${lc?" lc":""}" ${l.t==="grp"?`data-mzg="${ti}:${i}"`:""}${lc?` data-mzl="${ti}:${i}"`:""}><td style="padding-left:${8+nv*16}px">${tg}${lc?`<button type="button" class="lcb" data-mzl="${ti}:${i}">${esc(l.n)}</button>`:esc(l.n)}</td>${lc?nC(v).replace("<td",`<td data-mzm="${j}"`):nC(v)}${nC(A?v/A:null)}${SC?nC(v/SC):"<td>–</td>"}${SC&&PL&&A?nC(v/PL/A):"<td>–</td>"}</tr>`;
   });
   return h+`</tbody></table></div></div>`;
 }
@@ -1785,7 +1801,9 @@ function mzTabela(D,t,ti){
 }
 function mzLigar(D){ const b=$("#pnBody"); if(!b) return;
   b.querySelectorAll("[data-mzg]").forEach(tr=>tr.onclick=()=>{ const k=tr.dataset.mzg; MZ.ab[k]=!MZ.ab[k]; mzCorpo(); });
-  b.querySelectorAll("tr[data-mzl]").forEach(tr=>tr.onclick=e=>{ const [ti,i]=tr.dataset.mzl.split(":").map(Number), td=e.target.closest("td[data-mzm]"); mzLanc(D,ti,i,td?+td.dataset.mzm:null); });
+  b.querySelectorAll("tr[data-mzl]").forEach(tr=>tr.onclick=e=>{ const [ti,i]=tr.dataset.mzl.split(":").map(Number), td=e.target.closest("td[data-mzm]");
+    if (!td && tr.dataset.mzg && !e.target.closest(".lcb")) { const k=tr.dataset.mzg; MZ.ab[k]=!MZ.ab[k]; mzCorpo(); return; }
+    mzLanc(D,ti,i,td?+td.dataset.mzm:null); });
   b.querySelectorAll("[data-mzab]").forEach(x=>x.onclick=()=>{ const ti=+x.dataset.mzab, t=D.tabs[ti]; const ks=t.linhas.map((l,i)=>l.t==="grp"?ti+":"+i:null).filter(Boolean); const abrir=!ks.some(k=>MZ.ab[k]); ks.forEach(k=>MZ.ab[k]=abrir); mzCorpo(); });
   b.querySelectorAll("[data-mzcsv]").forEach(x=>x.onclick=()=>mzCsv(D,D.tabs[+x.dataset.mzcsv]));
 }

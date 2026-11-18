@@ -1672,7 +1672,17 @@ async function agrCorpo(b){
   // talhões (dados da propriedade)
   const usados=new Set(AG.p.map(x=>x.talhao_id));
   const tin=(id,c,v,w,tipo)=>`<input data-agt="${id}" data-c="${c}" value="${esc(tipo==="n"?agN(v):(v??""))}" style="width:${w||100}px;min-height:32px;padding:4px 6px" ${tipo==="n"?'inputmode="decimal"':""}>`;
-  h+=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div><h3 class="pnt" style="margin:0">Dados da propriedade · talhões</h3><p class="note" style="margin:2px 0 0">${AG.t.length} talhões · ${agN(AG.t.reduce((a,t)=>a+(+t.area_ha||0),0))} ha cadastrados · ${AG.t.filter(t=>t.posse==="arrendada").length} arrendados · ${AG.t.filter(t=>t.posse==="a confirmar").length} a confirmar</p></div><button class="btn sm" type="button" id="agTNovo">+ Novo talhão</button></div>
+  h+=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div><h3 class="pnt" style="margin:0">Dados da propriedade · talhões</h3><p class="note" style="margin:2px 0 0">${AG.t.length} talhões · ${agN(AG.t.reduce((a,t)=>a+(+t.area_ha||0),0))} ha cadastrados · ${AG.t.filter(t=>t.posse==="arrendada").length} arrendados · ${AG.t.filter(t=>t.posse==="a confirmar").length} a confirmar</p></div></div>
+    <form id="agTF" class="row" style="gap:6px;flex-wrap:wrap;align-items:flex-end;margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:10px">
+      <b style="width:100%;font-size:.9rem">+ Cadastrar talhão</b>
+      <label class="note" style="display:grid;gap:2px">Nome<input id="agTn" required style="min-height:34px;width:180px"></label>
+      <label class="note" style="display:grid;gap:2px">Área (ha)<input id="agTa" inputmode="decimal" style="min-height:34px;width:90px"></label>
+      <label class="note" style="display:grid;gap:2px">Posse<select id="agTp" style="min-height:34px"><option>própria</option><option>arrendada</option><option selected>a confirmar</option></select></label>
+      <label class="note" style="display:grid;gap:2px">Arrendador<input id="agTr" style="min-height:34px;width:150px"></label>
+      <label class="note" style="display:grid;gap:2px">sc/ha/ano<input id="agTs" inputmode="decimal" style="min-height:34px;width:70px"></label>
+      <button class="btn sm primary" type="submit">Cadastrar</button>
+    </form>
+    <p class="note" style="margin:8px 0 0">Para renomear ou corrigir um talhão, edite direto na tabela abaixo; salva ao sair do campo.</p>
     <div class="tw" style="margin-top:8px"><table class="dre"><thead><tr><th>Talhão</th><th>Área (ha)</th><th>Posse</th><th>Arrendador</th><th>sc/ha/ano</th><th>Produto</th><th>Observação</th><th></th></tr></thead><tbody>`+
     AG.t.map(t=>`<tr><td style="text-align:left">${tin(t.id,"nome",t.nome,170)}</td><td>${tin(t.id,"area_ha",t.area_ha,80,"n")}</td><td><select data-agt="${t.id}" data-c="posse" style="min-height:32px">${["própria","arrendada","a confirmar"].map(x=>`<option ${x===t.posse?"selected":""}>${x}</option>`).join("")}</select></td><td>${tin(t.id,"arrendador",t.arrendador,140)}</td><td>${tin(t.id,"arrend_sc_ha",t.arrend_sc_ha,60,"n")}</td><td>${tin(t.id,"arrend_produto",t.arrend_produto,70)}</td><td>${tin(t.id,"obs",t.obs,220)}</td><td>${usados.has(t.id)?"":`<button class="btn sm ghost" type="button" data-agtdel="${t.id}" aria-label="Excluir talhão">✕</button>`}</td></tr>`).join("")+
     `</tbody></table></div></div>`;
@@ -1691,10 +1701,12 @@ function agLigar(b){
   b.querySelectorAll("[data-agp]").forEach(el=>el.onchange=async()=>{ const id=el.dataset.agp, c=el.dataset.c; let v=el.value; if(["area_ha","arrend_sc","arrend_pct","meta_sc_ha","preco_sc"].includes(c)) v=agNum(v); if(c==="area_ha"&&v==null) return toast("Informe a área.");
     const {error}=await sb.from("agr_plantios").update({[c]:v===""?null:v,atualizado_em:new Date().toISOString()}).eq("id",id); if(error) return toast("Erro ao salvar: "+error.message); const x=AG.p.find(y=>y.id===id); if(x) x[c]=v; toast("Salvo."); re(); });
   b.querySelectorAll("[data-agdel]").forEach(el=>el.onclick=async()=>{ if(!confirm("Remover este talhão da safra?")) return; const {error}=await sb.from("agr_plantios").delete().eq("id",el.dataset.agdel); if(error) return toast("Erro: "+error.message); AG.p=AG.p.filter(x=>x.id!==el.dataset.agdel); re(); });
-  b.querySelectorAll("[data-agt]").forEach(el=>el.onchange=async()=>{ const id=el.dataset.agt, c=el.dataset.c; let v=el.value; if(["area_ha","arrend_sc_ha"].includes(c)) v=agNum(v); if(c==="nome"&&!String(v).trim()) return toast("Informe o nome.");
+  b.querySelectorAll("[data-agt]").forEach(el=>el.onchange=async()=>{ const id=el.dataset.agt, c=el.dataset.c; let v=el.value; if(["area_ha","arrend_sc_ha"].includes(c)) v=agNum(v); if(c==="nome"){ v=String(v).trim(); if(!v) return toast("Informe o nome."); if(AG.t.some(t=>t.id!==id&&t.nome.toLowerCase()===v.toLowerCase())) return toast("Já existe um talhão com esse nome."); }
     const {error}=await sb.from("agr_talhoes").update({[c]:v===""?null:v,atualizado_em:new Date().toISOString()}).eq("id",id); if(error) return toast("Erro ao salvar: "+error.message); const t=AG.t.find(y=>y.id===id); if(t) t[c]=v; toast("Salvo."); re(); });
-  $("#agTNovo").onclick=async()=>{ const nome=prompt("Nome do talhão:"); if(!nome) return; const area=agNum(prompt("Área (ha):")||"");
-    const {data,error}=await sb.from("agr_talhoes").insert({empresa:P.emp,nome:nome.trim(),area_ha:area}).select().single(); if(error) return toast("Erro: "+error.message); AG.t.push(data); AG.t.sort((a,b)=>a.nome.localeCompare(b.nome)); re(); };
+  $("#agTF").onsubmit=async e=>{ e.preventDefault(); const nome=$("#agTn").value.trim(); if(!nome) return toast("Informe o nome do talhão.");
+    if (AG.t.some(t=>t.nome.toLowerCase()===nome.toLowerCase())) return toast("Já existe um talhão com esse nome.");
+    const reg={empresa:P.emp,nome,area_ha:agNum($("#agTa").value),posse:$("#agTp").value,arrendador:$("#agTr").value.trim()||null,arrend_sc_ha:agNum($("#agTs").value)};
+    const {data,error}=await sb.from("agr_talhoes").insert(reg).select().single(); if(error) return toast("Erro: "+error.message); AG.t.push(data); AG.t.sort((a,b)=>a.nome.localeCompare(b.nome)); toast("Talhão "+nome+" cadastrado."); re(); };
   b.querySelectorAll("[data-agtdel]").forEach(el=>el.onclick=async()=>{ if(!confirm("Excluir este talhão do cadastro?")) return; const {error}=await sb.from("agr_talhoes").delete().eq("id",el.dataset.agtdel); if(error) return toast("Erro: "+error.message); AG.t=AG.t.filter(x=>x.id!==el.dataset.agtdel); re(); });
 }
 

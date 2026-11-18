@@ -1847,5 +1847,20 @@ function mzLanc(D,ti,i,mi){
 boot();
 })();
 </script>
+<script>
+/* Cards equilibrados: no máximo as colunas que cabem, linhas com quantidades iguais (ou quase) e nunca um card sozinho na última linha */
+(function(){
+  function bal(){ document.querySelectorAll(".kpis").forEach(g=>{ const ks=[...g.children].filter(x=>x.offsetParent!==null||g.offsetParent===null); const n=ks.length; if(!n) return;
+    ks.forEach(x=>x.style.gridColumn="");
+    const gap=parseFloat(getComputedStyle(g).columnGap)||10, w=g.clientWidth||g.getBoundingClientRect().width; if(!w) return;
+    const maxC=Math.max(1,Math.min(n,Math.floor((w+gap)/(165+gap)))); let r=Math.ceil(n/maxC), c=Math.ceil(n/r);
+    g.style.gridTemplateColumns=`repeat(${c},minmax(0,1fr))`;
+    const resto=n%c; if (c>1 && resto===1) ks[n-1].style.gridColumn="1 / -1";
+  }); }
+  let t=null; const agenda=()=>{ clearTimeout(t); t=setTimeout(bal,30); };
+  new MutationObserver(agenda).observe(document.documentElement,{childList:true,subtree:true});
+  addEventListener("resize",agenda); addEventListener("load",agenda);
+})();
+</script>
 </body>
 </html>

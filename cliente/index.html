@@ -1128,10 +1128,10 @@ async function abrirQ(D,id,mi){ const q=QB[id]; if(!q) return;
   if(!sel.length) h+=`<p class="note">Nenhum lançamento encontrado para este valor no período.</p>`;
   h+=Object.keys(porMes).sort().reverse().map(m=>{ const xs=porMes[m].sort((a,b)=>String(b[1]).localeCompare(String(a[1]))); const st=xs.reduce((a,x)=>a+(+x[7]||0),0);
     return `<div class="lcm"><div class="lcmh"><b>${esc(mesC(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(fmtDia(x[1]))}</b><span class="${x[7]<0?"neg":""}">${fRc(+x[7]||0)}</span></div><div class="lcd">${esc(x[3]||"Sem fornecedor/cliente")}${x[4]?" · "+esc(x[4]):""}</div><div class="lcd note">${esc(x[5]||"")}${x[6]&&!/^([-#]|life$|health$)/i.test(x[6])?" · "+esc(x[6]):""} · ${esc(x[2]||"")}${x[8]===1?" · Health":" · Life"}${x[9]&&x[9]!=="lançado"?` · <i>CC por ${esc(x[9])}</i>`:""}${x[10]?` · <i>plano antes: ${esc(x[10])}</i>`:""}${x[13]?(x[13]==="sem par"?` · <b class="neg">⚠ transferência sem a contrapartida de mesmo valor</b>`:` · par: lançamento ${esc(String(x[13]))}`):""}</div></div>`).join("")}</div>`; }).join("");
-  h+=`<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px"><span class="note" style="margin:0">Fonte: lançamentos confirmados da planilha de gestão</span>${sel.length?`<button type="button" class="btn sm ghost" data-lccsv>Baixar (CSV)</button>`:""}</div>`;
+  h+=`<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px"><span class="note" style="margin:0">Fonte: lançamentos confirmados da planilha de gestão</span>${sel.length?`<button type="button" class="btn sm ghost" data-lcpdf>Baixar PDF</button><button type="button" class="btn sm ghost" data-lccsv>Baixar (CSV)</button>`:""}</div>`;
   let d=document.getElementById("mzLc"); if(!d){ d=document.createElement("dialog"); d.id="mzLc"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
   d.innerHTML=h; d.querySelector("[data-lcx]").onclick=()=>d.close();
-  const c=d.querySelector("[data-lccsv]"); if(c) c.onclick=()=>{ const f=v=>(+v||0).toFixed(2).replace(".",","); const linhas=[["Data","Conta bancária","Fornecedor/cliente","Descrição","Plano de contas","Centro de custo","Valor","Empresa"],...sel.map(x=>[x[1],x[2],x[3],x[4],x[5],x[6],f(x[7]),x[8]===1?"Health":"Life"])];
+  const pdf=d.querySelector("[data-lcpdf]"); if(pdf) pdf.onclick=()=>lcPdf(d); const c=d.querySelector("[data-lccsv]"); if(c) c.onclick=()=>{ const f=v=>(+v||0).toFixed(2).replace(".",","); const linhas=[["Data","Conta bancária","Fornecedor/cliente","Descrição","Plano de contas","Centro de custo","Valor","Empresa"],...sel.map(x=>[x[1],x[2],x[3],x[4],x[5],x[6],f(x[7]),x[8]===1?"Health":"Life"])];
     const csv="﻿"+linhas.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\r\n"); const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${q.tit} ${P.emp} ${per}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
   d.showModal(); reg("ver_lancamentos", P.emp+" · "+q.tit).catch(()=>{});
 }
@@ -1815,6 +1815,23 @@ function mzCsv(D,t){ const idx=mzIdx(t), f=v=>v==null||v===""?"":typeof v==="num
   reg("baixar_painel", P.emp).catch(()=>{});
 }
 
+/* ===== PDF do detalhe de lançamentos (usa o conteúdo do próprio detalhe, com a identidade da Vital) ===== */
+function lcPdf(d){
+  const c=d.cloneNode(true); c.querySelectorAll("button,[data-lcx]").forEach(x=>x.remove());
+  const tit=(c.querySelector("h3")||{}).textContent||"Lançamentos", logo=new URL("../logo.png", location.href).href;
+  const w=window.open("","_blank"); if(!w) return toast("Permita a abertura de janelas para gerar o PDF.");
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(tit)} · ${esc(P.emp||"")}</title><style>
+    @page{size:A4;margin:14mm} *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#1d2b1f;font-size:11px;margin:0}
+    header{display:flex;align-items:center;gap:14px;border-bottom:3px solid #2f7d32;padding-bottom:10px;margin-bottom:12px} header img{height:52px}
+    header b{font-size:13px;color:#1f5f24} .eyebrow{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.04em} h3{font-size:15px;margin:2px 0;color:#1f5f24}
+    .note{color:#555;margin:2px 0} .lcm{border-top:1px solid #cfd8cf;padding:6px 0;break-inside:avoid-page} .lcmh{display:flex;justify-content:space-between;background:#eef5ee;padding:4px 6px;font-weight:bold;margin-bottom:4px}
+    .lci{padding:3px 6px;border-bottom:1px dotted #dfe5df;break-inside:avoid} .lcl{display:flex;justify-content:space-between} .lcd{color:#444} .neg{color:#b3261e} .lcw{color:#8a5a00}
+    footer{margin-top:14px;color:#777;font-size:9px;border-top:1px solid #ddd;padding-top:6px}
+  </style></head><body><header><img src="${logo}" alt="Vital Agro & Negócios"><div><b>Vital Agro &amp; Negócios</b><div class="note">${esc(P.emp||"")} · detalhe dos lançamentos</div></div></header>
+    ${c.innerHTML}<footer>Gerado em ${new Date().toLocaleString("pt-BR")} pelo portal Vital Agro &amp; Negócios</footer>
+    <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+  w.document.close(); reg("pdf_lancamentos", P.emp||"").catch(()=>{});
+}
 /* ===== detalhe dos lançamentos de uma conta (quando o painel traz a base de lançamentos) ===== */
 const mzLcDe = (D,t,l) => (D.lanc && t.lcc && l.lk && D.lanc.l[t.lcc+"|"+l.lk]) || null;
 const mzTemLc = (D,t) => !!(D.lanc && t.lcc && t.linhas.some(l=>mzLcDe(D,t,l)));
@@ -1836,10 +1853,10 @@ function mzLanc(D,ti,i,mi){
   h += ordem.map(m=>{ const xs=porMes[m].slice().sort((a,b)=>(b[1].slice(6)+b[1].slice(3,5)+b[1].slice(0,2)).localeCompare(a[1].slice(6)+a[1].slice(3,5)+a[1].slice(0,2)));
     const st=xs.reduce((a,x)=>a+x[4],0);
     return `<div class="lcm"><div class="lcmh"><b>${esc(mc(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(x[1]||"sem data")}</b><span class="${x[4]<0?"neg":""}">${fRc(x[4])}</span></div><div class="lcd">${esc(x[2]||"Sem fornecedor")}${x[3]?" · "+esc(x[3]):""}</div><div class="lcd note">${x[5]?"Conta: "+esc(x[5]):""}${x[6]?" · Nota "+esc(x[6]):""}</div></div>`).join("")}</div>`; }).join("");
-  h += `<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px"><span class="note" style="margin:0">Fonte: ${esc(D.lanc.fonte||"planilha de gestão")}</span>${sel.length?`<button type="button" class="btn sm ghost" data-lccsv>Baixar (CSV)</button>`:""}</div>`;
+  h += `<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px"><span class="note" style="margin:0">Fonte: ${esc(D.lanc.fonte||"planilha de gestão")}</span>${sel.length?`<button type="button" class="btn sm ghost" data-lcpdf>Baixar PDF</button><button type="button" class="btn sm ghost" data-lccsv>Baixar (CSV)</button>`:""}</div>`;
   let d=document.getElementById("mzLc"); if(!d){ d=document.createElement("dialog"); d.id="mzLc"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
   d.innerHTML=h; d.querySelector("[data-lcx]").onclick=()=>d.close();
-  const c=d.querySelector("[data-lccsv]"); if(c) c.onclick=()=>{ const f=v=>v.toFixed(2).replace(".",","); const linhas=[["Mês","Data","Fornecedor","Descrição","Valor","Conta","Nota"],...sel.map(x=>[x[0],x[1],x[2],x[3],f(x[4]),x[5],x[6]])];
+  const pdf=d.querySelector("[data-lcpdf]"); if(pdf) pdf.onclick=()=>lcPdf(d); const c=d.querySelector("[data-lccsv]"); if(c) c.onclick=()=>{ const f=v=>v.toFixed(2).replace(".",","); const linhas=[["Mês","Data","Fornecedor","Descrição","Valor","Conta","Nota"],...sel.map(x=>[x[0],x[1],x[2],x[3],f(x[4]),x[5],x[6]])];
     const csv="\ufeff"+linhas.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n"); const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${l.n} ${P.emp} ${per}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
   d.showModal(); reg("ver_lancamentos", P.emp+" · "+l.n).catch(()=>{});
 }

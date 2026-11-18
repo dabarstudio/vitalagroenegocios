@@ -1603,6 +1603,7 @@ const mzPerNome = () => MZ.per==="12" ? "últimos 12 meses" : MZ.per==="tudo" ? 
 
 function renderMatriz(el, D, emps){
   const secs=[["resumo","Resumo"],...["dre","dfc","bp"].filter(s=>D.tabs.some(t=>t.sec===s)).map(s=>[s,{dre:"DRE",dfc:"DFC",bp:"Balanço (BP)"}[s]])];
+  if (D.tabs.some(t=>t.ativ==="Agricultura")) secs.push(["safra","Propriedade e safra"]);
   if (!secs.some(s=>s[0]===MZ.sec)) MZ.sec="resumo";
   const anos=mzAnos(D), ult=mzUlt(D);
   el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
@@ -1622,8 +1623,80 @@ function mzLigarFiltros(D){ const f=$("#mzFil"); if(!f) return; const re=()=>{ f
   if ($("#mzCu")) $("#mzCu").onchange=e=>{ MZ.cul=e.target.value; MZ.saf=""; if (MZ.cul && !MZ.ativ) MZ.ativ="Agricultura"; re(); };
   if ($("#mzSa")) $("#mzSa").onchange=e=>{ MZ.saf=e.target.value; re(); }; }
 function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return;
+  if (MZ.sec==="safra") { agrCorpo(b); return; }
   b.innerHTML = (D.verif&&D.verif[MZ.sec]?`<div class="card" role="status" style="border-left:4px solid #D69E2E;padding:10px 14px"><p class="note" style="margin:0;color:#B7791F"><b>⚠ Em verificação</b> · ${esc(String(D.verif[MZ.sec]).replace(/^Em verificação:\s*/,""))}</p></div>`:"") + (MZ.sec==="resumo" ? mzResumo(D) : (D.tabs.map((t,ti)=>t.sec===MZ.sec&&mzTabVis(t)?mzTabela(D,t,ti):"").join("")||(MZ.sec!=="resumo"&&(MZ.ativ||MZ.cul)?`<div class="card"><p class="note" style="margin:0">Nenhuma tabela desta seção para o filtro escolhido.</p></div>`:"")) + (D.obs&&D.obs[MZ.sec]?`<div class="card"><p class="note" style="margin:0">${esc(D.obs[MZ.sec])}</p></div>`:""));
   mzLigar(D); }
+
+/* ===== Propriedade e planejamento de safra (talhões, safras, plantios) ===== */
+const AG = { emp:null, t:[], s:[], p:[], sel:null, ab:{talhoes:false} };
+const agN = v => v==null||v==="" ? "" : Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const agP = v => (v*100).toFixed(2).replace(".",",")+"%";
+const agNum = v => { if (v==null) return null; const x=String(v).trim().replace(/\./g,"").replace(",","."); return x===""?null:(isFinite(+x)?+x:null); };
+const AG_CULT = ["Soja","Milho","Sorgo","Feijão","Trigo","Milheto","Braquiária","Pastagem","Outra"];
+async function agCarregar(){
+  const e=P.emp; const [t,s]=await Promise.all([sb.from("agr_talhoes").select("*").eq("empresa",e).order("nome"), sb.from("agr_safras").select("*").eq("empresa",e).order("inicio",{ascending:false})]);
+  if (t.error||s.error) throw (t.error||s.error);
+  AG.emp=e; AG.t=t.data||[]; AG.s=s.data||[];
+  if (!AG.sel || !AG.s.some(x=>x.id===AG.sel)) AG.sel=(AG.s.find(x=>x.status==="planejamento")||AG.s[0]||{}).id||null;
+  const ids=AG.s.map(x=>x.id); const p = ids.length ? await sb.from("agr_plantios").select("*").in("safra_id",ids).order("cultura").order("area_ha",{ascending:false}) : {data:[]};
+  if (p.error) throw p.error; AG.p=p.data||[];
+}
+async function agrCorpo(b){
+  if (AG.emp!==P.emp) { b.innerHTML=`<div class="card"><p class="note" style="margin:0">Carregando talhões e safras…</p></div>`; try { await agCarregar(); } catch(e){ b.innerHTML=`<div class="card"><p class="note" style="margin:0">Não foi possível carregar: ${esc(e.message||e)}</p></div>`; return; } }
+  const sf=AG.s.find(x=>x.id===AG.sel), tn=id=>(AG.t.find(t=>t.id===id)||{}).nome||"?";
+  const pl=AG.p.filter(x=>x.safra_id===AG.sel);
+  const grupos={}; pl.forEach(x=>{ const k=x.cultura+" · "+(x.ciclo==="safrinha"?"safrinha":x.ciclo==="perene"?"perene":"safra"); (grupos[k] ||= {ha:0,n:0,sc:0,ts:[]}); grupos[k].ha+=+x.area_ha||0; grupos[k].n++; grupos[k].sc+=+x.arrend_sc||0; grupos[k].ts.push(tn(x.talhao_id)); });
+  const tot=Object.values(grupos).reduce((a,g)=>a+g.ha,0);
+  const inp=(id,campo,v,w,tipo)=>`<input data-agp="${id}" data-c="${campo}" value="${esc(tipo==="n"?agN(v):(v??""))}" style="width:${w||90}px;min-height:32px;padding:4px 6px" ${tipo==="n"?'inputmode="decimal"':""}>`;
+  const selC=(id,v)=>`<select data-agp="${id}" data-c="cultura" style="min-height:32px">${[...new Set([...AG_CULT,v])].map(c=>`<option ${c===v?"selected":""}>${esc(c)}</option>`).join("")}</select>`;
+  const selCi=(id,v)=>`<select data-agp="${id}" data-c="ciclo" style="min-height:32px">${["safra","safrinha","perene"].map(c=>`<option ${c===v?"selected":""}>${c}</option>`).join("")}</select>`;
+  const selT=(id,v)=>`<select data-agp="${id}" data-c="talhao_id" style="min-height:32px;max-width:190px">${AG.t.map(t=>`<option value="${t.id}" ${t.id===v?"selected":""}>${esc(t.nome)}${t.area_ha?" ("+agN(t.area_ha)+" ha)":""}</option>`).join("")}</select>`;
+  let h=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-end">
+      <div><h3 class="pnt" style="margin:0">Planejamento da safra</h3><p class="note" style="margin:2px 0 0">Ano-safra de julho a junho. Cadastre no início da safra quais talhões vão para cada cultura: a participação de cada cultura na área define o rateio dos gastos da Agricultura.</p></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:flex-end"><label class="note" style="display:grid;gap:2px">Safra<select id="agSf" style="min-height:38px">${AG.s.map(x=>`<option value="${x.id}" ${x.id===AG.sel?"selected":""}>${esc(x.nome)} · ${esc(x.status)}</option>`).join("")}</select></label>
+      <button class="btn sm" type="button" id="agNova">+ Nova safra</button></div></div>`;
+  if (!sf) h+=`<p class="note">Nenhuma safra cadastrada. Toque em “+ Nova safra”.</p>`;
+  else {
+    h+=`<div class="row" style="gap:8px;flex-wrap:wrap;margin:10px 0"><label class="note">Status <select id="agSt" style="min-height:32px">${["planejamento","em andamento","encerrada"].map(x=>`<option ${x===sf.status?"selected":""}>${x}</option>`).join("")}</select></label><span class="note">Período: ${esc(sf.inicio.split("-").reverse().join("/"))} a ${esc(sf.fim.split("-").reverse().join("/"))}</span></div>`;
+    h+=`<h4 style="margin:12px 0 6px">Área por cultura e % do rateio</h4><div class="tw"><table class="dre"><thead><tr><th>Cultura</th><th>Talhões</th><th>Área (ha)</th><th>% da área = % do rateio</th><th>Arrendamento (sc)</th></tr></thead><tbody>`+
+      Object.entries(grupos).sort((a,b)=>b[1].ha-a[1].ha).map(([k,g])=>`<tr><td>${esc(k)}</td><td style="text-align:left;white-space:normal">${esc(g.ts.join(", "))}</td><td>${agN(g.ha)}</td><td><b>${tot?agP(g.ha/tot):"–"}</b></td><td>${g.sc?agN(g.sc):""}</td></tr>`).join("")+
+      `<tr class="dt dtf"><td>Total plantado no ano-safra</td><td></td><td>${agN(tot)}</td><td>100%</td><td>${agN(Object.values(grupos).reduce((a,g)=>a+g.sc,0))}</td></tr></tbody></table></div>`;
+    h+=`<h4 style="margin:16px 0 6px">Talhões plantados nesta safra</h4><p class="note">As alterações são salvas ao sair do campo. “Arrend. (sc)” é a parte do contrato que cabe a esta cultura; “% contrato” registra a divisão (ex.: 70% soja, 30% safrinha).</p><div class="tw"><table class="dre"><thead><tr><th>Talhão</th><th>Cultura</th><th>Ciclo</th><th>Área (ha)</th><th>Arrend. (sc)</th><th>% contrato</th><th>Centro de custo (Ideagri)</th><th>Meta (sc/ha)</th><th>Preço (R$/sc)</th><th></th></tr></thead><tbody>`+
+      pl.map(x=>`<tr><td style="text-align:left">${selT(x.id,x.talhao_id)}</td><td>${selC(x.id,x.cultura)}</td><td>${selCi(x.id,x.ciclo)}</td><td>${inp(x.id,"area_ha",x.area_ha,80,"n")}</td><td>${inp(x.id,"arrend_sc",x.arrend_sc,80,"n")}</td><td>${inp(x.id,"arrend_pct",x.arrend_pct,60,"n")}</td><td>${inp(x.id,"centro_custo",x.centro_custo,80)}</td><td>${inp(x.id,"meta_sc_ha",x.meta_sc_ha,70,"n")}</td><td>${inp(x.id,"preco_sc",x.preco_sc,80,"n")}</td><td><button class="btn sm ghost" type="button" data-agdel="${x.id}" aria-label="Remover">✕</button></td></tr>`).join("")+
+      `</tbody></table></div><div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm" type="button" id="agAdd" ${AG.t.length?"":"disabled"}>+ Adicionar talhão à safra</button>${AG.s.length>1?`<button class="btn sm ghost" type="button" id="agCopia">Copiar plantios de outra safra</button>`:""}</div>`;
+    const comMeta=pl.filter(x=>x.meta_sc_ha&&x.preco_sc);
+    if (comMeta.length) { const rec=comMeta.reduce((a,x)=>a+x.area_ha*x.meta_sc_ha*x.preco_sc,0), sc=comMeta.reduce((a,x)=>a+x.area_ha*x.meta_sc_ha,0);
+      h+=`<p class="note" style="margin-top:8px">Pela meta e preço informados: produção esperada de <b>${agN(sc)} sc</b> e receita esperada de <b>R$ ${agN(rec)}</b> (${comMeta.length} talhão(ões) com meta).</p>`; }
+  }
+  h+=`</div>`;
+  // talhões (dados da propriedade)
+  const usados=new Set(AG.p.map(x=>x.talhao_id));
+  const tin=(id,c,v,w,tipo)=>`<input data-agt="${id}" data-c="${c}" value="${esc(tipo==="n"?agN(v):(v??""))}" style="width:${w||100}px;min-height:32px;padding:4px 6px" ${tipo==="n"?'inputmode="decimal"':""}>`;
+  h+=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div><h3 class="pnt" style="margin:0">Dados da propriedade · talhões</h3><p class="note" style="margin:2px 0 0">${AG.t.length} talhões · ${agN(AG.t.reduce((a,t)=>a+(+t.area_ha||0),0))} ha cadastrados · ${AG.t.filter(t=>t.posse==="arrendada").length} arrendados · ${AG.t.filter(t=>t.posse==="a confirmar").length} a confirmar</p></div><button class="btn sm" type="button" id="agTNovo">+ Novo talhão</button></div>
+    <div class="tw" style="margin-top:8px"><table class="dre"><thead><tr><th>Talhão</th><th>Área (ha)</th><th>Posse</th><th>Arrendador</th><th>sc/ha/ano</th><th>Produto</th><th>Observação</th><th></th></tr></thead><tbody>`+
+    AG.t.map(t=>`<tr><td style="text-align:left">${tin(t.id,"nome",t.nome,170)}</td><td>${tin(t.id,"area_ha",t.area_ha,80,"n")}</td><td><select data-agt="${t.id}" data-c="posse" style="min-height:32px">${["própria","arrendada","a confirmar"].map(x=>`<option ${x===t.posse?"selected":""}>${x}</option>`).join("")}</select></td><td>${tin(t.id,"arrendador",t.arrendador,140)}</td><td>${tin(t.id,"arrend_sc_ha",t.arrend_sc_ha,60,"n")}</td><td>${tin(t.id,"arrend_produto",t.arrend_produto,70)}</td><td>${tin(t.id,"obs",t.obs,220)}</td><td>${usados.has(t.id)?"":`<button class="btn sm ghost" type="button" data-agtdel="${t.id}" aria-label="Excluir talhão">✕</button>`}</td></tr>`).join("")+
+    `</tbody></table></div></div>`;
+  b.innerHTML=h; agLigar(b);
+}
+function agLigar(b){
+  const re=()=>agrCorpo($("#pnBody"));
+  const sf=$("#agSf"); if (sf) sf.onchange=e=>{ AG.sel=e.target.value; re(); };
+  const st=$("#agSt"); if (st) st.onchange=async e=>{ const {error}=await sb.from("agr_safras").update({status:e.target.value}).eq("id",AG.sel); if(error) return toast("Erro: "+error.message); AG.s.find(x=>x.id===AG.sel).status=e.target.value; toast("Status atualizado."); re(); };
+  $("#agNova").onclick=async()=>{ const nome=prompt("Nome da safra (ex.: 27/28):"); if(!nome) return; const m=nome.match(/(\d{2})\/(\d{2})/); const y=m?2000+(+m[1]):new Date().getFullYear();
+    const {data,error}=await sb.from("agr_safras").insert({empresa:P.emp,nome:nome.trim(),inicio:`${y}-07-01`,fim:`${y+1}-06-30`,status:"planejamento"}).select().single(); if(error) return toast("Erro: "+error.message); AG.s.unshift(data); AG.sel=data.id; toast("Safra "+nome+" criada."); re(); };
+  const add=$("#agAdd"); if (add) add.onclick=async()=>{ const {data,error}=await sb.from("agr_plantios").insert({safra_id:AG.sel,talhao_id:AG.t[0].id,cultura:"Soja",ciclo:"safra",area_ha:AG.t[0].area_ha||0}).select().single(); if(error) return toast("Erro: "+error.message); AG.p.push(data); re(); };
+  const cp=$("#agCopia"); if (cp) cp.onclick=async()=>{ const outras=AG.s.filter(x=>x.id!==AG.sel); const nome=prompt("Copiar plantios de qual safra? ("+outras.map(x=>x.nome).join(", ")+")", outras[0].nome); const o=outras.find(x=>x.nome===(nome||"").trim()); if(!o) return;
+    const rows=AG.p.filter(x=>x.safra_id===o.id).map(({id,criado_em,atualizado_em,safra_id,...r})=>({...r,safra_id:AG.sel})); if(!rows.length) return toast("Essa safra não tem plantios.");
+    const {data,error}=await sb.from("agr_plantios").insert(rows).select(); if(error) return toast("Erro: "+error.message); AG.p.push(...data); toast(rows.length+" plantio(s) copiados. Ajuste culturas e áreas."); re(); };
+  b.querySelectorAll("[data-agp]").forEach(el=>el.onchange=async()=>{ const id=el.dataset.agp, c=el.dataset.c; let v=el.value; if(["area_ha","arrend_sc","arrend_pct","meta_sc_ha","preco_sc"].includes(c)) v=agNum(v); if(c==="area_ha"&&v==null) return toast("Informe a área.");
+    const {error}=await sb.from("agr_plantios").update({[c]:v===""?null:v,atualizado_em:new Date().toISOString()}).eq("id",id); if(error) return toast("Erro ao salvar: "+error.message); const x=AG.p.find(y=>y.id===id); if(x) x[c]=v; toast("Salvo."); re(); });
+  b.querySelectorAll("[data-agdel]").forEach(el=>el.onclick=async()=>{ if(!confirm("Remover este talhão da safra?")) return; const {error}=await sb.from("agr_plantios").delete().eq("id",el.dataset.agdel); if(error) return toast("Erro: "+error.message); AG.p=AG.p.filter(x=>x.id!==el.dataset.agdel); re(); });
+  b.querySelectorAll("[data-agt]").forEach(el=>el.onchange=async()=>{ const id=el.dataset.agt, c=el.dataset.c; let v=el.value; if(["area_ha","arrend_sc_ha"].includes(c)) v=agNum(v); if(c==="nome"&&!String(v).trim()) return toast("Informe o nome.");
+    const {error}=await sb.from("agr_talhoes").update({[c]:v===""?null:v,atualizado_em:new Date().toISOString()}).eq("id",id); if(error) return toast("Erro ao salvar: "+error.message); const t=AG.t.find(y=>y.id===id); if(t) t[c]=v; toast("Salvo."); re(); });
+  $("#agTNovo").onclick=async()=>{ const nome=prompt("Nome do talhão:"); if(!nome) return; const area=agNum(prompt("Área (ha):")||"");
+    const {data,error}=await sb.from("agr_talhoes").insert({empresa:P.emp,nome:nome.trim(),area_ha:area}).select().single(); if(error) return toast("Erro: "+error.message); AG.t.push(data); AG.t.sort((a,b)=>a.nome.localeCompare(b.nome)); re(); };
+  b.querySelectorAll("[data-agtdel]").forEach(el=>el.onclick=async()=>{ if(!confirm("Excluir este talhão do cadastro?")) return; const {error}=await sb.from("agr_talhoes").delete().eq("id",el.dataset.agtdel); if(error) return toast("Erro: "+error.message); AG.t=AG.t.filter(x=>x.id!==el.dataset.agtdel); re(); });
+}
 
 function mzResumo(D){
   const rec=mzSerie(D,"rec"), res=mzSerie(D,"res"), desp=mzSerie(D,"desp"), ent=mzSerie(D,"ent"), sai=mzSerie(D,"sai"), cx=mzSerie(D,"cx");

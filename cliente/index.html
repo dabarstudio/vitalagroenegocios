@@ -1574,9 +1574,21 @@ function baixarDRE(D){
 }
 
 /* ===== painéis "matriz": DRE, DFC e BP extraídos das planilhas de gestão de cada cliente ===== */
-const MZ = { per:"12", sec:"resumo", ab:{} };
+const MZ = { per:"12", sec:"resumo", ab:{}, ativ:"", cul:"", saf:"" };
+// Filtros de atividade/cultura/safra: tabs podem ter "ativ" (ex.: "Agricultura", "Pecuária") e "cult" (lista paralela a cols, "Cultura|Safra" ou null)
+const mzCultOk = c => !!c && (!MZ.cul || c.split("|")[0]===MZ.cul) && (!MZ.saf || c.split("|")[1]===MZ.saf);
+function mzTabVis(t){ if (MZ.ativ && t.ativ!==MZ.ativ) return false; if (MZ.cul) return !!(t.cult && t.cult.some(mzCultOk)); return true; }
+function mzFiltrosHTML(D){ const ts=D.tabs||[]; if (!ts.some(t=>t.ativ||t.cult)) return "";
+  const ativs=[...new Set(ts.map(t=>t.ativ).filter(Boolean))];
+  const cs=ts.flatMap(t=>(t.cult||[]).filter(Boolean)).filter(c=>!MZ.ativ||ts.some(t=>(t.cult||[]).includes(c)&&(!t.ativ||t.ativ===MZ.ativ)));
+  const culs=[...new Set(cs.map(c=>c.split("|")[0]))];
+  const safs=MZ.cul?[...new Set(cs.filter(c=>c.split("|")[0]===MZ.cul).map(c=>c.split("|")[1]))]:[];
+  const o=(v,l,sel)=>`<option value="${esc(v)}"${v===sel?" selected":""}>${esc(l)}</option>`;
+  return `<label>Atividade<select id="mzAt">${o("","Todas",MZ.ativ)}${ativs.map(a=>o(a,a,MZ.ativ)).join("")}</select></label>`+
+    (culs.length&&MZ.ativ!=="Pecuária"?`<label>Cultura<select id="mzCu">${o("","Todas",MZ.cul)}${culs.map(c=>o(c,c,MZ.cul)).join("")}</select></label>`:"")+
+    (safs.length?`<label>Safra<select id="mzSa">${o("",safs.length>1?"Comparar todas":"Todas",MZ.saf)}${safs.map(c=>o(c,c,MZ.saf)).join("")}</select></label>`:""); }
 const mzEhMes = c => /^\d{4}-\d{2}$/.test(c);
-function mzIdx(t){ const n=t.cols.length, a=[...Array(n).keys()]; if (!t.meses) return a;
+function mzIdx(t){ const n=t.cols.length, a=[...Array(n).keys()]; if (!t.meses) return (MZ.cul && t.cult) ? a.filter(i=>mzCultOk(t.cult[i])) : a;
   if (MZ.per==="12") return a.slice(Math.max(0,n-12)); if (MZ.per==="tudo") return a; return a.filter(i=>t.cols[i].startsWith(MZ.per)); }
 const mzCol = (t,i) => t.meses ? mesC(t.cols[i]) : t.cols[i];
 function mzTot(t,l,idx){ if (l.t==="cab"||l.t==="rot") return null; if (l.t==="pct") return null; if (!t.meses && t.tot===false) return null;
@@ -1596,16 +1608,21 @@ function renderMatriz(el, D, emps){
   el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
       ${D.rascunho?`<p class="note" style="margin:2px 0 0;color:var(--c-desp)"><b>Em revisão</b> · visível só para a equipe Vital até ser liberado ao cliente.</p>`:""}<p class="note" style="margin:2px 0 0">${ult?"Dados até "+mesC(ult)+" · ":""}atualizado em ${esc(String(D.gerado||"").split(" ")[0].split("-").reverse().join("/"))} · fonte: ${esc(D.fonte||"planilha de gestão")}</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
-      ${anos.length?`<label>Período<select id="mzPer"><option value="12">Últimos 12 meses</option>${anos.map(a=>`<option value="${a}">${a}</option>`).join("")}<option value="tudo">Tudo</option></select></label>`:""}</div></div>
+      <span id="mzFil" style="display:contents">${mzFiltrosHTML(D)}</span>${anos.length?`<label>Período<select id="mzPer"><option value="12">Últimos 12 meses</option>${anos.map(a=>`<option value="${a}">${a}</option>`).join("")}<option value="tudo">Tudo</option></select></label>`:""}</div></div>
     <nav class="pns" role="tablist">${secs.map(([k,l])=>`<button class="tab" role="tab" data-mzs="${k}" aria-selected="${MZ.sec===k}">${l}</button>`).join("")}</nav>
     <div id="pnBody" class="stack"></div>`;
   if ($("#mzPer")) { $("#mzPer").value=MZ.per; $("#mzPer").onchange=e=>{MZ.per=e.target.value; mzCorpo();}; }
-  if ($("#pnEmp")) $("#pnEmp").onchange=e=>{P.emp=e.target.value; MZ.ab={}; renderPainel();};
+  if ($("#pnEmp")) $("#pnEmp").onchange=e=>{P.emp=e.target.value; MZ.ab={}; MZ.ativ=MZ.cul=MZ.saf=""; renderPainel();};
+  mzLigarFiltros(D);
   el.querySelectorAll("[data-mzs]").forEach(b=>b.onclick=()=>{ MZ.sec=b.dataset.mzs; el.querySelectorAll("[data-mzs]").forEach(x=>x.setAttribute("aria-selected", x===b)); mzCorpo(); });
   mzCorpo();
 }
+function mzLigarFiltros(D){ const f=$("#mzFil"); if(!f) return; const re=()=>{ f.innerHTML=mzFiltrosHTML(D); mzLigarFiltros(D); mzCorpo(); };
+  if ($("#mzAt")) $("#mzAt").onchange=e=>{ MZ.ativ=e.target.value; if (MZ.ativ==="Pecuária") { MZ.cul=""; MZ.saf=""; } re(); };
+  if ($("#mzCu")) $("#mzCu").onchange=e=>{ MZ.cul=e.target.value; MZ.saf=""; if (MZ.cul && !MZ.ativ) MZ.ativ="Agricultura"; re(); };
+  if ($("#mzSa")) $("#mzSa").onchange=e=>{ MZ.saf=e.target.value; re(); }; }
 function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return;
-  b.innerHTML = (D.verif&&D.verif[MZ.sec]?`<div class="card" role="status" style="border-left:4px solid #D69E2E;padding:10px 14px"><p class="note" style="margin:0;color:#B7791F"><b>⚠ Em verificação</b> · ${esc(String(D.verif[MZ.sec]).replace(/^Em verificação:\s*/,""))}</p></div>`:"") + (MZ.sec==="resumo" ? mzResumo(D) : D.tabs.map((t,ti)=>t.sec===MZ.sec?mzTabela(D,t,ti):"").join("") + (D.obs&&D.obs[MZ.sec]?`<div class="card"><p class="note" style="margin:0">${esc(D.obs[MZ.sec])}</p></div>`:""));
+  b.innerHTML = (D.verif&&D.verif[MZ.sec]?`<div class="card" role="status" style="border-left:4px solid #D69E2E;padding:10px 14px"><p class="note" style="margin:0;color:#B7791F"><b>⚠ Em verificação</b> · ${esc(String(D.verif[MZ.sec]).replace(/^Em verificação:\s*/,""))}</p></div>`:"") + (MZ.sec==="resumo" ? mzResumo(D) : (D.tabs.map((t,ti)=>t.sec===MZ.sec&&mzTabVis(t)?mzTabela(D,t,ti):"").join("")||(MZ.sec!=="resumo"&&(MZ.ativ||MZ.cul)?`<div class="card"><p class="note" style="margin:0">Nenhuma tabela desta seção para o filtro escolhido.</p></div>`:"")) + (D.obs&&D.obs[MZ.sec]?`<div class="card"><p class="note" style="margin:0">${esc(D.obs[MZ.sec])}</p></div>`:""));
   mzLigar(D); }
 
 function mzResumo(D){
@@ -1673,14 +1690,15 @@ function mzLanc(D,ti,i,mi){
   const ordem = Object.keys(porMes).sort().reverse();
   const tot = sel.reduce((a,x)=>a+x[4],0);
   const dem = (mi!=null ? [mi] : mzIdx(t)).reduce((a,j)=>a+(+l.v[j]||0),0);
-  const per = mi!=null ? mesC(t.cols[mi]) : mzPerNome();
+  const mc = c => /^\d{4}-\d{2}$/.test(c) ? mesC(c) : c;
+  const per = mi!=null ? mc(t.cols[mi]) : (t.meses ? mzPerNome() : mzIdx(t).map(j=>t.cols[j]).join(" · "));
   let h = `<div class="lch"><div><div class="eyebrow">${esc(t.titulo)}</div><h3 style="margin:2px 0 0">${esc(l.n)}</h3><p class="note" style="margin:2px 0 0">${esc(per)} · ${sel.length} lançamento${sel.length===1?"":"s"} · total <b>${fRc(tot)}</b></p></div>
     <button type="button" class="btn sm ghost" data-lcx aria-label="Fechar">Fechar</button></div>`;
   if (!sel.length) h += `<p class="note">Nenhum lançamento desta conta no período.</p>`;
   if (Math.abs(tot-dem)>=1) h += `<p class="note lcw">A soma dos lançamentos (${fRc(tot)}) é diferente do valor do demonstrativo (${fRc(dem)}). A diferença vem de ajustes feitos direto na planilha de gestão.</p>`;
   h += ordem.map(m=>{ const xs=porMes[m].slice().sort((a,b)=>(b[1].slice(6)+b[1].slice(3,5)+b[1].slice(0,2)).localeCompare(a[1].slice(6)+a[1].slice(3,5)+a[1].slice(0,2)));
     const st=xs.reduce((a,x)=>a+x[4],0);
-    return `<div class="lcm"><div class="lcmh"><b>${esc(mesC(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(x[1]||"sem data")}</b><span class="${x[4]<0?"neg":""}">${fRc(x[4])}</span></div><div class="lcd">${esc(x[2]||"Sem fornecedor")}${x[3]?" · "+esc(x[3]):""}</div><div class="lcd note">${x[5]?"Conta: "+esc(x[5]):""}${x[6]?" · Nota "+esc(x[6]):""}</div></div>`).join("")}</div>`; }).join("");
+    return `<div class="lcm"><div class="lcmh"><b>${esc(mc(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(x[1]||"sem data")}</b><span class="${x[4]<0?"neg":""}">${fRc(x[4])}</span></div><div class="lcd">${esc(x[2]||"Sem fornecedor")}${x[3]?" · "+esc(x[3]):""}</div><div class="lcd note">${x[5]?"Conta: "+esc(x[5]):""}${x[6]?" · Nota "+esc(x[6]):""}</div></div>`).join("")}</div>`; }).join("");
   h += `<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px"><span class="note" style="margin:0">Fonte: ${esc(D.lanc.fonte||"planilha de gestão")}</span>${sel.length?`<button type="button" class="btn sm ghost" data-lccsv>Baixar (CSV)</button>`:""}</div>`;
   let d=document.getElementById("mzLc"); if(!d){ d=document.createElement("dialog"); d.id="mzLc"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
   d.innerHTML=h; d.querySelector("[data-lcx]").onclick=()=>d.close();

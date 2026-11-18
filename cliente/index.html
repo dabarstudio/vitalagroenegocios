@@ -153,7 +153,7 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .pnt{font-family:var(--display);font-size:1rem;margin:0 0 6px;color:var(--brand)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:2px}
-.kpi span{font-size:.8rem;color:var(--muted)}.kpi b{font-family:var(--display);font-size:1.25rem;color:var(--fg)}.kpi em{font-style:normal;font-size:.8rem;color:var(--muted)}
+.kpi span{font-size:.8rem;color:var(--muted)}.kpi b{font-family:var(--display);font-size:1.25rem;color:var(--fg)}.kpi em{font-style:normal;font-size:.8rem;color:var(--muted)}.kpi.kc span i{font-style:normal;font-size:1.05rem;margin-right:2px}.kpi.kc{border-left:4px solid var(--brand,#2f7d32)}.kpi.kneg{border-left-color:#c0392b}.kpi.kneg b{color:#c0392b}
 .gw{position:relative}.gsv{width:100%;height:auto;display:block}
 .gl{stroke:var(--line);stroke-width:1}.g0{stroke:var(--muted);stroke-width:1}.gt{fill:var(--muted);font:11px var(--body)}.gt.gp{font-style:italic}
 .gh{fill:transparent}.gh:hover{fill:var(--fg);fill-opacity:.05}.gln{fill:none;stroke-width:2}.gdot{stroke:var(--surface);stroke-width:2}.gdot.gp{fill-opacity:.4}
@@ -1715,8 +1715,42 @@ function mzResumo(D){
   if (!h) h=`<div class="card"><p class="note">Abra as abas acima para ver os demonstrativos.</p></div>`;
   return h;
 }
+/* ===== visão de uma cultura: cards + DRE com R$, R$/ha, R$/sc e sc/ha (modelo da planilha de gestão) ===== */
+const fD = (v,d=2) => v==null||!isFinite(v) ? "–" : v.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+function mzCult(D,t,ti,j){
+  const m=t.met[j], A=m.area||0, SC=m.sc||0, PL=m.preco||0;
+  const lk=k=>t.linhas.find(l=>l.k===k), val=k=>{ const l=lk(k); return l?(+l.v[j]||0):null; };
+  const rec=val("rec"), md=val("md"), rat=val("rat"), res=val("res"), dc=val("dc");
+  const card=(ic,ti_,v,sub,neg)=>`<div class="kpi kc${neg?" kneg":""}"><span><i aria-hidden="true">${ic}</i> ${esc(ti_)}</span><b>${esc(v)}</b>${sub?`<em>${esc(sub)}</em>`:""}</div>`;
+  const R=v=>(v<0?"−R$ ":"R$ ")+fD(Math.abs(v));
+  let c=card("📐","Hectares",fD(A)+" ha",m.arrend_ha?`${fD(m.arrend_ha)} ha arrendados`:"");
+  if (SC) c+=card("🌾","Produtividade",fD(SC/A)+" sc/ha","")+card("📦","Produção",fD(SC)+" sc","sacas de 60 kg");
+  if (m.bruto) c+=card("💲","Valor bruto comercializado","R$ "+fD(m.bruto)+"/sc","");
+  if (PL) c+=card("💵",m.bruto?"Valor líquido comercializado":"Preço médio de venda","R$ "+fD(PL)+"/sc","");
+  if (SC && dc!=null && rat!=null) c+=card("🧾","Custo total por saca","R$ "+fD(-(dc+rat)/SC)+"/sc",`direto R$ ${fD(-dc/SC)} + rateio R$ ${fD(-rat/SC)}`);
+  if (SC && PL && dc!=null && rat!=null) { const pe=-(dc+rat)/PL/A; c+=card("⚖️","Ponto de equilíbrio",fD(pe)+" sc/ha",SC/A>=pe?"acima do equilíbrio":`faltaram ${fD(pe-SC/A)} sc/ha`,SC/A<pe); }
+  if (md!=null) c+=card("📈","Margem direta",R(md),rec?fD(md/rec*100,1)+"% da receita":"",md<0);
+  if (res!=null) c+=card(res<0?"🔻":"✅","Resultado",R(res),A?`${R(res/A)}/ha`+(SC?` · ${R(res/SC)}/sc`:""):"",res<0);
+  // tabela: só linhas em R$ (as linhas de indicadores viraram cards)
+  let grp=-1; const pai=t.linhas.map((l,i)=>{ if (l.t==="grp") { grp=i; return -1; } if (l.t==="item") return grp; grp=-1; return -1; });
+  const nC=v=>`<td class="${v<0?"neg":""}">${fD(v)}</td>`;
+  let h=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">${esc(t.cols[j])} · ${esc(t.titulo)}</h3>
+    <div class="row" style="gap:6px"><button class="btn sm ghost" data-mzab="${ti}">Abrir tudo</button><button class="btn sm ghost" data-mzcsv="${ti}">Baixar planilha (CSV)</button></div></div>
+    <div class="kpis" style="margin:12px 0">${c}</div>
+    <p class="note">Toque numa linha com ▸ para abrir o grupo.${SC?"":" Sem volume em sacas nas notas desta cultura: R$/sc e sc/ha ficam em branco."}</p>
+    <div class="tw"><table class="dre"><thead><tr><th>Descrição</th><th>R$</th><th>R$/ha</th><th>R$/sc</th><th>sc/ha</th></tr></thead><tbody>`;
+  let sec=null;
+  t.linhas.forEach((l,i)=>{
+    if (l.t==="cab") { sec=l.n; return; } if (l.ind || l.t==="rot" || l.t==="pct") return; if (l.oculto) return;
+    if (pai[i]>=0 && !MZ.ab[ti+":"+pai[i]]) return;
+    const v=l.v[j]; if (v==null || typeof v==="string") return; if (Math.abs(v)<0.005 && l.t==="item") return;
+    const cls = l.t==="tot"?"dt dtf": l.t==="grp"?"dg":"dcat", tg=l.t==="grp"?`<span class="tg">${MZ.ab[ti+":"+i]?"▾":"▸"}</span> `:"", nv=l.t==="item"?1:0;
+    h+=`<tr class="${cls}" ${l.t==="grp"?`data-mzg="${ti}:${i}"`:""}><td style="padding-left:${8+nv*16}px">${tg}${esc(l.n)}</td>${nC(v)}${nC(A?v/A:null)}${SC?nC(v/SC):"<td>–</td>"}${SC&&PL&&A?nC(v/PL/A):"<td>–</td>"}</tr>`;
+  });
+  return h+`</tbody></table></div></div>`;
+}
 function mzTabela(D,t,ti){
-  const idx=mzIdx(t); if (!idx.length) return `<div class="card"><h3 class="pnt">${esc(t.titulo)}</h3><p class="note">Sem dados no período escolhido.</p></div>`;
+  const idx=mzIdx(t); if (t.met && idx.length===1 && t.met[idx[0]]) return mzCult(D,t,ti,idx[0]); if (!idx.length) return `<div class="card"><h3 class="pnt">${esc(t.titulo)}</h3><p class="note">Sem dados no período escolhido.</p></div>`;
   // grupos: cada linha "grp" abre/fecha as linhas "item" logo abaixo dela
   let grp=-1; const pai=t.linhas.map((l,i)=>{ if (l.t==="grp") { grp=i; return -1; } if (l.t==="item") return grp; grp=-1; return -1; });
   const temGrp=pai.some(x=>x>=0);

@@ -180,12 +180,13 @@ const VCPG = (() => {
   /* filtros: [{relatorio, acao, pessoa, data_balanco|null}] */
   function filtrosDoDia(filtros, tipo, dataISO) {
     // exclusão vale do balanço informado em diante (só volta com nova ordem); "mostrar somente" vale só para o balanço informado
-    const f = filtros.filter((x) => x.relatorio === tipo && (!x.data_balanco || (x.acao === "excluir" ? x.data_balanco <= dataISO : x.data_balanco === dataISO)));
-    return { excluir: new Set(f.filter((x) => x.acao === "excluir").map((x) => x.pessoa)), incluir: f.filter((x) => x.acao === "incluir").map((x) => x.pessoa), regras: f };
+    // ajuste manual vale só para o balanço informado
+    const f = filtros.filter((x) => x.relatorio === tipo && (!x.data_balanco || (x.acao === "excluir" ? x.data_balanco <= dataISO : x.data_balanco === dataISO)) && (x.acao !== "ajuste" || x.data_balanco === dataISO));
+    return { excluir: new Set(f.filter((x) => x.acao === "excluir").map((x) => x.pessoa)), incluir: f.filter((x) => x.acao === "incluir").map((x) => x.pessoa), ajustes: f.filter((x) => x.acao === "ajuste"), regras: f };
   }
   function relatorio(dados, tipo, dataISO, filtros) {
     const cfg = CFG[tipo], D = serialISO(dataISO), vmin = serialISO(cfg.vencApos);
-    const { excluir, incluir, regras } = filtrosDoDia(filtros, tipo, dataISO), inc = incluir.length ? new Set(incluir) : null;
+    const { excluir, incluir, ajustes, regras } = filtrosDoDia(filtros, tipo, dataISO), inc = incluir.length ? new Set(incluir) : null;
     const itens = [], exVal = new Map();
     for (const v of dados) {
       const t2 = +v[COL.total2] || 0, vp = +v[COL.pago] || 0, pg = v[COL.pag];
@@ -198,6 +199,12 @@ const VCPG = (() => {
       const vi = isoSerial(v[COL.venc]);
       itens.push({ nome, saldo, ano: +vi.slice(0, 4), mes: +vi.slice(5, 7) });
     }
+    // ajustes manuais: valores que a contabilidade reconhece e o Connectere ainda não tem (ex.: NF faturada no mês e recebida depois)
+    for (const a of ajustes) {
+      const vi = String(a.vencimento || dataISO).slice(0, 10), val = +a.valor || 0;
+      if (!val) continue;
+      itens.push({ nome: limpo(a.pessoa), saldo: val, ano: +vi.slice(0, 4), mes: +vi.slice(5, 7), ajuste: true });
+    }
     const anos = [...new Set(itens.map((x) => x.ano))].sort((a, b) => a - b);
     const cols = [];
     for (const a of anos) {
@@ -209,7 +216,8 @@ const VCPG = (() => {
     let linhas = [...porNome.entries()].map(([nome, l]) => ({ nome, vals: cols.map((c) => soma(l, c)), total: l.reduce((s, x) => s + x.saldo, 0) }));
     linhas = cfg.ordem === "valor" ? linhas.sort((a, b) => b.total - a.total) : linhas.sort((a, b) => a.nome.trim().toLowerCase().localeCompare(b.nome.trim().toLowerCase(), "pt-BR"));
     return { tipo, dataISO, cols, linhas, totais: cols.map((c) => soma(itens, c)), total: itens.reduce((s, x) => s + x.saldo, 0), excluidos: [...excluir], incluidos: incluir,
-      notas: regras.map((r) => ({ acao: r.acao, pessoa: String(r.pessoa).trim(), desde: r.data_balanco || null, pedido: r.solicitado_por || "", valor: r.acao === "excluir" ? exVal.get(r.pessoa) || 0 : null })) };
+      notas: regras.map((r) => ({ acao: r.acao, pessoa: String(r.pessoa).trim(), desde: r.data_balanco || null, pedido: r.solicitado_por || "", obs: r.observacao || "", venc: r.vencimento || null,
+        valor: r.acao === "excluir" ? exVal.get(r.pessoa) || 0 : r.acao === "ajuste" ? +r.valor || 0 : null })) };
   }
   const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   const SIGLA = { cpg: "CPG", crc: "CRC" };
@@ -265,7 +273,8 @@ const VCPG = (() => {
     y += RH * 2.5;
     const ex = (rel.notas || []).filter((x) => x.acao === "excluir").sort((a, b) => b.valor - a.valor || a.pessoa.localeCompare(b.pessoa, "pt-BR"));
     const so = (rel.notas || []).filter((x) => x.acao === "incluir");
-    if (M.notas !== false && (ex.length || so.length)) {
+    const aj = (rel.notas || []).filter((x) => x.acao === "ajuste" && x.valor);
+    if (M.notas !== false && (ex.length || so.length || aj.length)) {
       const quebra = (h) => { if (y + h > BASE - 6) { doc.addPage(); topo(); y = TOPO + 14; } };
       const par = (s, tam, cor, neg) => { doc.setFont("helvetica", neg ? "bold" : "normal"); doc.setFontSize(tam); doc.setTextColor(...cor); const ls = doc.splitTextToSize(s, R - L); quebra(ls.length * tam * 1.3); doc.text(ls, L, y); y += ls.length * tam * 1.3; };
       quebra(60); par("Notas explicativas", 11, verde, true); y += 2;
@@ -283,6 +292,13 @@ const VCPG = (() => {
         ex.forEach((x) => linhaN([x.pessoa, x.valor ? "R$ " + brl(x.valor) : "sem saldo", x.desde ? "Balanço de " + brData(x.desde) : "Todos os balanços", x.pedido || "–"]));
         linhaN(["Total excluído", "R$ " + brl(tot), "", ""], true);
         y += 6;
+      }
+      if (aj.length) {
+        const tot = aj.reduce((s, x) => s + x.valor, 0);
+        par(`${++k}. Ajustes manuais incluídos. Os valores abaixo ${rel.tipo === "crc" ? "a receber" : "a pagar"} foram somados ao relatório por orientação da contabilidade, porque ainda não constam em aberto no Connectere na data do balanço. Somam R$ ${brl(tot)} e estão no Total Geral.`, 8, tinta);
+        y += 2;
+        for (const x of aj) par(`• ${x.pessoa}: R$ ${brl(x.valor)}${x.venc ? " · vencimento " + brData(x.venc) : ""}${x.pedido ? " · pedido por " + x.pedido : ""}. ${x.obs}`, 7.6, tinta);
+        y += 4;
       }
       if (so.length) par(`${++k}. Este relatório mostra somente: ${so.map((x) => x.pessoa).sort((a, b) => a.localeCompare(b, "pt-BR")).join("; ")}.`, 8, tinta);
     }

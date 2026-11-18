@@ -361,7 +361,7 @@ function renderFiltros() {
     <div id="filCorpo" class="stack"${S.filAberto ? "" : ' style="display:none"'}>
     <p class="note">${S.contabil ? "Marque aqui quem sai (ou quem entra) em cada relatório, com a observação do motivo. A Vital acompanha tudo o que for registrado." : "Registre aqui cada pedido da Tática Contabilidade (Driele), com a observação."} Os balancetes gerados nesta página aplicam estes filtros. Um filtro pode valer para todos os balanços ou só para o balanço de um mês.${S.rel === "crc" ? " No Contas a receber, quando há pessoas em “Mostrar somente”, o relatório traz só elas." : ""}</p>
     <div class="tablewrap"><table><thead><tr><th>Pessoa</th><th>Ação</th><th>Vale para</th><th>Observação</th><th>Registro</th>${S.filtra ? '<th class="num"></th>' : ""}</tr></thead><tbody>
-      ${lista.map((f) => `<tr><td>${esc(nomePessoa(f.pessoa))}</td><td>${f.acao === "excluir" ? '<span class="tag ex">Excluir</span>' : '<span class="tag in">Mostrar somente</span>'}</td>
+      ${lista.map((f) => `<tr><td>${esc(nomePessoa(f.pessoa))}</td><td>${f.acao === "excluir" ? '<span class="tag ex">Excluir</span>' : f.acao === "ajuste" ? `<span class="tag in">Ajuste + R$ ${VCPG.brl(+f.valor || 0)}</span>${f.vencimento ? `<div class="note nw">venc. ${br(f.vencimento)}</div>` : ""}` : '<span class="tag in">Mostrar somente</span>'}</td>
         <td class="nw">${f.data_balanco ? (f.acao === "excluir" ? "Do balanço de " + br(f.data_balanco) + " em diante" : "Só o balanço de " + br(f.data_balanco)) : "Todos os balanços"}</td>
         <td><div class="obs">${esc(f.observacao)}</div>${f.solicitado_por ? `<div class="note">Pedido por ${esc(f.solicitado_por)}</div>` : ""}</td>
         <td class="note nw">${esc(f.criado_por_nome || "")}<br>${dataHora(f.criado_em)}</td>
@@ -373,10 +373,15 @@ function renderFiltros() {
       <div class="stack" style="margin-top:14px">
         <div class="grid3">
           <div class="field"><label for="nfRel">Relatório</label><select id="nfRel">${["cpg", "crc"].map((k) => `<option value="${k}"${N.relatorio === k ? " selected" : ""}>${RELN[k]}</option>`).join("")}</select></div>
-          <div class="field"><label for="nfAcao">O que fazer</label><select id="nfAcao"><option value="excluir"${N.acao === "excluir" ? " selected" : ""}>Excluir do relatório</option><option value="incluir"${N.acao === "incluir" ? " selected" : ""}>Mostrar somente estas pessoas</option></select></div>
-          <div class="field"><label for="nfData">Vale para</label><select id="nfData"><option value="">Todos os balanços</option>${datas.map((d) => `<option value="${d}"${N.data === d ? " selected" : ""}>${N.acao === "excluir" ? "Do balanço de " + br(d) + " em diante" : "Só o balanço de " + br(d)}</option>`).join("")}</select></div>
+          <div class="field"><label for="nfAcao">O que fazer</label><select id="nfAcao"><option value="excluir"${N.acao === "excluir" ? " selected" : ""}>Excluir do relatório</option><option value="incluir"${N.acao === "incluir" ? " selected" : ""}>Mostrar somente estas pessoas</option><option value="ajuste"${N.acao === "ajuste" ? " selected" : ""}>Ajuste: somar um valor em aberto</option></select></div>
+          <div class="field"><label for="nfData">Vale para</label><select id="nfData">${N.acao === "ajuste" ? "" : '<option value="">Todos os balanços</option>'}${datas.map((d) => `<option value="${d}"${N.data === d ? " selected" : ""}>${N.acao === "excluir" ? "Do balanço de " + br(d) + " em diante" : "Só o balanço de " + br(d)}</option>`).join("")}</select></div>
         </div>
-        <div class="field"><label for="nfPes">Pessoas (como aparecem no Connectere)</label>
+        ${N.acao === "ajuste" ? `<div class="callout note" style="margin:0">Use o ajuste quando a contabilidade reconhece um valor em aberto na data do balanço que o Connectere ainda não mostra (ex.: venda faturada no mês e recebida depois). O valor entra no Total Geral só do balanço escolhido e aparece nas notas explicativas com a observação.</div>
+        <div class="grid2">
+          <div class="field"><label for="nfValor">Valor (R$)</label><input id="nfValor" inputmode="decimal" placeholder="Ex.: 2.442.888,75" value="${esc(N.valor || "")}"></div>
+          <div class="field"><label for="nfVenc">Vencimento (coluna em que o valor aparece)</label><input id="nfVenc" type="date" value="${esc(N.venc || "")}"></div>
+        </div>` : ""}
+        <div class="field"><label for="nfPes">${N.acao === "ajuste" ? "Pessoa (uma só, como aparece no Connectere)" : "Pessoas (como aparecem no Connectere)"}</label>
           <div class="cbx" id="nfCbx"><div class="cbx-in"><input id="nfPes" role="combobox" aria-expanded="false" aria-controls="nfLista" autocomplete="off" ${NOMES() ? "" : "disabled"} placeholder="${NOMES() ? `🔎 Buscar entre ${(NOMES()[N.relatorio] || []).length} pessoas de ${RELN[N.relatorio].toLowerCase()}…` : "Carregando a lista de pessoas (só na primeira vez de cada planilha)…"}"><button class="btn" id="nfAbre" type="button" ${NOMES() ? "" : "disabled"} aria-label="Abrir a lista">▾</button></div>
           <div class="cbx-lista" id="nfLista" role="listbox" aria-multiselectable="true" hidden></div></div>
           <p class="note" style="margin:4px 0 0">Escolha na lista (pode marcar várias). Só aparecem os nomes que estão no relatório, do jeito que vêm do Connectere.</p>
@@ -390,7 +395,7 @@ function renderFiltros() {
         <div class="row"><button class="btn primary" id="nfSalvar">Registrar filtro</button><span class="note err" id="nfErr" role="alert"></span></div>
       </div></details>` : ""}
     ${S.removidos.length ? `<details><summary class="note" style="cursor:pointer;font-weight:600">Filtros removidos (${S.removidos.length})</summary><div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>Relatório</th><th>Pessoa</th><th>Vale para</th><th>Observação</th><th>Removido</th></tr></thead><tbody>
-      ${S.removidos.map((f) => `<tr><td>${RELN[f.relatorio]}</td><td>${esc(nomePessoa(f.pessoa))} · ${f.acao === "excluir" ? "excluir" : "mostrar somente"}</td><td class="nw">${f.data_balanco ? br(f.data_balanco) : "Todos"}</td><td><div class="obs">${esc(f.observacao)}</div></td><td class="note"><b>${esc(f.motivo_remocao || "")}</b><br>${esc(f.removido_por_nome || "")} · ${dataHora(f.removido_em)}</td></tr>`).join("")}
+      ${S.removidos.map((f) => `<tr><td>${RELN[f.relatorio]}</td><td>${esc(nomePessoa(f.pessoa))} · ${f.acao === "excluir" ? "excluir" : f.acao === "ajuste" ? "ajuste R$ " + VCPG.brl(+f.valor || 0) : "mostrar somente"}</td><td class="nw">${f.data_balanco ? br(f.data_balanco) : "Todos"}</td><td><div class="obs">${esc(f.observacao)}</div></td><td class="note"><b>${esc(f.motivo_remocao || "")}</b><br>${esc(f.removido_por_nome || "")} · ${dataHora(f.removido_em)}</td></tr>`).join("")}
     </tbody></table></div></details>` : ""}
     </div>`;
   $("#filTog").onclick = () => { S.filAberto = !S.filAberto; try { localStorage.setItem("cpg.filAberto", S.filAberto ? "1" : "0"); } catch (_) {} renderFiltros(); };
@@ -407,8 +412,8 @@ function renderFiltros() {
   if (det) {
     det.ontoggle = () => { N.aberto = det.open; if (!det.open) return; if (NOMES()) { if ($("#nfPes") && $("#nfPes").disabled) renderFiltros(); return; } nomesPessoas().then(renderFiltros).catch((e) => { const x = $("#nfErr"); if (x) x.textContent = e.message; }); };
     if (det.open && !NOMES() && !S.carregandoNomes) { S.carregandoNomes = true; nomesPessoas().then(() => { S.carregandoNomes = false; renderFiltros(); }).catch((e) => { S.carregandoNomes = false; const x = $("#nfErr"); if (x) x.textContent = e.message; }); }
-    const guarda = () => { N.relatorio = $("#nfRel").value; N.acao = $("#nfAcao").value; N.data = $("#nfData").value; N.sol = $("#nfSol").value; N.obs = $("#nfObs").value; };
-    ["nfAcao", "nfData", "nfSol", "nfObs"].forEach((id) => $("#" + id).addEventListener("input", guarda));
+    const guarda = () => { N.relatorio = $("#nfRel").value; N.acao = $("#nfAcao").value; N.data = $("#nfData").value; N.sol = $("#nfSol").value; N.obs = $("#nfObs").value; if ($("#nfValor")) { N.valor = $("#nfValor").value; N.venc = $("#nfVenc").value; } };
+    ["nfAcao", "nfData", "nfSol", "nfObs", "nfValor", "nfVenc"].forEach((id) => { const e = $("#" + id); if (e) e.addEventListener("input", guarda); });
     $("#nfAcao").addEventListener("change", () => { guarda(); renderFiltros(); });
     $("#nfRel").onchange = () => { guarda(); N.pessoas = []; renderFiltros(); };
     // lista suspensa com busca: só deixa escolher nomes que existem na base do relatório
@@ -441,6 +446,21 @@ function renderFiltros() {
     $("#nfSalvar").onclick = async () => {
       guarda(); const err = $("#nfErr"); err.textContent = "";
       if (!N.pessoas.length) { err.textContent = "Adicione ao menos uma pessoa."; return; }
+      if (N.acao === "ajuste") {
+        const v = Number(String(N.valor || "").replace(/\s|R\$/g, "").replace(/\./g, "").replace(",", "."));
+        if (N.pessoas.length !== 1) { err.textContent = "O ajuste é para uma pessoa só."; return; }
+        if (!(v > 0)) { err.textContent = "Informe o valor do ajuste."; $("#nfValor").focus(); return; }
+        if (!N.data) { err.textContent = "Escolha o balanço em que o ajuste vale."; return; }
+        if (!N.obs || !N.obs.trim()) { err.textContent = "Escreva a observação (o que foi pedido e por quem)."; $("#nfObs").focus(); return; }
+        $("#nfSalvar").disabled = true;
+        try {
+          await rpc("cpg_ajuste_incluir", { p_empresa: S.emp.empresa, p_relatorio: N.relatorio, p_pessoa: N.pessoas[0], p_valor: v, p_vencimento: N.venc || null, p_data: N.data, p_observacao: N.obs, p_solicitado_por: N.sol || null });
+          toast("Ajuste registrado.");
+          S.rel = N.relatorio; S.novo = { relatorio: N.relatorio, acao: "excluir", pessoas: [], data: "" };
+          await carregar();
+        } catch (e) { err.textContent = e.message; $("#nfSalvar").disabled = false; }
+        return;
+      }
       if (!N.obs || !N.obs.trim()) { err.textContent = "Escreva a observação (o que foi pedido e por quem)."; $("#nfObs").focus(); return; }
       $("#nfSalvar").disabled = true;
       try {

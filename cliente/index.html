@@ -389,7 +389,7 @@ async function entrar(user, novoLogin){
   if (volta()) return;
   await inicio();
 }
-async function inicio(){ await carregarPaineis(); try { const {data} = await sb.from("dfc_empresas").select("empresa"); S.dfc = data||[]; } catch { S.dfc = []; } try { const {data} = await sb.from("cq_quadros").select("id"); S.cq = data||[]; } catch { S.cq = []; } try { const {data} = await sb.rpc("cpg_empresas"); S.cpg = data||[]; } catch { S.cpg = []; } try { const {data} = await sb.from("disc_acessos").select("empresa, ve_todos").eq("user_id", S.user.id); S.disc = data||[]; } catch { S.disc = []; } try { const {data} = await sb.rpc("conc_minhas_empresas"); S.conc = data||[]; } catch { S.conc = []; } definirAbas(); const alvo = S.alvo; S.alvo = null; const ok = alvo && alvo !== "login" && alvo !== "termos" && (TABS.some(t => t[0] === alvo) || (GRUPO_TAB[alvo] && TABS.some(t => t[0] === GRUPO_TAB[alvo])) || (alvo === "painel" && (S.paineis||[]).length) || (alvo === "dabar" && (S.papel==="admin" || (S.perfil && S.perfil.socio))));
+async function inicio(){ await carregarPaineis(); try { const {data} = await sb.from("dfc_empresas").select("empresa"); S.dfc = data||[]; } catch { S.dfc = []; } try { const {data} = await sb.from("cq_quadros").select("id"); S.cq = data||[]; } catch { S.cq = []; } await carregarQuadrosEmp(); try { const {data} = await sb.rpc("cpg_empresas"); S.cpg = data||[]; } catch { S.cpg = []; } try { const {data} = await sb.from("disc_acessos").select("empresa, ve_todos").eq("user_id", S.user.id); S.disc = data||[]; } catch { S.disc = []; } try { const {data} = await sb.rpc("conc_minhas_empresas"); S.conc = data||[]; } catch { S.conc = []; } definirAbas(); const alvo = S.alvo; S.alvo = null; const ok = alvo && alvo !== "login" && alvo !== "termos" && (TABS.some(t => t[0] === alvo) || (GRUPO_TAB[alvo] && TABS.some(t => t[0] === GRUPO_TAB[alvo])) || (alvo === "painel" && (S.paineis||[]).length) || (alvo === "dabar" && (S.papel==="admin" || (S.perfil && S.perfil.socio))));
   if (S.papel==="equipe") { go(ok ? alvo : "inicio"); return; } await carregar(); go(ok ? alvo : S.papel==="admin" ? "inicio" : (S.paineis||[]).length ? "painel" : "docs"); }
 function volta(){ const v = new URLSearchParams(location.search).get("volta"); if (v && /^\/[a-z0-9/_-]*$/i.test(v)) { location.href = v; return true; } return false; }
 async function sair(){ clearTimeout(inat); try { localStorage.removeItem("vital_user"); } catch {} await sb.auth.signOut().catch(()=>{}); S.papel=null; S.arqs=[]; go("login"); }
@@ -954,6 +954,30 @@ const nfmt = new Intl.NumberFormat("pt-BR",{maximumFractionDigits:0});
 const fN = v => (Math.abs(v)<0.5 ? "–" : nfmt.format(Math.round(v)));
 const fR = v => { const a=Math.abs(v), s=v<0?"−":""; return a>=1e6 ? s+"R$ "+(a/1e6).toFixed(2).replace(".",",")+" mi" : a>=1e3 ? s+"R$ "+nfmt.format(Math.round(a/1e3))+" mil" : s+"R$ "+nfmt.format(Math.round(a)); };
 const fP = v => isFinite(v) ? (v*100).toFixed(1).replace(".",",")+"%" : "–";
+async function carregarQuadrosEmp(){ S.cqq = []; if (!sb) return;
+  try { const {data} = await sb.from("cq_quadros").select("id,empresa,nome,geral,wl_escritorio"); let qs = (data||[]).filter(q => !q.wl_escritorio);
+    if (!(S.papel==="admin" || S.papel==="equipe")) { const {data: mm} = await sb.from("cq_membros").select("quadro").eq("user_id", S.user.id); const meus = new Set((mm||[]).map(x=>x.quadro)); qs = qs.filter(q => meus.has(q.id)); }
+    S.cqq = qs; } catch { S.cqq = []; } }
+function quadrosDe(emp){ return (S.cqq||[]).filter(q => q.empresa===emp).sort((a,b)=> (/^Quadro geral/i.test(b.nome)-/^Quadro geral/i.test(a.nome)) || ((b.geral?1:0)-(a.geral?1:0)) || a.nome.localeCompare(b.nome,"pt")); }
+function temAbaTarefas(){ return quadrosDe(P.emp).length>0 || S.papel==="admin" || S.papel==="equipe"; }
+const TQ = {};
+function tarCorpo(b){ const emp=P.emp, qs=quadrosDe(emp), time=S.papel==="admin"||S.papel==="equipe";
+  if (!qs.length) { b.innerHTML = `<div class="card stack"><h3 style="font-size:1.05rem;margin:0">Quadro de tarefas</h3><p class="note" style="margin:0">${esc(emp)} ainda não tem quadro de tarefas. Ao liberar, o quadro geral é criado com a equipe Vital, e quem tem acesso ao portal desse cliente passa a vê-lo aqui, ao lado dos relatórios.</p>
+      <div class="row"><label class="note" style="margin:0">Letreiro <select id="tqSeg"><option value="geral">Mercado</option><option value="agro">Mercado agro</option><option value="tecnologia">Tecnologia</option><option value="saude">Saúde</option><option value="construcao">Construção e imóveis</option><option value="alimentacao">Alimentação</option></select></label>
+      ${time?`<button class="btn primary sm" type="button" id="tqLib">＋ Liberar quadro de tarefas</button>`:""}</div><p class="err" id="tqErr" hidden></p></div>`;
+    const bt=$("#tqLib"); if (bt) bt.onclick = async () => { bt.disabled = true; const {error} = await sb.rpc("cq_liberar_kanban", { p_empresa: emp, p_segmento: $("#tqSeg").value });
+      if (error) { bt.disabled = false; const e=$("#tqErr"); e.textContent = error.message; e.hidden = false; return; }
+      await carregarQuadrosEmp(); try { const {data} = await sb.from("cq_quadros").select("id"); S.cq = data||[]; } catch {} tarCorpo(b); };
+    return; }
+  let id = TQ[emp]; if (!qs.some(q=>q.id===id)) id = qs[0].id; TQ[emp] = id;
+  const url = "/vitalagroenegocios/quadro/?q=" + encodeURIComponent(id);
+  b.innerHTML = `<div class="card" style="padding:10px 14px"><div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div><b>Quadro de tarefas</b><div class="note" style="margin:0">Quem faz o quê, prazos e o que está atrasado em ${esc(emp)}.</div></div>
+      <div class="row" style="gap:8px">${qs.length>1?`<label class="note" style="margin:0">Quadro <select id="tqSel">${qs.map(q=>`<option value="${q.id}" ${q.id===id?"selected":""}>${esc(q.nome.replace(" · "+emp,""))}</option>`).join("")}</select></label>`:""}
+      <a class="btn sm" href="${url}" target="_blank" rel="noopener">Abrir em tela cheia</a></div></div></div>
+    <iframe id="tqFr" title="Quadro de tarefas de ${esc(emp)}" src="${url}&embed=1" style="width:100%;height:max(640px,calc(100vh - 260px));border:1px solid var(--line);border-radius:12px;background:var(--surface)"></iframe>`;
+  const s=$("#tqSel"); if (s) s.onchange = () => { TQ[emp] = s.value; tarCorpo(b); };
+}
 async function carregarPaineis(){ if (!sb) return; const r = await sb.from("ent_paineis").select("empresa,chave,dados,atualizado_em").neq("chave","lancamentos"); S.paineis = r.error ? [] : (r.data||[]).filter(x=>x.dados && (x.dados.fatos || x.dados.tipo==="matriz") && !(x.dados.rascunho && (S.papel==="cliente"||S.papel==="gestor"))).sort((a,b)=>a.empresa.localeCompare(b.empresa,"pt")); }
 function pac(){ const l=S.paineis||[]; const x = l.find(p=>p.empresa===P.emp) || l[0]; if (x) P.emp = x.empresa; return x && x.dados; }
 function mesesPrev(D){ const u=D.meses[D.meses.length-1]; let y=+u.slice(0,4), m=+u.slice(5,7); const o=[]; for(let i=0;i<4;i++){ m++; if(m>12){m=1;y++;} o.push(y+"-"+String(m).padStart(2,"0")); } return o; }
@@ -1066,6 +1090,7 @@ function renderPainel(){
   const emps=(S.paineis||[]).map(p=>p.empresa);
   if (D.tipo==="matriz") return renderMatriz(el, D, emps);
   const secs=[["resumo","Resumo"],["dre","DRE"],["dfc","DFC e conciliação"],["bp","Balanço (BP)"],["lanc","Lançamentos"],["an","Análises"],["pend","Pendências"]];
+  if (temAbaTarefas()) secs.push(["tar","Tarefas"]); else if (P.sec==="tar") P.sec="resumo";
   el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
       <p class="note" style="margin:2px 0 0">Dados até ${mesC(D.meses[D.meses.length-1])} · atualizado em ${esc(D.gerado.split(" ")[0].split("-").reverse().join("/"))} · fonte: planilha Gestão BPO (lançamentos confirmados)</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
@@ -1080,7 +1105,7 @@ function renderPainel(){
   el.querySelectorAll("[data-pns]").forEach(b=>b.onclick=()=>{ P.sec=b.dataset.pns; P.an=null; el.querySelectorAll("[data-pns]").forEach(x=>x.setAttribute("aria-selected", x===b)); corpo(); });
   corpo();
 }
-function corpo(){ QB.length=0; const D=pac(), b=$("#pnBody"); b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, lanc:secLanc, an:secAN, pend:secPend})[P.sec](D); ligar(D);
+function corpo(){ QB.length=0; const D=pac(), b=$("#pnBody"); if (P.sec==="tar") { tarCorpo(b); return; } b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, lanc:secLanc, an:secAN, pend:secPend})[P.sec](D); ligar(D);
   if (P.sec==="bp" && !(S.pnBens && P.emp in S.pnBens)) carregarBens().then(corpo);
   if ((P.sec==="lanc"||precisaLanc()) && !(S.lanc && P.emp in S.lanc)) carregarLanc().then(corpo); }
 /* ===== imobilizado editável pelo cliente (pn_bens) e sugestões de reclassificação (pn_sugestoes) ===== */
@@ -1619,6 +1644,7 @@ function renderMatriz(el, D, emps){
     mzExt(D).catch(e=>{ D.__extErr=String(e.message||e); console.warn("mzExt",e); }).finally(()=>renderMatriz(el,D,emps)); return; }
   const secs=[["resumo","Resumo"],...["dre","dfc","bp"].filter(s=>D.tabs.some(t=>t.sec===s)).map(s=>[s,{dre:"DRE",dfc:"DFC",bp:"Balanço (BP)"}[s]])];
   if (D.tabs.some(t=>t.ativ==="Agricultura")) secs.push(["safra","Propriedade e safra"]);
+  if (temAbaTarefas()) secs.push(["tar","Tarefas"]);
   if (!secs.some(s=>s[0]===MZ.sec)) MZ.sec="resumo";
   const anos=mzAnos(D), ult=mzUlt(D);
   el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
@@ -1639,6 +1665,7 @@ function mzLigarFiltros(D){ const f=$("#mzFil"); if(!f) return; const re=()=>{ f
   if ($("#mzSa")) $("#mzSa").onchange=e=>{ MZ.saf=e.target.value; re(); }; }
 function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return;
   if (MZ.sec==="safra") { agrCorpo(b); return; }
+  if (MZ.sec==="tar") { tarCorpo(b); return; }
   b.innerHTML = (D.verif&&D.verif[MZ.sec]?`<div class="card" role="status" style="border-left:4px solid #D69E2E;padding:10px 14px"><p class="note" style="margin:0;color:#B7791F"><b>⚠ Em verificação</b> · ${esc(String(D.verif[MZ.sec]).replace(/^Em verificação:\s*/,""))}</p></div>`:"") + (MZ.sec==="resumo" ? mzResumo(D) : (D.tabs.map((t,ti)=>t.sec===MZ.sec&&mzTabVis(t)?mzTabela(D,t,ti):"").join("")||(MZ.sec!=="resumo"&&(MZ.ativ||MZ.cul)?`<div class="card"><p class="note" style="margin:0">Nenhuma tabela desta seção para o filtro escolhido.</p></div>`:"")) + (D.obs&&D.obs[MZ.sec]?`<div class="card"><p class="note" style="margin:0">${esc(D.obs[MZ.sec])}</p></div>`:""));
   mzLigar(D); }
 

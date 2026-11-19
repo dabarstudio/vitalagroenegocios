@@ -307,6 +307,9 @@ body{padding-bottom:0}
 .k>*,.k .m>*{max-width:100%;min-width:0}
 .k .m .av{flex:none}
 .k .m{overflow-wrap:anywhere}
+html.embed header.top,html.embed .rodape,html.embed .ticker{display:none!important}
+html.embed body{background:var(--bg)}
+html.embed main#app{padding-top:10px}
 </style>
 <script src="/vitalagroenegocios/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
@@ -333,6 +336,8 @@ body{padding-bottom:0}
 <script>
 (() => {
 "use strict";
+const EMBED = new URLSearchParams(location.search).get("embed") === "1";
+if (EMBED) document.documentElement.classList.add("embed");
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -469,8 +474,7 @@ async function iniciar() {
   ligarTempoReal();
   iniciarNotif();
   iniciarTicker();
-  iniciarInstalar();
-  convitePush();
+  if (!EMBED) { iniciarInstalar(); convitePush(); }
   if (new URLSearchParams(location.search).get("card")) { abrirPorUrl(location.href); history.replaceState(null, "", location.pathname); }
   setInterval(() => { if (document.visibilityState === "visible" && !$("#dlg").open && !document.querySelector(".addf")) carregar(true); }, 30000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !$("#dlg").open) carregar(true); });

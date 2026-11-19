@@ -3,6 +3,9 @@
    a cada marco concluído e a cada 3 meses. Equipe: edita a jornada de cada cliente (com modelos prontos).
    Sócios: painel NPS (nota, evolução mensal, por cliente e comentários). Tabelas: jor_marcos, nps_respostas. */
 (function(){
+/* o script principal da Área do cliente roda dentro de uma função; ele expõe o que a jornada precisa em window.VITAL */
+let S, sb, esc, toast, fmtD, MC, empresasConhecidas;
+const bind = () => { const v = window.VITAL || {}; ({S, sb, esc, toast, fmtD, MC, empresasConhecidas} = v); return !!sb; };
 const J = { emp:"", marcos:[], emps:[], edit:false, nps:{f:"", emp:""} };
 const STA = { feito:["✅","Feito","ok"], agora:["⏳","Agora","ag"], proximo:["🔜","Próximo","pr"] };
 const MODELOS = {
@@ -117,6 +120,7 @@ async function carregarMarcos(emp){
 }
 
 window.renderJornada = async function(){
+  if (!bind()) return;
   const v = $j("#v-jornada"); if (!v) return;
   v.innerHTML = `<div class="card">Carregando a jornada…</div>`;
   J.emps = await empresasJornada();
@@ -207,6 +211,7 @@ function ligarEditor(){
 
 /* ----- pesquisa NPS para o cliente ----- */
 window.npsVerificar = async function(){
+  if (!bind()) return;
   if (eq() || !S.user) return;
   let pulou = {}; try { pulou = JSON.parse(sessionStorage.getItem("vital_nps_pulou")||"{}"); } catch {}
   const emps = await empresasJornada();
@@ -241,6 +246,7 @@ function abrirNPS(emp, p){
 
 /* ----- painel NPS para os sócios ----- */
 window.renderNPS = async function(){
+  if (!bind()) return;
   const v = $j("#v-nps"); if (!v) return;
   if (!soc()) { v.innerHTML = `<div class="card">Área exclusiva dos sócios.</div>`; return; }
   v.innerHTML = `<div class="card">Carregando o NPS…</div>`;

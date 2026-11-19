@@ -207,6 +207,15 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface-2)}
 .vmais-l{display:grid;gap:4px}
 .vmais-l .tab{display:block;width:100%;text-align:left;padding:12px 14px;min-height:44px;border-radius:10px;border:1px solid var(--line,#d8e2d9);background:var(--bg,#f4f7f3);color:inherit;font:inherit;font-weight:600;text-decoration:none}
 .vmais-l .tab[aria-selected="true"]{background:var(--tint,#e5f1e0)}
+/* logo do cliente (cli_marcas) */
+.cmarca{display:none;align-items:center;gap:8px;flex:none}
+.cmarca.on{display:flex}
+.cmarca i{font-style:normal;color:var(--muted);font-size:.9rem}
+.cmarca img{height:44px;max-width:96px;object-fit:contain;border-radius:10px;background:#fff;border:1px solid var(--line);padding:3px}
+.pnlogo{float:left;height:60px;max-width:120px;object-fit:contain;margin:0 12px 4px 0;border-radius:12px;background:#fff;border:1px solid var(--line);padding:4px}
+.pnlogo.vazio{display:grid;place-items:center;width:60px;font-size:.7rem;color:var(--muted);border-style:dashed;cursor:pointer;text-align:center;line-height:1.1}
+.pnlogo.edit{cursor:pointer}
+@media (max-width:600px){ .cmarca img{height:36px;max-width:72px} .pnlogo{height:48px;max-width:90px} .pnlogo.vazio{width:48px} }
 </style>
 <script src="/vitalagroenegocios/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
@@ -215,6 +224,7 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface-2)}
 <header class="top">
   <div class="wrap">
     <a class="logo" href="/vitalagroenegocios/" title="Página inicial da Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
+    <span class="cmarca" id="cMarca" aria-hidden="true"><i>×</i><img id="cMarcaImg" alt=""></span>
     <div class="brandtxt"><b role="heading" aria-level="1">Área do cliente</b><span>Entregáveis da Vital Agro &amp; Negócios</span></div>
     <div class="spacer"></div>
     <nav class="tabs" id="tabsTop" role="tablist" aria-label="Seções"></nav>
@@ -978,7 +988,7 @@ function tarCorpo(b){ const emp=P.emp, qs=quadrosDe(emp), time=S.papel==="admin"
     <iframe id="tqFr" title="Quadro de tarefas de ${esc(emp)}" src="${url}&embed=1" style="width:100%;height:max(640px,calc(100vh - 260px));border:1px solid var(--line);border-radius:12px;background:var(--surface)"></iframe>`;
   const s=$("#tqSel"); if (s) s.onchange = () => { TQ[emp] = s.value; tarCorpo(b); };
 }
-async function carregarPaineis(){ if (!sb) return; const r = await sb.from("ent_paineis").select("empresa,chave,dados,atualizado_em").neq("chave","lancamentos"); S.paineis = r.error ? [] : (r.data||[]).filter(x=>x.dados && (x.dados.fatos || x.dados.tipo==="matriz") && !(x.dados.rascunho && (S.papel==="cliente"||S.papel==="gestor"))).sort((a,b)=>a.empresa.localeCompare(b.empresa,"pt")); }
+async function carregarPaineis(){ if (!sb) return; await carregarMarcas(); const r = await sb.from("ent_paineis").select("empresa,chave,dados,atualizado_em").neq("chave","lancamentos"); S.paineis = r.error ? [] : (r.data||[]).filter(x=>x.dados && (x.dados.fatos || x.dados.tipo==="matriz") && !(x.dados.rascunho && (S.papel==="cliente"||S.papel==="gestor"))).sort((a,b)=>a.empresa.localeCompare(b.empresa,"pt")); }
 function pac(){ const l=S.paineis||[]; const x = l.find(p=>p.empresa===P.emp) || l[0]; if (x) P.emp = x.empresa; return x && x.dados; }
 function mesesPrev(D){ const u=D.meses[D.meses.length-1]; let y=+u.slice(0,4), m=+u.slice(5,7); const o=[]; for(let i=0;i<4;i++){ m++; if(m>12){m=1;y++;} o.push(y+"-"+String(m).padStart(2,"0")); } return o; }
 function idxPer(D){ const n=D.meses.length, a=[...Array(n).keys()];
@@ -1084,6 +1094,23 @@ const AN = [
  {id:"r_tr", gr:"Receitas", t:"Receita de treinamentos", tipo:"rec", p:(D,f)=>g_(D,f)==="R_TREIN", dim:"emp"}];
 
 /* --- tela principal --- */
+/* ===== logo de cada cliente (tabela cli_marcas) ===== */
+const nzE = t => String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim().replace(/\s+/g," ");
+async function carregarMarcas(){ try { const r=await sb.from("cli_marcas").select("empresa,logo"); S.marcas={}; (r.data||[]).forEach(m=>S.marcas[nzE(m.empresa)]=m.logo); } catch { S.marcas=S.marcas||{}; } aplicarMarcaTopo(); }
+const marcaDe = e => (S.marcas||{})[nzE(e)] || null;
+const podeMarca = () => S.papel==="admin" || !!(S.perfil && S.perfil.socio);
+function marcaPainel(emp){ const m=marcaDe(emp), ed=podeMarca();
+  if (m) return `<img class="pnlogo${ed?" edit":""}" src="${m}" alt="Logo ${esc(emp)}" ${ed?`data-mlogo="1" title="Trocar a logo deste cliente"`:""}>`;
+  return ed ? `<span class="pnlogo vazio" data-mlogo="1" role="button" tabindex="0" title="Enviar a logo deste cliente">+ logo</span>` : ""; }
+async function aplicarMarcaTopo(){ const box=$("#cMarca"), img=$("#cMarcaImg"); if (!box) return;
+  let emp=null; if (S.papel==="cliente"||S.papel==="gestor") { if (!S.minhasEmp) { try { const g=await sb.from("gestor_empresas").select("empresa").eq("user_id",S.user.id); S.minhasEmp=(g.data||[]).map(x=>x.empresa); } catch { S.minhasEmp=[]; } } emp=(S.minhasEmp||[]).find(e=>marcaDe(e)); }
+  const m=emp?marcaDe(emp):null; box.classList.toggle("on",!!m); if (m) { img.src=m; img.alt="Logo "+emp; } }
+async function trocarMarca(file){ if (!file || !podeMarca()) return; const emp=P.emp;
+  try { const url=await new Promise((ok,er)=>{ const fr=new FileReader(); fr.onerror=er; fr.onload=()=>{ const im=new Image(); im.onerror=er; im.onload=()=>{ const k=Math.min(1,300/Math.max(im.width,im.height)), c=document.createElement("canvas"); c.width=Math.round(im.width*k); c.height=Math.round(im.height*k); c.getContext("2d").drawImage(im,0,0,c.width,c.height); let u=c.toDataURL("image/webp",0.85); if (!u.startsWith("data:image/webp")) u=c.toDataURL("image/png"); ok(u); }; im.src=fr.result; }; fr.readAsDataURL(file); });
+    const r=await sb.from("cli_marcas").upsert({empresa:emp, logo:url, atualizado_em:new Date().toISOString()}); if (r.error) throw r.error;
+    S.marcas=S.marcas||{}; S.marcas[nzE(emp)]=url; toast("Logo de "+emp+" atualizada."); renderPainel(); aplicarMarcaTopo();
+  } catch(e) { console.warn(e); toast("Não foi possível salvar a logo."); } }
+document.addEventListener("click", e=>{ const t=e.target.closest && e.target.closest("[data-mlogo]"); if (!t || !podeMarca()) return; const i=document.createElement("input"); i.type="file"; i.accept="image/*"; i.onchange=()=>trocarMarca(i.files[0]); i.click(); });
 function renderPainel(){
   const el=$("#v-painel"), D=pac();
   if (!D) { el.innerHTML=`<div class="card empty">Nenhum painel disponível ainda.</div>`; return; }
@@ -1091,7 +1118,7 @@ function renderPainel(){
   if (D.tipo==="matriz") return renderMatriz(el, D, emps);
   const secs=[["resumo","Resumo"],["dre","DRE"],["dfc","DFC e conciliação"],["bp","Balanço (BP)"],["lanc","Lançamentos"],["an","Análises"],["pend","Pendências"]];
   if (temAbaTarefas()) secs.push(["tar","Tarefas"]); else if (P.sec==="tar") P.sec="resumo";
-  el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
+  el.innerHTML = `<div class="pnh"><div>${marcaPainel(P.emp)}<div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
       <p class="note" style="margin:2px 0 0">Dados até ${mesC(D.meses[D.meses.length-1])} · atualizado em ${esc(D.gerado.split(" ")[0].split("-").reverse().join("/"))} · fonte: planilha Gestão BPO (lançamentos confirmados)</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
       <label>Empresa<select id="pnVer"><option value="c">Consolidado</option><option value="l">Arcanjos Life</option><option value="h">Arcanjos Health</option></select></label>
@@ -1647,7 +1674,7 @@ function renderMatriz(el, D, emps){
   if (temAbaTarefas()) secs.push(["tar","Tarefas"]);
   if (!secs.some(s=>s[0]===MZ.sec)) MZ.sec="resumo";
   const anos=mzAnos(D), ult=mzUlt(D);
-  el.innerHTML = `<div class="pnh"><div><div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
+  el.innerHTML = `<div class="pnh"><div>${marcaPainel(P.emp)}<div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
       ${D.rascunho?`<p class="note" style="margin:2px 0 0;color:var(--c-desp)"><b>Em revisão</b> · visível só para a equipe Vital até ser liberado ao cliente.</p>`:""}<p class="note" style="margin:2px 0 0">${ult?"Dados até "+mesC(ult)+" · ":""}atualizado em ${esc(String(D.gerado||"").split(" ")[0].split("-").reverse().join("/"))} · fonte: ${esc(D.fonte||"planilha de gestão")}</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
       <span id="mzFil" style="display:contents">${mzFiltrosHTML(D)}</span>${anos.length?`<label>Período<select id="mzPer"><option value="12">Últimos 12 meses</option>${anos.map(a=>`<option value="${a}">${a}</option>`).join("")}<option value="tudo">Tudo</option></select></label>`:""}</div></div>

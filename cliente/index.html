@@ -244,6 +244,8 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface-2)}
   <section id="v-vitrine" class="view stack" hidden></section>
   <section id="v-papo" class="view stack" hidden></section>
   <section id="v-dabar" class="view stack" hidden></section>
+  <section id="v-jornada" class="view stack" hidden></section>
+  <section id="v-nps" class="view stack" hidden></section>
 </main>
 <div class="toast" id="toast" hidden></div>
 <script>
@@ -305,7 +307,7 @@ const S = { user:null, perfil:null, papel:null, empresas:[], arqs:[], emp:"", ca
 let TABS = [], cur = "login";
 function definirAbas(){
   TABS = !S.papel ? [] : S.papel==="admin" ? [["inicio","Início"],["docs","Entregas"],["midias","Comunicação"],["acessos","Acessos"],["conta","Minha conta"]]
-    : S.papel==="equipe" ? [["inicio","Início"],["midias","Comunicação"],["conta","Minha conta"]] : [["docs","Entregas"],["conta","Minha conta"]];
+    : S.papel==="equipe" ? [["inicio","Início"],["midias","Comunicação"],["conta","Minha conta"]] : [["jornada","Minha jornada"],["docs","Entregas"],["conta","Minha conta"]];
   if ((S.paineis||[]).length && !TABS.some(t=>t[0]==="painel")) TABS.splice(S.papel==="admin"||S.papel==="equipe"?1:0, 0, ["painel","Painéis"]);
   const h = TABS.map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${cur===k || (GRUPO_TAB[cur]===k)}">${l}</button>`).join("") + (["admin","equipe","cliente","gestor"].includes(S.papel) && !(S.perfil && Array.isArray(S.perfil.ferramentas) && S.perfil.ferramentas.length && !S.perfil.ferramentas.includes("projetos")) ? `<a class="tab" href="/vitalagroenegocios/projetos/">Projetos</a>` : "") + (["cliente","gestor"].includes(S.papel) && (S.conc||[]).length ? `<a class="tab" href="/vitalagroenegocios/conciliacao/">Conciliação bancária</a>` : "") + (S.papel ? `<button class="tab" data-sair="1">Sair</button>` : "");
   $("#tabsTop").innerHTML = h; navInferior(h);
@@ -324,7 +326,7 @@ function go(k){
   if (!S.papel) k = "login";
   cur = k; definirAbas();
   document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== "v-"+k);
-  ({painel:renderPainel, inicio:renderInicio, login:renderLogin, termos:renderTermos, docs:renderDocs, conta:renderConta, pub:renderPub, acessos:renderAcessos, midias:renderMidias, vitrine:renderVitrine, papo:renderPapo, dabar:renderDabar})[k]?.();
+  ({painel:renderPainel, inicio:renderInicio, login:renderLogin, termos:renderTermos, docs:renderDocs, conta:renderConta, pub:renderPub, acessos:renderAcessos, midias:renderMidias, vitrine:renderVitrine, papo:renderPapo, dabar:renderDabar, jornada:()=>window.renderJornada?.(), nps:()=>window.renderNPS?.()})[k]?.();
   subNav(k); setTimeout(() => subNav(k), 400); setTimeout(() => subNav(k), 1500);
   try{ if (location.hash.slice(1) !== k) history.pushState(null,"","#"+k); }catch{}
   window.scrollTo({top:0});
@@ -400,7 +402,8 @@ async function entrar(user, novoLogin){
   await inicio();
 }
 async function inicio(){ await carregarPaineis(); try { const {data} = await sb.from("dfc_empresas").select("empresa"); S.dfc = data||[]; } catch { S.dfc = []; } try { const {data} = await sb.from("cq_quadros").select("id"); S.cq = data||[]; } catch { S.cq = []; } await carregarQuadrosEmp(); try { const {data} = await sb.rpc("cpg_empresas"); S.cpg = data||[]; } catch { S.cpg = []; } try { const {data} = await sb.from("disc_acessos").select("empresa, ve_todos").eq("user_id", S.user.id); S.disc = data||[]; } catch { S.disc = []; } try { const {data} = await sb.rpc("conc_minhas_empresas"); S.conc = data||[]; } catch { S.conc = []; } definirAbas(); const alvo = S.alvo; S.alvo = null; const ok = alvo && alvo !== "login" && alvo !== "termos" && (TABS.some(t => t[0] === alvo) || (GRUPO_TAB[alvo] && TABS.some(t => t[0] === GRUPO_TAB[alvo])) || (alvo === "painel" && (S.paineis||[]).length) || (alvo === "dabar" && (S.papel==="admin" || (S.perfil && S.perfil.socio))));
-  if (S.papel==="equipe") { go(ok ? alvo : "inicio"); return; } await carregar(); go(ok ? alvo : S.papel==="admin" ? "inicio" : (S.paineis||[]).length ? "painel" : "docs"); }
+  if (S.papel==="equipe") { go(ok ? alvo : "inicio"); return; } await carregar(); let temJor = false; if (S.papel!=="admin") { try { const r = await sb.from("jor_marcos").select("id",{count:"exact",head:true}); temJor = !r.error && r.count>0; } catch {} }
+  go(ok ? alvo : S.papel==="admin" ? "inicio" : temJor ? "jornada" : (S.paineis||[]).length ? "painel" : "docs"); setTimeout(() => window.npsVerificar?.(), 1500); }
 function volta(){ const v = new URLSearchParams(location.search).get("volta"); if (v && /^\/[a-z0-9/_-]*$/i.test(v)) { location.href = v; return true; } return false; }
 async function sair(){ clearTimeout(inat); try { localStorage.removeItem("vital_user"); } catch {} await sb.auth.signOut().catch(()=>{}); S.papel=null; S.arqs=[]; go("login"); }
 
@@ -439,6 +442,7 @@ function renderInicio(){
       ["Funil de vendas", "Leads até virarem clientes.", "/vitalagroenegocios/projetos/#quadros", true],
       ["Comercial e indicadores", "Leads por responsável, origem e serviço; prazos e rentabilidade.", "/vitalagroenegocios/projetos/#comercial", true]]],
     ["Clientes", [
+      ["Jornada dos clientes", "A trilha que cada cliente vê: etapas feitas, em andamento e próximas (com modelos prontos).", "#jornada", eq],
       ["Painéis financeiros", "DRE, fluxo de caixa, balanço e análises dos clientes com BPO.", "#painel", (S.paineis||[]).length>0],
       ["Entregas", "Relatórios publicados, pedidos de cada cliente e o botão Publicar.", "#docs", adm, "entregas"],
       ["Premiação COE e CCA", "Arcanjos: base mensal do COE, critérios, cálculo e PDF da premiação.", "/vitalagroenegocios/premiacao/", adm]]],
@@ -455,6 +459,7 @@ function renderInicio(){
       ["Vitrine do site", "Depoimentos e galeria de clientes.", "#vitrine", adm]]],
     ["Gestão · sócios", [
       ["Indicadores (KPIs)", "Tarefas e entregas do time, ao vivo, e diagnósticos dos clientes (Arcanjos).", "/vitalagroenegocios/kpi/", soc],
+      ["NPS dos clientes", "Nota de satisfação, evolução mês a mês, por cliente e comentários.", "#nps", soc],
       ["Financeiro", "Lançamentos, contas a pagar, orçado × realizado e comissões.", "/vitalagroenegocios/projetos/#financeiro", soc],
       ["Acessos", "Criar login de cliente, colaborador ou sócio.", "#acessos", adm],
       ["Dabar · escritórios", "Escritórios contábeis licenciados: uso, clientes e suporte.", "#dabar", soc]]]
@@ -1998,5 +2003,6 @@ boot();
   addEventListener("resize",agenda); addEventListener("load",agenda);
 })();
 </script>
+<script src="/vitalagroenegocios/cliente/jornada.js?v=1"></script>
 </body>
 </html>

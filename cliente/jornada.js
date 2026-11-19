@@ -159,7 +159,7 @@ function editor(){
       <div class="field"><label for="jMod">Aplicar modelo</label><select id="jMod"><option value="">Escolha…</option>${Object.entries(MODELOS).map(([k,[t]])=>`<option value="${k}">${t}</option>`).join("")}</select></div>
       <button class="btn" id="jModOk">➕ Adicionar etapas do modelo</button>
       <button class="btn" id="jNovo">➕ Etapa em branco</button>
-      <span class="note" style="margin-left:auto">Escreva como se explicasse para uma criança 🧸 · o cliente vê exatamente este texto.</span>
+      <span class="note" style="margin-left:auto">Traduza o "contabilês": linguagem simples, como numa conversa · o cliente vê exatamente este texto.</span>
     </div>
     ${J.emp ? "" : `<p class="note">Escolha um cliente acima.</p>`}
     <div class="jor-ed">${M.map((m,i) => `<div class="jor-row" data-id="${m.id}">

@@ -1612,7 +1612,7 @@ async function mzExt(D){
   const pos=D.tabs.findIndex(t=>rm.has(t.titulo)); const resto=D.tabs.filter(t=>!rm.has(t.titulo));
   const novos=X.tabs||[]; const dre=novos.filter(t=>t.sec==="dre"), out=novos.filter(t=>t.sec!=="dre");
   D.tabs=[...dre, ...resto.filter(t=>t.sec==="dre"), ...resto.filter(t=>t.sec!=="dre"), ...out];
-  if (X.lanc) D.lanc=X.lanc; D.__ext=true;
+  if (X.lanc) D.lanc=X.lanc; if (X.realcc) D.realcc=X.realcc; D.__ext=true;
 }
 function renderMatriz(el, D, emps){
   if (D.ext && !D.__ext && !D.__extErr) { el.innerHTML=`<div class="card"><p class="note" style="margin:0">Carregando lançamentos do painel…</p></div>`;
@@ -1673,11 +1673,31 @@ async function agrCorpo(b){
   if (!sf) h+=`<p class="note">Nenhuma safra cadastrada. Toque em “+ Nova safra”.</p>`;
   else {
     h+=`<div class="row" style="gap:8px;flex-wrap:wrap;margin:10px 0"><label class="note">Status <select id="agSt" style="min-height:32px">${["planejamento","em andamento","encerrada"].map(x=>`<option ${x===sf.status?"selected":""}>${x}</option>`).join("")}</select></label><span class="note">Período: ${esc(sf.inicio.split("-").reverse().join("/"))} a ${esc(sf.fim.split("-").reverse().join("/"))}</span></div>`;
+    const RC=(pac()||{}).realcc||{}, hoje=new Date().toISOString().slice(0,10);
+    const agPer=Object.entries(RC.AGm||{}).filter(([m])=>m>=sf.inicio.slice(0,7)&&m<=sf.fim.slice(0,7)).reduce((a,[,v])=>a+v,0);
+    const G2={}; pl.forEach(x=>{ const k=x.cultura+" · "+(x.ciclo==="safrinha"?"safrinha":x.ciclo==="perene"?"perene":"safra"); const g=(G2[k] ||= {ha:0,sc:0,rec:0,orc:0,cc:new Set(),pl:0});
+      const a=+x.area_ha||0; g.ha+=a; if(x.meta_sc_ha){ g.sc+=a*x.meta_sc_ha; if(x.preco_sc) g.rec+=a*x.meta_sc_ha*x.preco_sc; } if(x.orc_ha) g.orc+=a*x.orc_ha; if(x.centro_custo) g.cc.add(x.centro_custo.trim().toUpperCase()); if(x.data_plantio&&x.data_plantio<=hoje) g.pl+=a; });
+    let T={ha:0,sc:0,rec:0,orc:0,real:0,pl:0};
+    Object.values(G2).forEach(g=>{ g.dir=[...g.cc].reduce((a,c)=>a+(RC[c]?-RC[c].dc:0),0); g.rat=tot?-agPer*g.ha/tot:0; g.real=g.dir+g.rat; ["ha","sc","rec","orc","real","pl"].forEach(k=>T[k]+=g[k]); });
+    const R$=v=>"R$ "+agN(v), pctO=(r,o)=>o?Math.round(r/o*100)+"%":"–";
+    const cards=[["📐","Área plantada no ano-safra",agN(T.ha)+" ha",`${Object.keys(G2).length} cultura(s) · ${pl.length} talhão(ões)`],
+      ["🌱","Plantio realizado",T.ha?Math.round(T.pl/T.ha*100)+"%":"–",T.pl?agN(T.pl)+" ha com data de plantio até hoje":"preencha a data de plantio nos talhões"],
+      ["🌾","Produção projetada",T.sc?agN(T.sc)+" sc":"–",T.sc&&T.ha?agN(T.sc/T.ha)+" sc/ha pela meta":"informe a meta sc/ha"],
+      ["💰","Receita projetada",T.rec?R$(T.rec):"–",T.rec?"meta × preço informados":"informe meta e preço"],
+      ["🧾","Orçamento da safra",T.orc?R$(T.orc):"–",T.orc&&T.ha?R$(T.orc/T.ha)+"/ha":"informe o orçamento R$/ha"],
+      ["📊","Realizado até hoje",R$(T.real),T.orc?pctO(T.real,T.orc)+" do orçamento":"custos do Ideagri + rateio da Agricultura",T.orc&&T.real>T.orc],
+      [T.rec-Math.max(T.orc,T.real)>=0?"✅":"🔻","Resultado projetado",T.rec?R$(T.rec-Math.max(T.orc,T.real)):"–","receita projetada − maior entre orçado e realizado",T.rec&&T.rec-Math.max(T.orc,T.real)<0],
+      ["⚖️","Ponto de equilíbrio",T.rec&&T.sc?agN(Math.max(T.orc,T.real)/(T.rec/T.sc)/T.ha)+" sc/ha":"–","sacas por hectare para pagar o custo"]];
+    h+=`<div class="kpis" style="margin:12px 0">${cards.map(c=>kcard(c[0],c[1],c[2],c[3],c[4])).join("")}</div>`;
+    h+=`<h4 style="margin:12px 0 6px">Orçado × realizado por cultura</h4><div class="tw"><table class="dre"><thead><tr><th>Cultura</th><th>Área (ha)</th><th>% rateio</th><th>Meta (sc/ha)</th><th>Receita projetada</th><th>Orçamento</th><th>Realizado</th><th>% do orçado</th><th>Resultado projetado</th></tr></thead><tbody>`+
+      Object.entries(G2).sort((a,b)=>b[1].ha-a[1].ha).map(([k,g])=>{ const alerta=g.orc&&g.real>g.orc; const rp=g.rec?g.rec-Math.max(g.orc,g.real):null;
+        return `<tr><td>${esc(k)}</td><td>${agN(g.ha)}</td><td>${tot?agP(g.ha/tot):"–"}</td><td>${g.sc&&g.ha?agN(g.sc/g.ha):"–"}</td><td>${g.rec?agN(g.rec):"–"}</td><td>${g.orc?agN(g.orc):"–"}</td><td title="Direto (centros ${esc([...g.cc].join(", ")||"–")}): R$ ${agN(g.dir)} · Rateio da Agricultura: R$ ${agN(g.rat)}">${agN(g.real)}</td><td class="${alerta?"neg":""}">${alerta?"⚠️ ":""}${pctO(g.real,g.orc)}</td><td class="${rp<0?"neg":""}">${rp==null?"–":agN(rp)}</td></tr>`; }).join("")+
+      `</tbody></table></div><p class="note">Realizado = custos lançados no Ideagri nos centros de custo de cada cultura + parte dos gastos do centro Agricultura do período da safra, pela área. Passe o mouse no valor para ver a divisão. ⚠️ indica realizado acima do orçamento.</p>`;
     h+=`<h4 style="margin:12px 0 6px">Área por cultura e % do rateio</h4><div class="tw"><table class="dre"><thead><tr><th>Cultura</th><th>Talhões</th><th>Área (ha)</th><th>% da área = % do rateio</th><th>Arrendamento (sc)</th></tr></thead><tbody>`+
       Object.entries(grupos).sort((a,b)=>b[1].ha-a[1].ha).map(([k,g])=>`<tr><td>${esc(k)}</td><td style="text-align:left;white-space:normal">${esc(g.ts.join(", "))}</td><td>${agN(g.ha)}</td><td><b>${tot?agP(g.ha/tot):"–"}</b></td><td>${g.sc?agN(g.sc):""}</td></tr>`).join("")+
       `<tr class="dt dtf"><td>Total plantado no ano-safra</td><td></td><td>${agN(tot)}</td><td>100%</td><td>${agN(Object.values(grupos).reduce((a,g)=>a+g.sc,0))}</td></tr></tbody></table></div>`;
-    h+=`<h4 style="margin:16px 0 6px">Talhões plantados nesta safra</h4><p class="note">As alterações são salvas ao sair do campo. “Arrend. (sc)” é a parte do contrato que cabe a esta cultura; “% contrato” registra a divisão (ex.: 70% soja, 30% safrinha).</p><div class="tw"><table class="dre"><thead><tr><th>Talhão</th><th>Cultura</th><th>Ciclo</th><th>Área (ha)</th><th>Arrend. (sc)</th><th>% contrato</th><th>Centro de custo (Ideagri)</th><th>Meta (sc/ha)</th><th>Preço (R$/sc)</th><th></th></tr></thead><tbody>`+
-      pl.map(x=>`<tr><td style="text-align:left">${selT(x.id,x.talhao_id)}</td><td>${selC(x.id,x.cultura)}</td><td>${selCi(x.id,x.ciclo)}</td><td>${inp(x.id,"area_ha",x.area_ha,80,"n")}</td><td>${inp(x.id,"arrend_sc",x.arrend_sc,80,"n")}</td><td>${inp(x.id,"arrend_pct",x.arrend_pct,60,"n")}</td><td>${inp(x.id,"centro_custo",x.centro_custo,80)}</td><td>${inp(x.id,"meta_sc_ha",x.meta_sc_ha,70,"n")}</td><td>${inp(x.id,"preco_sc",x.preco_sc,80,"n")}</td><td><button class="btn sm ghost" type="button" data-agdel="${x.id}" aria-label="Remover">✕</button></td></tr>`).join("")+
+    h+=`<h4 style="margin:16px 0 6px">Talhões plantados nesta safra</h4><p class="note">As alterações são salvas ao sair do campo. “Arrend. (sc)” é a parte do contrato que cabe a esta cultura; “% contrato” registra a divisão (ex.: 70% soja, 30% safrinha).</p><div class="tw"><table class="dre"><thead><tr><th>Talhão</th><th>Cultura</th><th>Ciclo</th><th>Área (ha)</th><th>Arrend. (sc)</th><th>% contrato</th><th>Centro de custo (Ideagri)</th><th>Meta (sc/ha)</th><th>Preço (R$/sc)</th><th>Orçamento (R$/ha)</th><th>Plantio</th><th>Colheita</th><th></th></tr></thead><tbody>`+
+      pl.map(x=>`<tr><td style="text-align:left">${selT(x.id,x.talhao_id)}</td><td>${selC(x.id,x.cultura)}</td><td>${selCi(x.id,x.ciclo)}</td><td>${inp(x.id,"area_ha",x.area_ha,80,"n")}</td><td>${inp(x.id,"arrend_sc",x.arrend_sc,80,"n")}</td><td>${inp(x.id,"arrend_pct",x.arrend_pct,60,"n")}</td><td>${inp(x.id,"centro_custo",x.centro_custo,80)}</td><td>${inp(x.id,"meta_sc_ha",x.meta_sc_ha,70,"n")}</td><td>${inp(x.id,"preco_sc",x.preco_sc,80,"n")}</td><td>${inp(x.id,"orc_ha",x.orc_ha,90,"n")}</td><td><input type="date" data-agp="${x.id}" data-c="data_plantio" value="${esc(x.data_plantio||"")}" style="min-height:32px"></td><td><input type="date" data-agp="${x.id}" data-c="data_colheita" value="${esc(x.data_colheita||"")}" style="min-height:32px"></td><td><button class="btn sm ghost" type="button" data-agdel="${x.id}" aria-label="Remover">✕</button></td></tr>`).join("")+
       `</tbody></table></div><div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm" type="button" id="agAdd" ${AG.t.length?"":"disabled"}>+ Adicionar talhão à safra</button>${AG.s.length>1?`<button class="btn sm ghost" type="button" id="agCopia">Copiar plantios de outra safra</button>`:""}</div>`;
     const comMeta=pl.filter(x=>x.meta_sc_ha&&x.preco_sc);
     if (comMeta.length) { const rec=comMeta.reduce((a,x)=>a+x.area_ha*x.meta_sc_ha*x.preco_sc,0), sc=comMeta.reduce((a,x)=>a+x.area_ha*x.meta_sc_ha,0);
@@ -1713,7 +1733,7 @@ function agLigar(b){
   const cp=$("#agCopia"); if (cp) cp.onclick=async()=>{ const outras=AG.s.filter(x=>x.id!==AG.sel); const nome=prompt("Copiar plantios de qual safra? ("+outras.map(x=>x.nome).join(", ")+")", outras[0].nome); const o=outras.find(x=>x.nome===(nome||"").trim()); if(!o) return;
     const rows=AG.p.filter(x=>x.safra_id===o.id).map(({id,criado_em,atualizado_em,safra_id,...r})=>({...r,safra_id:AG.sel})); if(!rows.length) return toast("Essa safra não tem plantios.");
     const {data,error}=await sb.from("agr_plantios").insert(rows).select(); if(error) return toast("Erro: "+error.message); AG.p.push(...data); toast(rows.length+" plantio(s) copiados. Ajuste culturas e áreas."); re(); };
-  b.querySelectorAll("[data-agp]").forEach(el=>el.onchange=async()=>{ const id=el.dataset.agp, c=el.dataset.c; let v=el.value; if(["area_ha","arrend_sc","arrend_pct","meta_sc_ha","preco_sc"].includes(c)) v=agNum(v); if(c==="area_ha"&&v==null) return toast("Informe a área.");
+  b.querySelectorAll("[data-agp]").forEach(el=>el.onchange=async()=>{ const id=el.dataset.agp, c=el.dataset.c; let v=el.value; if(["area_ha","arrend_sc","arrend_pct","meta_sc_ha","preco_sc","orc_ha"].includes(c)) v=agNum(v); if(["data_plantio","data_colheita"].includes(c)&&!v) v=null; if(c==="area_ha"&&v==null) return toast("Informe a área.");
     const {error}=await sb.from("agr_plantios").update({[c]:v===""?null:v,atualizado_em:new Date().toISOString()}).eq("id",id); if(error) return toast("Erro ao salvar: "+error.message); const x=AG.p.find(y=>y.id===id); if(x) x[c]=v; toast("Salvo."); re(); });
   b.querySelectorAll("[data-agdel]").forEach(el=>el.onclick=async()=>{ if(!confirm("Remover este talhão da safra?")) return; const {error}=await sb.from("agr_plantios").delete().eq("id",el.dataset.agdel); if(error) return toast("Erro: "+error.message); AG.p=AG.p.filter(x=>x.id!==el.dataset.agdel); re(); });
   b.querySelectorAll("[data-agt]").forEach(el=>el.onchange=async()=>{ const id=el.dataset.agt, c=el.dataset.c; let v=el.value; if(["area_ha","arrend_sc_ha"].includes(c)) v=agNum(v); if(c==="nome"){ v=String(v).trim(); if(!v) return toast("Informe o nome."); if(AG.t.some(t=>t.id!==id&&t.nome.toLowerCase()===v.toLowerCase())) return toast("Já existe um talhão com esse nome."); }
@@ -1734,7 +1754,10 @@ function mzResumo(D){
   if (ent) k+=kpi("Entradas de caixa", fR(sm(ent)), mzPerNome());
   if (sai) k+=kpi("Saídas de caixa", fR(-Math.abs(sm(sai))), mzPerNome());
   if (cx) k+=kpi("Saldo de caixa", fR(cx.v[cx.v.length-1]), "fim de "+cx.lab[cx.lab.length-1]);
-  (D.kpis||[]).forEach(x=>k+=kpi(x.t,x.v,x.s));
+  if (MZ.ativ||MZ.cul) { const vis=D.tabs.filter(t=>mzTabVis(t)&&t.cards), vistos=new Set();
+      vis.forEach(t=>t.cards.forEach(c=>{ if(!vistos.has(c.t)){ vistos.add(c.t); k+=kcard(c.ic,c.t,c.v,c.s,c.neg); } }));
+      (D.kpis||[]).filter(x=>x.ativ===MZ.ativ&&(!MZ.cul||!x.cult||x.cult===MZ.cul)).forEach(x=>k+=kpi(x.t,x.v,x.s)); }
+  else (D.kpis||[]).forEach(x=>k+=kpi(x.t,x.v,x.s));
   let h=k?`<div class="kpis">${k}</div>`:"";
   if (rec && (res||desp)) { const d = desp ? desp.v.map(v=>-Math.abs(v)) : rec.v.map((v,i)=>-(v-(res.v[i]||0)));
     h+=`<div class="card"><h3 class="pnt">Receita, despesas e resultado por mês</h3>${grafico(rec.lab,[{nome:"Receita",v:rec.v,cor:COR.rec},{nome:"Despesas",v:d,cor:COR.desp},...(res?[{nome:"Resultado",v:res.v,cor:COR.res,linha:1}]:[])],{})}<p class="note">Fonte: DRE da planilha de gestão.</p></div>`; }
@@ -1744,6 +1767,7 @@ function mzResumo(D){
 }
 /* ===== visão de uma cultura: cards + DRE com R$, R$/ha, R$/sc e sc/ha (modelo da planilha de gestão) ===== */
 const fD = (v,d=2) => v==null||!isFinite(v) ? "–" : v.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const kcard=(ic,ti_,v,sub,neg)=>`<div class="kpi kc${neg?" kneg":""}"><span><i aria-hidden="true">${ic||"📊"}</i> ${esc(ti_)}</span><b>${esc(v)}</b>${sub?`<em>${esc(sub)}</em>`:""}</div>`;
 function mzCult(D,t,ti,j){
   const m=t.met[j], A=m.area||0, SC=m.sc||0, PL=m.preco||0;
   const lk=k=>t.linhas.find(l=>l.k===k), val=k=>{ const l=lk(k); return l?(+l.v[j]||0):null; };
@@ -1785,6 +1809,7 @@ function mzTabela(D,t,ti){
   const showTot = t.meses || t.tot!==false;
   let h=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">${esc(t.titulo)}${t.meses?" · "+esc(mzPerNome()):""}</h3>
     <div class="row" style="gap:6px">${temGrp?`<button class="btn sm ghost" data-mzab="${ti}">Abrir tudo</button>`:""}<button class="btn sm ghost" data-mzcsv="${ti}">Baixar planilha (CSV)</button></div></div>
+    ${t.cards?`<div class="kpis" style="margin:12px 0">${t.cards.map(c=>kcard(c.ic,c.t,c.v,c.s,c.neg)).join("")}</div>`:""}
     ${t.nota?`<p class="note">${esc(t.nota)}</p>`:""}${temGrp?`<p class="note">Toque numa linha com ▸ para abrir o grupo.${mzTemLc(D,t)?" Toque no nome de uma conta sublinhada para ver os lançamentos, ou num valor para ver os lançamentos daquele mês.":""}</p>`:""}
     <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${idx.map(i=>`<th>${esc(mzCol(t,i))}</th>`).join("")}${showTot&&t.meses?"<th>Total</th>":""}</tr></thead><tbody>`;
   t.linhas.forEach((l,i)=>{

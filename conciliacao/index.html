@@ -128,7 +128,7 @@ table.res td:nth-child(10){min-width:240px}table.res td:nth-child(4),table.res t
 <footer class="rodape">By <b style="color:var(--brand)">Vital Agro&amp;Negócios</b> · os arquivos são lidos no seu navegador; só o resultado é salvo.</footer>
 <div class="toast" id="toast" hidden></div>
 <input type="file" id="fBanco" accept=".ofx,.OFX,.csv,.xlsx,.xls,.pdf,.txt" multiple hidden>
-<input type="file" id="fBase" accept=".csv,.xlsx,.xls,.txt" hidden>
+<input type="file" id="fBase" accept=".csv,.xlsx,.xls,.txt" multiple hidden>
 <script>
 (() => {
 "use strict";
@@ -498,7 +498,15 @@ function blocoBancos() {
 }
 function blocoBase() {
   const a = S.base;
-  const corpo = !a ? `<div class="drop" data-drop="base" tabindex="0" role="button"><b>📎 Escolher ou arrastar a planilha</b><span class="note">Excel ou CSV com data, descrição e valor (ou entrada/saída); se tiver coluna de banco, melhor</span></div>`
+  if (a && a.ixc) { const tem = (t) => a.ixc.find((p) => p.tipo === t);
+    const linha = (p) => `<div class="ext"><b>${p.tipo === "receber" ? "📥 Contas a receber (IXC)" : "📤 Contas a pagar (IXC)"}</b><div class="note">📄 ${esc(p.nome)} · ${resumoArq(p.itens)}</div></div>`;
+    const falta = !tem("receber") ? "Contas a Receber" : !tem("pagar") ? "Contas a Pagar" : "";
+    return `<div class="card"><div class="step"><i>2</i><h3 style="font-size:1.05rem">Bases do sistema (IXC)</h3><span class="note">${a.itens.length} lançamento(s)</span></div><div style="margin-top:12px;display:grid;gap:12px">
+      ${a.ixc.map(linha).join("")}
+      ${falta ? `<div class="drop" data-drop="base" data-somar="1" tabindex="0" role="button"><b>📎 Adicionar o relatório de ${falta}</b><span class="note">CSV exportado do IXC</span></div>` : ""}
+      <div class="row" style="justify-content:space-between"><p class="note" style="margin:0">Recebimentos com status "Recebido" entram como entrada; pagamentos entram como saída, pela data de pagamento. Lançamentos fora do período dos extratos ficam de fora.</p><button class="btn sm" data-trocar="base" type="button">Trocar arquivos</button></div>
+      ${previa(a.itens, true)}</div></div>`; }
+  const corpo = !a ? `<div class="drop" data-drop="base" tabindex="0" role="button"><b>📎 Escolher ou arrastar a planilha</b><span class="note">Excel ou CSV com data, descrição e valor (ou entrada/saída); se tiver coluna de banco, melhor. Do IXC, pode mandar Contas a Pagar e Contas a Receber juntos.</span></div>`
     : `<div class="row" style="justify-content:space-between"><div><b>${esc(a.nome)}</b><div class="note">${resumoArq(a.itens)}</div></div><button class="btn sm" data-trocar="base" type="button">Trocar arquivo</button></div>${a.gdoor ? `<p class="ok" style="margin:8px 0 0;font-weight:600">✔ Relatório de caixa do GDoor reconhecido: usei as ${a.gdoor.itens.length} linhas de banco ("Recebimento pelo banco" / "Saída do banco"), já com o sinal do ponto de vista do banco e a descrição do documento.</p><p class="note">Ficaram de fora ${a.gdoor.caixa} lançamento(s) que não passaram por banco (dinheiro/caixa)${a.gdoor.naoBanco ? ` e ${a.gdoor.naoBanco} de numerários em trânsito` : ""}. Bancos encontrados: ${[...new Set(a.itens.map((x) => x.banco).filter(Boolean))].map(esc).join(", ") || "—"}.</p>` : ""}${mapaHTML(a, "base")}${previa(a.itens, true)}`;
   return `<div class="card"><div class="step"><i>2</i><h3 style="font-size:1.05rem">Planilha da empresa (base)</h3></div><div style="margin-top:12px">${corpo}</div></div>`;
 }
@@ -624,7 +632,7 @@ function montarLote(idx) {
 /* ================= arquivos ================= */
 function abrirArquivo(qual) { const inp = qual === "banco" ? $("#fBanco") : $("#fBase"); inp.value = ""; inp.click(); }
 $("#fBanco").onchange = (e) => e.target.files.length && carregarExtratos([...e.target.files]);
-$("#fBase").onchange = (e) => e.target.files[0] && carregarBase(e.target.files[0]);
+$("#fBase").onchange = (e) => { const fs = [...e.target.files], so = S.baseSomar; S.baseSomar = false; if (fs.length) carregarBase(fs, so); };
 async function lerTabela(file) {
   const rows = await lerPlanilha(file); const header = acharCabecalho(rows); const mapa = { header, ...sugerirMapa(rows[header] || []) };
   return { rows, mapa, status: new Set() };
@@ -649,10 +657,39 @@ async function carregarExtratos(files) {
   }
   if (n) { S.res = null; S.salvoId = null; autoChaves(); render(); toast(n + " extrato(s) carregado(s)."); }
 }
-async function carregarBase(file) {
-  if (!/\.(xlsx|xls|csv|txt)$/i.test(file.name)) { toast("Use Excel ou CSV para a planilha."); return; }
+/* Relatórios do IXC (Contas a Pagar e Contas a Receber): reconhecidos pelo cabeçalho e somados numa base só */
+function ixcItens(rows) {
+  let hi = -1, h = []; for (let i = 0; i < Math.min(rows.length, 10); i++) { const c = (rows[i] || []).map((x) => normTxt(x).trim()); if (c.includes("data do pagamento") && c.includes("valor recebido") || c.includes("data pagamento") && c.includes("valor total pago")) { hi = i; h = c; break; } }
+  if (hi < 0) return null;
+  const ix = (k) => h.indexOf(k), rec = h.includes("valor recebido");
+  const cD = ix(rec ? "data do pagamento" : "data pagamento"), cV = ix(rec ? "valor recebido" : "valor total pago"), cN = ix("razao social/nome"), cP = ix("planejamento analitico"), cS = ix("status"), cDs = ix("descricao");
+  const itens = [];
+  for (let i = hi + 1; i < rows.length; i++) { const r = rows[i]; if (!r) continue;
+    const d = data(r[cD]); const v = num(r[cV]); if (!d || !v) continue;
+    if (rec && cS >= 0 && !/recebid/.test(normTxt(r[cS]))) continue;
+    const ds = cDs >= 0 ? String(r[cDs] || "").trim() : "";
+    const banco = /sicoob/i.test(ds) ? "Sicoob" : /sicredi/i.test(ds) ? "Sicredi" : "";
+    itens.push({ data: d, desc: [String(r[cN] || "").trim(), cP >= 0 ? String(r[cP] || "").trim() : "", ds].filter(Boolean).join(" · "), valor: rec ? Math.abs(v) : -Math.abs(v), status: rec ? "Recebido" : "Pago", banco, lote: "", doc: "", linha: i + 1 }); }
+  return { tipo: rec ? "receber" : "pagar", itens };
+}
+function juntarIxc(partes) {
+  const itens = partes.flatMap((p) => p.itens).sort((a, b) => a.data.localeCompare(b.data));
+  return { nome: partes.map((p) => p.nome).join(" + "), ixc: partes, itens, status: new Set(), rows: null, mapa: null };
+}
+async function carregarBase(fs, somar) {
+  fs = [].concat(fs).filter(Boolean); if (!fs.length) return;
+  if (fs.some((f) => !/\.(xlsx|xls|csv|txt)$/i.test(f.name))) { toast("Use Excel ou CSV para a planilha."); return; }
   try {
-    const t = await lerTabela(file); const obj = { nome: file.name, ...t };
+    const lidos = []; for (const f of fs) { const rows = await lerPlanilha(f); lidos.push({ f, rows, ixc: ixcItens(rows) }); }
+    if (lidos.every((x) => x.ixc)) {
+      let partes = somar && S.base && S.base.ixc ? S.base.ixc.slice() : [];
+      lidos.forEach((x) => { partes = partes.filter((p) => p.tipo !== x.ixc.tipo); partes.push({ nome: x.f.name, ...x.ixc }); });
+      partes.sort((a, b) => a.tipo.localeCompare(b.tipo, "pt-BR") * -1);
+      S.base = juntarIxc(partes); S.res = null; S.salvoId = null; autoChaves(); render();
+      toast(partes.map((p) => (p.tipo === "receber" ? "Contas a receber: " : "Contas a pagar: ") + p.itens.length).join(" · ")); return;
+    }
+    if (lidos.length > 1) { toast("Para juntar várias planilhas, use os relatórios de Contas a Pagar e a Receber do IXC. Nos outros casos, envie uma planilha só."); return; }
+    const t = (() => { const rows = lidos[0].rows, header = acharCabecalho(rows); return { rows, mapa: { header, ...sugerirMapa(rows[header] || []) }, status: new Set() }; })(); const obj = { nome: lidos[0].f.name, ...t };
     if (obj.mapa.status >= 0) { const vals = [...new Set(obj.rows.slice(obj.mapa.header + 1).map((r) => String(r[obj.mapa.status] ?? "").trim()).filter(Boolean))]; vals.filter((v) => /confirm|pago|recebid|realiz|concil|quitad|baixad|liquid/i.test(normTxt(v))).forEach((v) => obj.status.add(v)); }
     obj.itens = linhasDaTabela(obj.rows, obj.mapa, { status: obj.status }); aplicarGdoor(obj);
     S.base = obj; S.res = null; S.salvoId = null; autoChaves(); render();
@@ -676,6 +713,7 @@ function autoChaves() {
     if (placar[0] && placar[0][1] >= Math.max(3, E.itens.length * 0.3) && (!placar[1] || placar[0][1] > placar[1][1] * 2)) { E.chave = placar[0][0]; usadas.add(placar[0][0]); E.chaveAuto = true; } });
 }
 function remapear(chave) {
+  if (chave === "base" && S.base && S.base.ixc) return;
   if (chave === "base") { const a = S.base; a.itens = linhasDaTabela(a.rows, a.mapa, { status: a.status }); aplicarGdoor(a); autoChaves(); }
   else { const E = S.bancos[+chave.slice(1)]; E.itens = linhasDaTabela(E.rows, E.mapa); const sd = saldosDaTabela(E); E.saldoIni = sd ? sd.ini : null; E.saldoFim = sd ? sd.fim : null; if (sd) { E.saldo = sd.fim; E.dtSaldo = sd.dt; } }
   S.res = null; render();
@@ -687,10 +725,10 @@ function ligar() {
   $("#selEmp").onchange = async (e) => { S.empresa = e.target.value; try { localStorage.setItem("conc.emp", S.empresa); } catch {} S.res = null; S.salvoId = null; await carregarHist(); render(); };
   $("#tol").onchange = (e) => { S.tol = Math.max(0, Math.min(10, +e.target.value || 0)); };
   app.querySelectorAll("[data-drop]").forEach((d) => {
-    d.onclick = () => abrirArquivo(d.dataset.drop);
-    d.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirArquivo(d.dataset.drop); } };
+    d.onclick = () => { S.baseSomar = d.dataset.somar === "1"; abrirArquivo(d.dataset.drop); };
+    d.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); S.baseSomar = d.dataset.somar === "1"; abrirArquivo(d.dataset.drop); } };
     d.ondragover = (e) => { e.preventDefault(); d.classList.add("on"); }; d.ondragleave = () => d.classList.remove("on");
-    d.ondrop = (e) => { e.preventDefault(); d.classList.remove("on"); const fs = [...e.dataTransfer.files]; if (!fs.length) return; if (d.dataset.drop === "banco") carregarExtratos(fs); else carregarBase(fs[0]); };
+    d.ondrop = (e) => { e.preventDefault(); d.classList.remove("on"); const fs = [...e.dataTransfer.files]; if (!fs.length) return; if (d.dataset.drop === "banco") carregarExtratos(fs); else carregarBase(fs, d.dataset.somar === "1"); };
   });
   app.querySelectorAll("[data-trocar]").forEach((b) => b.onclick = () => abrirArquivo(b.dataset.trocar));
   app.querySelectorAll("[data-rem]").forEach((b) => b.onclick = () => { S.bancos.splice(+b.dataset.rem, 1); S.res = null; render(); });

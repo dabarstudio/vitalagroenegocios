@@ -162,7 +162,7 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .gtip{position:absolute;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.82rem;display:grid;gap:3px;box-shadow:0 6px 18px rgba(0,0,0,.12);pointer-events:none;min-width:170px}
 .gtip span{display:flex;align-items:center;gap:6px}.gtip i{width:10px;height:10px;border-radius:2px;display:inline-block}
 .tw{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;overscroll-behavior-x:contain;scrollbar-width:auto;scrollbar-color:#8aa892 #eef3ee;touch-action:pan-x pan-y}.tw::-webkit-scrollbar{height:12px;width:12px}.tw::-webkit-scrollbar-thumb{background:#8aa892;border-radius:8px;border:3px solid #eef3ee}.tw::-webkit-scrollbar-track{background:#eef3ee;border-radius:8px}
-.dre.nm th,.dre.nm td{text-align:left;white-space:normal;vertical-align:middle}.dre.nm th:first-child,.dre.nm td:first-child{position:static;min-width:170px}.dre.nm td.num,.dre.nm th.num{text-align:right;white-space:nowrap}.dre.nm td:last-child{text-align:right}.acb{white-space:nowrap}.acok{white-space:nowrap;font-size:.82rem;color:var(--ok,#007941);font-weight:600}.acdet{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}.acdet div{background:var(--surface-2);border-radius:10px;padding:8px 10px;display:grid;gap:2px}.acdet small{color:var(--muted);font-size:.75rem}.acf{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.acf label{display:grid;gap:4px;font-size:.85rem;font-weight:600}.acf select,.acf input{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
+.dre.nm th,.dre.nm td{text-align:left;white-space:normal;vertical-align:middle}.dre.nm th:first-child,.dre.nm td:first-child{position:static;min-width:170px}.dre.nm td.num,.dre.nm th.num{text-align:right;white-space:nowrap}.dre.nm td:last-child{text-align:right}.acv.aprovado{color:var(--ok,#007941)}.acv.alterado{color:#9a5b00;max-width:260px;overflow:hidden;text-overflow:ellipsis}.vsug{margin-top:10px;border:2px solid var(--brand-2,#79C25B);border-radius:12px;padding:10px 12px;display:grid;gap:2px;background:#f3faf0}.vsug small{color:var(--muted);font-size:.75rem}.vsug b{font-size:1.05rem;color:var(--brand,#00582F)}.vsug span{font-size:.85rem;color:var(--muted)}.acb{white-space:nowrap}.acok{white-space:nowrap;font-size:.82rem;color:var(--ok,#007941);font-weight:600}.acdet{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}.acdet div{background:var(--surface-2);border-radius:10px;padding:8px 10px;display:grid;gap:2px}.acdet small{color:var(--muted);font-size:.75rem}.acf{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.acf label{display:grid;gap:4px;font-size:.85rem;font-weight:600}.acf select,.acf input{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
 .dre thead th{z-index:2;box-shadow:0 1px 0 var(--line)}.dre thead th:first-child{z-index:3}
 .dre tr.lc td[data-mzm]{cursor:pointer}.dre tr.lc td[data-mzm]:hover{background:var(--surface-2);text-decoration:underline dotted}
 .lcb{all:unset;cursor:pointer;color:inherit;text-decoration:underline dotted;text-underline-offset:3px}.lcb:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
@@ -1957,6 +1957,46 @@ async function mzAcAbrir(D,ti,i){ const t=D.tabs[ti], l=t.linhas[i], a=t.acao, c
     if (e2) { bt.disabled=false; bt.textContent="📋 Criar cartão"; return toast("Não consegui criar o cartão: "+e2.message); }
     d.close(); delete MZ.env[P.emp+"|"+(a.prefixo||"")]; toast(r.novo?"Cartão criado no "+r.quadro+".":"Este lançamento já estava no "+r.quadro+"."); mzCorpo(); reg("enviar_acao_quadro",P.emp+" · "+l.n).catch(()=>{}); };
   d.showModal(); }
+/* ===== Validação de reclassificação pelo cliente (fica no portal; a Vital aplica depois) ===== */
+MZ.val = MZ.val || {};
+function mzValMap(){ const k=P.emp, e=MZ.val[k];
+  if (e===undefined && sb) { MZ.val[k]=null; sb.from("pn_reclass").select("*").eq("empresa",P.emp).then(({data})=>{ const m={}; (data||[]).forEach(r=>m[r.chave]=r); MZ.val[k]=m; mzCorpo(); }); }
+  return e||{}; }
+function mzValBtn(t,ti,i){ const l=t.linhas[i], v=mzValMap()[mzAcChave(t,l)];
+  if (v) { const lab=v.aplicado_em?"🟢 Ajustado":v.status==="aprovado"?"👍 Aprovado":"✏️ "+esc(v.escolhida);
+    return `<button type="button" class="btn sm ghost acb acv ${v.status}" data-mzac="${ti}:${i}" title="Validado por ${esc(v.por_nome||"")} · toque para rever">${lab}</button>`; }
+  return `<button type="button" class="btn sm acb" data-mzac="${ti}:${i}" title="Confirmar ou trocar a classificação sugerida">✔ Validar</button>`; }
+function mzValProg(t){ if (!t.acao || t.acao.modo!=="validar") return ""; const m=mzValMap(), its=t.linhas.filter(l=>l.t==="item"), n=its.length;
+  let ap=0, al=0, aj=0; its.forEach(l=>{ const v=m[mzAcChave(t,l)]; if(!v) return; if(v.aplicado_em) aj++; if(v.status==="aprovado") ap++; else al++; });
+  const f=ap+al, p=n?f/n:0;
+  return `<div class="gmm" style="margin:12px 0"><h4>✔ Validação das classificações${t.acao.resp?" · "+esc(t.acao.resp):""}</h4><div class="gmb"><i style="width:${Math.min(100,p*100).toFixed(1)}%"></i><b>${f} de ${n} validados${p>=1?" 🎉":""}</b></div>
+    <p class="note" style="margin:0">👍 ${ap} sugestões aprovadas · ✏️ ${al} trocadas por outra conta · 🟢 ${aj} já ajustadas pela Vital no painel. Para cada lançamento, confirme a sugestão ou escolha a conta mais coerente; a Vital faz o ajuste aqui na área do cliente, sem precisar mexer no IXC.</p></div>`; }
+function mzValAbrir(D,ti,i){ const t=D.tabs[ti], l=t.linhas[i], a=t.acao, c=t.cols, ch=mzAcChave(t,l), v=mzValMap()[ch];
+  if (!sb) return toast("Faça login para validar.");
+  const sug=String(l.v[a.sug]||""), atual=String(l.v[a.atual]||""), acao=String(l.v[a.col]||"");
+  const contas=[...new Set([sug,...(a.contas||[])])].filter(Boolean).sort((x,y)=>x.localeCompare(y,"pt-BR"));
+  const fv=x=>typeof x==="number"?fRc(x):String(x);
+  let d=document.getElementById("mzVal"); if(!d){ d=document.createElement("dialog"); d.id="mzVal"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
+  const trav=v&&v.aplicado_em;
+  d.innerHTML=`<div class="lch"><div><div class="eyebrow">Validar classificação</div><h3 style="margin:2px 0 0">${esc(l.n)}</h3></div><button type="button" class="btn sm ghost" data-x>Fechar</button></div>
+   <div class="acdet"><div><small>${esc(c[0])}</small><b>${esc(fv(l.v[0]))}</b></div><div><small>${esc(c[1])}</small><b>${esc(fv(l.v[1]))}</b></div><div><small>Lançado hoje em</small><b>${esc(atual)}</b></div></div>
+   <div class="vsug"><small>Sugestão da Vital</small><b>${esc(sug)}</b>${acao?`<span>${esc(acao)}</span>`:""}</div>
+   ${v?`<p class="note" style="margin:8px 0 0">${v.status==="aprovado"?"👍 Aprovado":"✏️ Trocado para <b>"+esc(v.escolhida)+"</b>"} por ${esc(v.por_nome||"")} em ${new Date(v.em).toLocaleDateString("pt-BR")}${v.aplicado_em?" · 🟢 ajustado pela Vital em "+new Date(v.aplicado_em).toLocaleDateString("pt-BR"):""}.</p>`:""}
+   ${trav?"":`<div class="acf" style="margin-top:12px"><label>Outra conta, se a sugestão não estiver certa<select data-c><option value="">— manter a sugestão —</option>${contas.filter(x=>x!==sug).map(x=>`<option${v&&v.status==="alterado"&&v.escolhida===x?" selected":""}>${esc(x)}</option>`).join("")}</select></label>
+   <label>Observação (opcional)<input type="text" data-o maxlength="300" value="${esc(v&&v.obs||"")}" placeholder="Ex.: é peça do carro da empresa"></label></div>
+   <div class="row" style="justify-content:space-between;gap:8px;margin-top:14px;flex-wrap:wrap"><button type="button" class="btn sm ghost" data-q title="Criar uma tarefa no quadro em vez de validar agora">📋 Enviar ao quadro</button>
+     <div class="row" style="gap:8px">${v&&!v.aplicado_em?`<button type="button" class="btn sm ghost" data-del>Desfazer</button>`:""}<button type="button" class="btn sm" data-ok>👍 Sugestão certa</button></div></div>`}`;
+  d.querySelectorAll("[data-x]").forEach(x=>x.onclick=()=>d.close());
+  const sel=d.querySelector("[data-c]"), ok=d.querySelector("[data-ok]");
+  if (sel) sel.onchange=()=>{ ok.textContent=sel.value?"✏️ Usar esta conta":"👍 Sugestão certa"; };
+  const q=d.querySelector("[data-q]"); if (q) q.onclick=()=>{ d.close(); mzAcAbrir(D,ti,i); };
+  const del=d.querySelector("[data-del]"); if (del) del.onclick=async()=>{ const { error } = await sb.from("pn_reclass").delete().eq("empresa",P.emp).eq("chave",ch); if (error) return toast("Não consegui desfazer: "+error.message); delete MZ.val[P.emp]; d.close(); mzCorpo(); };
+  if (ok) ok.onclick=async()=>{ ok.disabled=true; const esc2=sel.value||sug;
+    const row={empresa:P.emp, chave:ch, fornecedor:l.n, data_pg:String(l.v[0]||""), valor:typeof l.v[1]==="number"?l.v[1]:null, conta_atual:atual, sugerida:sug, escolhida:esc2, status:sel.value?"alterado":"aprovado", obs:d.querySelector("[data-o]").value.trim()||null, por:S.user.id, por_nome:(S.perfil&&S.perfil.nome)||S.user.email||"", em:new Date().toISOString()};
+    const { error } = await sb.from("pn_reclass").upsert(row,{onConflict:"empresa,chave"});
+    if (error) { ok.disabled=false; return toast("Não consegui salvar: "+error.message); }
+    MZ.val[P.emp]=MZ.val[P.emp]||{}; MZ.val[P.emp][ch]=row; d.close(); toast(row.status==="aprovado"?"Sugestão aprovada.":"Conta trocada para "+esc2+"."); mzCorpo(); reg("validar_reclass",P.emp+" · "+l.n).catch(()=>{}); };
+  d.showModal(); }
 function mzTabela(D,t,ti){
   const idx=mzIdx(t); if (t.met && idx.length===1 && t.met[idx[0]]) return mzCult(D,t,ti,idx[0]); if (!idx.length) return `<div class="card"><h3 class="pnt">${esc(t.titulo)}</h3><p class="note">Sem dados no período escolhido.</p></div>`;
   // grupos: cada linha "grp" abre/fecha as linhas "item" logo abaixo dela
@@ -1965,7 +2005,7 @@ function mzTabela(D,t,ti){
   const showTot = t.meses || t.tot!==false;
   let h=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">${esc(t.titulo)}${t.meses?" · "+esc(mzPerNome()):""}</h3>
     <div class="row" style="gap:6px">${temGrp?`<button class="btn sm ghost" data-mzab="${ti}">Abrir tudo</button>`:""}<button class="btn sm ghost" data-mzcsv="${ti}">Baixar planilha (CSV)</button></div></div>
-    ${t.cards?`<div class="kpis" style="margin:12px 0">${t.cards.map(c=>kcard(c.ic,c.t,c.v,c.s,c.neg,{ser:c.ser,ti,li:c.lin?t.linhas.findIndex(l=>l.n===c.lin):null})).join("")}</div>`:""}${mzGami(t)}${insHTML(t.ins)}
+    ${t.cards?`<div class="kpis" style="margin:12px 0">${t.cards.map(c=>kcard(c.ic,c.t,c.v,c.s,c.neg,{ser:c.ser,ti,li:c.lin?t.linhas.findIndex(l=>l.n===c.lin):null})).join("")}</div>`:""}${mzGami(t)}${mzValProg(t)}${insHTML(t.ins)}
     ${t.nota?`<p class="note">${esc(t.nota)}</p>`:""}${temGrp?`<p class="note">Toque numa linha com ▸ para abrir o grupo.${mzTemLc(D,t)?" Toque no nome de uma conta sublinhada para ver os lançamentos, ou num valor para ver os lançamentos daquele mês.":""}</p>`:""}
     <div class="tw"><table class="dre${t.meses?"":" nm"}"><thead><tr><th>${esc(t.col0||"Conta")}</th>${idx.map(i=>`<th>${esc(mzCol(t,i))}</th>`).join("")}${showTot&&t.meses?"<th>Total</th>":""}</tr></thead><tbody>`;
   t.linhas.forEach((l,i)=>{
@@ -1973,7 +2013,7 @@ function mzTabela(D,t,ti){
     const cls = l.t==="tot"?"dt dtf": l.t==="saldo"?"dt": l.t==="grp"?"dg": l.t==="cab"?"dsub": l.t==="rot"?"di": l.t==="pct"?"di":"dcat";
     const nv = l.t==="item" ? (pai[i]>=0?2:1) : l.t==="rot" ? 1 : 0;
     const tg = l.t==="grp" && t.linhas.some((x,j)=>pai[j]===i) ? `<span class="tg">${MZ.ab[ti+":"+i]?"▾":"▸"}</span>` : "";
-    const cel = (x,j) => { if (t.acao && j===t.acao.col && l.t==="item") return `<td>${mzAcBtn(t,ti,i)}</td>`; if (x==null||x==="") return `<td></td>`; if (typeof x==="string") return `<td>${esc(x)}</td>`; if (l.t==="pct") return `<td>${fP(x)}</td>`; return `<td class="num${x<0?" neg":""}">${fN(x)}</td>`; };
+    const cel = (x,j) => { if (t.acao && j===t.acao.col && l.t==="item") return `<td>${t.acao.modo==="validar"?mzValBtn(t,ti,i):mzAcBtn(t,ti,i)}</td>`; if (x==null||x==="") return `<td></td>`; if (typeof x==="string") return `<td>${esc(x)}</td>`; if (l.t==="pct") return `<td>${fP(x)}</td>`; return `<td class="num${x<0?" neg":""}">${fN(x)}</td>`; };
     const tot = showTot&&t.meses ? mzTot(t,l,idx) : undefined;
     const lc = mzLcDe(D,t,l);
     h+=`<tr class="${cls}${lc?" lc":""}" ${tg?`data-mzg="${ti}:${i}"`:""}${lc?` data-mzl="${ti}:${i}"`:""}><td style="padding-left:${8+nv*16}px">${tg}${lc?`<button type="button" class="lcb" data-mzl="${ti}:${i}">${esc(l.n)}</button>`:esc(l.n)}</td>${l.t==="cab"?idx.map(()=>"<td></td>").join(""):idx.map(j=>lc?cel(l.v[j],j).replace("<td",`<td data-mzm="${j}"`):cel(l.v[j],j)).join("")}${tot===undefined?"":tot==null?"<td></td>":`<td class="${tot<0?"neg":""}"><b>${l.t==="pct"?"":fN(tot)}</b></td>`}</tr>`;
@@ -1987,7 +2027,7 @@ function mzLigar(D){ const b=$("#pnBody"); if(!b) return;
     mzLanc(D,ti,i,td?+td.dataset.mzm:null); });
   b.querySelectorAll("[data-mzab]").forEach(x=>x.onclick=()=>{ const ti=+x.dataset.mzab, t=D.tabs[ti]; const ks=t.linhas.map((l,i)=>l.t==="grp"?ti+":"+i:null).filter(Boolean); const abrir=!ks.some(k=>MZ.ab[k]); ks.forEach(k=>MZ.ab[k]=abrir); mzCorpo(); });
   b.querySelectorAll("[data-mzcsv]").forEach(x=>x.onclick=()=>mzCsv(D,D.tabs[+x.dataset.mzcsv]));
-  b.querySelectorAll("[data-mzac]").forEach(x=>x.onclick=e=>{ e.stopPropagation(); const [ti,i]=x.dataset.mzac.split(":").map(Number); mzAcAbrir(D,ti,i); });
+  b.querySelectorAll("[data-mzac]").forEach(x=>x.onclick=e=>{ e.stopPropagation(); const [ti,i]=x.dataset.mzac.split(":").map(Number); (D.tabs[ti].acao&&D.tabs[ti].acao.modo==="validar"?mzValAbrir:mzAcAbrir)(D,ti,i); });
 }
 function mzCsv(D,t){ const idx=mzIdx(t), f=v=>v==null||v===""?"":typeof v==="number"?v.toFixed(2).replace(".",","):String(v);
   const L=[["Conta",...idx.map(i=>t.cols[i]),...(t.meses?["Total"]:[])]];

@@ -218,7 +218,7 @@ button.kpi{font:inherit;cursor:pointer;text-align:left;transition:border-color .
 button.kpi:hover{border-color:var(--brand-2)}
 button.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg);box-shadow:inset 0 0 0 1px var(--brand)}
 .board{display:grid;grid-template-columns:repeat(var(--n,4),minmax(270px,1fr));gap:12px;align-items:stretch;overflow-x:auto;padding-bottom:10px;scrollbar-width:thin;scrollbar-color:var(--brand-2,#79C25B) transparent}
-.board::-webkit-scrollbar{height:10px}.board::-webkit-scrollbar-thumb{background:var(--brand-2,#79C25B);border-radius:99px}
+.board .colh{top:0}.board::-webkit-scrollbar{height:10px}.board::-webkit-scrollbar-thumb{background:var(--brand-2,#79C25B);border-radius:99px}
 .col{background:var(--surface-2);border-radius:var(--r);padding:10px;display:grid;gap:8px;align-content:start;min-height:120px}
 .col.drop{outline:2px dashed var(--brand-2);outline-offset:-2px}
 .fsel{border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:var(--surface);color:inherit;font:inherit;font-size:.86rem;max-width:230px}

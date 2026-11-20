@@ -238,6 +238,7 @@ button.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg
 .cchip:hover{background:#eef5ec}.cchip.atr{border-left-color:var(--bad);color:var(--bad);font-weight:600}.cchip.ok{border-left-color:var(--ok);color:var(--muted);text-decoration:line-through}
 @media (max-width:760px){.cgrid{grid-template-columns:minmax(0,1fr)}.cwd,.cdia.vaz,.cdia.cvz{display:none}.cdia{min-height:0}.cnum .cdw{display:inline;color:var(--muted);text-transform:capitalize}.cchip{white-space:normal;font-size:.85rem;padding:6px 8px}}
 .pdfdlg{border:0;border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.pdfdlg::backdrop{background:rgba(0,0,0,.35)}
+.colh .colp{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--brand);font-size:1.15rem;font-weight:700;line-height:1;display:grid;place-items:center;cursor:pointer;padding:0}.colh .colp:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
 .colh .n{font-size:.8rem;color:var(--muted);font-weight:700;background:var(--surface);border-radius:999px;padding:1px 8px}
 .k{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:grid;gap:6px;text-align:left;width:100%}
 .k:hover{border-color:var(--brand-2)}
@@ -747,7 +748,7 @@ function render() {
     const ks = S.cards.filter(k => k._v === c.id).sort(S.ordem === "prazo" ? porPrazo : (a, b) => a.ordem - b.ordem);
     const vis = ks.filter(passa);
     return `<section class="col${c.referencia ? " ref" : ""}" data-col="${c.id}" aria-label="${esc(c.nome)}"${c.referencia ? ` title="Atribuições fixas e observações internas: não contam como tarefas em aberto"` : ""}>
-      <div class="colh"${c.concluida || S.marc ? "" : ` data-dbl="${c.id}" title="Dois cliques para criar um cartão nesta lista"`}><h2>${esc(c.nome)}</h2><span class="n">${ks.length}</span></div>
+      <div class="colh"${c.concluida || S.marc ? "" : ` data-dbl="${c.id}" title="Toque no + (ou dê dois cliques) para criar um cartão nesta lista"`}><h2>${esc(c.nome)}</h2><span class="n">${ks.length}</span>${c.concluida || S.marc ? "" : `<button class="colp" type="button" data-addh="${c.id}" title="Criar um cartão nesta lista" aria-label="Criar cartão em ${esc(c.nome)}">+</button>`}</div>
       ${vis.map(cardHTML).join("") || `<div class="vazio">${ks.length ? "Nada neste filtro." : "Nenhuma tarefa."}</div>`}
       ${c.concluida || S.marc ? "" : `<button class="add" type="button" data-add="${c.id}">+ Adicionar tarefa</button>`}
     </section>`;
@@ -796,6 +797,7 @@ function render() {
     };
   });
   $$("[data-add]").forEach(b => b.onclick = () => novoForm(b));
+  $$("[data-addh]").forEach(x => x.onclick = (e) => { e.stopPropagation(); const h = x.closest(".colh"), b = document.querySelector(`[data-add="${x.dataset.addh}"]`); if (!b || !h) return; h.after(b); novoForm(b); });
   $$("[data-dbl]").forEach(h => h.ondblclick = (e) => { e.preventDefault(); const b = document.querySelector(`[data-add="${h.dataset.dbl}"]`); if (!b) return; h.after(b); novoForm(b); });
   { const tp = document.querySelector(".top"); if (tp) document.documentElement.style.setProperty("--topo", tp.offsetHeight + "px"); }
 }

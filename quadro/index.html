@@ -310,6 +310,25 @@ body{padding-bottom:0}
 html.embed header.top,html.embed .rodape,html.embed .ticker{display:none!important}
 html.embed body{background:var(--bg)}
 html.embed main#app{padding-top:10px}
+/* seletor de quadros com clientes recolhíveis (equipe Vital) */
+.qp{position:relative;min-width:0;max-width:min(380px,40vw);flex:0 1 320px}
+.qp>button.qpb{width:100%;display:flex;align-items:center;gap:8px;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);color:var(--fg);font:inherit;cursor:pointer;min-height:40px;text-align:left}
+.qp>button.qpb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qp .qpp{position:absolute;right:0;top:calc(100% + 6px);z-index:60;width:min(360px,92vw);max-height:min(70vh,520px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+.qp .qpp[hidden]{display:none}
+.qp .qps{margin:8px;min-height:38px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font:inherit;background:var(--surface);color:var(--fg)}
+.qp .qpl{overflow:auto;padding:0 6px 8px;overscroll-behavior:contain}
+.qp .qpg>button{width:100%;display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--fg);font:inherit;font-weight:700;padding:9px 8px;border-radius:8px;cursor:pointer;text-align:left}
+.qp .qpg>button:hover{background:var(--surface-2)}
+.qp .qpg>button i{font-style:normal;color:var(--muted);width:1em;transition:transform .15s}
+.qp .qpg.on>button i{transform:rotate(90deg)}
+.qp .qpg>button small{margin-left:auto;color:var(--muted);font-weight:600}
+.qp .qpi{display:block;width:100%;border:0;background:transparent;color:var(--fg);font:inherit;text-align:left;padding:8px 10px 8px 30px;border-radius:8px;cursor:pointer}
+.qp .qpi:hover{background:var(--surface-2)}
+.qp .qpi[aria-current="true"]{background:var(--brand);color:var(--on-brand);font-weight:700}
+.qp .qpx{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
+.qp .qpx .qpi{padding-left:10px}
+@media (max-width:640px){ .qp{order:9;flex:1 1 100%;width:100%;max-width:none} .qp .qpp{left:0;right:auto;width:100%} }
 </style>
 <script src="/vitalagroenegocios/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
@@ -467,6 +486,7 @@ async function iniciar() {
     if (S.time) {
       const emps = [...new Set(S.proprios.map(q => q.empresa))].sort((a, b) => a.localeCompare(b));
       sel.innerHTML = emps.map(e => `<optgroup label="${esc(e)}">${S.proprios.filter(q => q.empresa === e).sort((a, b) => (b.geral - a.geral) || a.nome.localeCompare(b.nome)).map(q => opt(q.id, q.nome.replace(" · " + e, ""))).join("")}</optgroup>`).join("") + (S.outros.length ? opt(MARC, "📌 Marcadas para mim") : "") + `<option value="__liberar">＋ Liberar Kanban para um cliente…</option>`;
+      montarSeletor(sel, emps);
     } else sel.innerHTML = opts.map(([v, t]) => opt(v, t)).join("");
     sel.onchange = () => { if (sel.value === "__liberar") { sel.value = S.marc ? MARC : (S.q ? S.q.id : ""); liberarKanban(); return; } S.marc = sel.value === MARC; S.q = S.marc ? null : S.proprios.find(q => q.id === sel.value); try { localStorage.setItem("cq.q", sel.value); } catch {} S.filtro = "todas"; S.fCriado = ""; S.fAtrib = ""; carregar(); };
   }
@@ -507,7 +527,38 @@ async function liberarKanban() {
 }
 function falha(msg) { $("#app").innerHTML = `<div class="card stack"><h2 style="font-size:1.2rem">Quadro de tarefas</h2><p>${esc(msg)}</p><div><a class="btn" href="/vitalagroenegocios/cliente/">Voltar para a Área do cliente</a></div></div>`; }
 
+/* seletor com clientes que expandem e recolhem; o <select> continua por baixo como fonte do valor */
+function montarSeletor(sel, emps) {
+  let box = document.getElementById("qp");
+  if (!box) { box = document.createElement("div"); box.className = "qp"; box.id = "qp"; box.innerHTML = `<button type="button" class="qpb" aria-haspopup="true" aria-expanded="false"><span></span><b aria-hidden="true">▾</b></button><div class="qpp" hidden><input class="qps" type="search" placeholder="Buscar cliente ou quadro" aria-label="Buscar quadro"><div class="qpl"></div></div>`; sel.after(box); }
+  sel.hidden = true;
+  const btn = box.querySelector(".qpb"), pan = box.querySelector(".qpp"), busca = box.querySelector(".qps"), lista = box.querySelector(".qpl");
+  let abertos = new Set(); try { abertos = new Set(JSON.parse(localStorage.getItem("cq.abertos") || "[]")); } catch {}
+  const grava = () => { try { localStorage.setItem("cq.abertos", JSON.stringify([...abertos])); } catch {} };
+  const atual = () => sel.value;
+  const quadrosDe = e => S.proprios.filter(q => q.empresa === e).sort((a, b) => (b.geral - a.geral) || a.nome.localeCompare(b.nome));
+  const rotulo = () => { const o = sel.options[sel.selectedIndex]; const g = o && o.parentElement && o.parentElement.label; btn.querySelector("span").textContent = o ? (g ? g + " · " : "") + o.textContent : "Escolha o quadro"; };
+  const desenha = () => {
+    const q = busca.value.trim().toLowerCase(), eAtual = (S.q && S.q.empresa) || "";
+    lista.innerHTML = emps.map(e => {
+      const qs = quadrosDe(e).filter(x => !q || e.toLowerCase().includes(q) || x.nome.toLowerCase().includes(q)); if (!qs.length) return "";
+      const on = !!q || abertos.has(e) || (e === eAtual && !abertos.has("!" + e));
+      return `<div class="qpg${on ? " on" : ""}"><button type="button" data-g="${esc(e)}" aria-expanded="${on}"><i aria-hidden="true">▸</i>${esc(e)}<small>${qs.length}</small></button>${on ? qs.map(x => `<button type="button" class="qpi" data-v="${x.id}" aria-current="${x.id === atual()}">${esc(x.nome.replace(" · " + e, ""))}</button>`).join("") : ""}</div>`;
+    }).join("") + `<div class="qpx">${S.outros.length ? `<button type="button" class="qpi" data-v="${MARC}" aria-current="${atual() === MARC}">📌 Marcadas para mim</button>` : ""}<button type="button" class="qpi" data-v="__liberar">＋ Liberar Kanban para um cliente…</button></div>`;
+  };
+  const fecha = () => { pan.hidden = true; btn.setAttribute("aria-expanded", "false"); };
+  btn.onclick = e => { e.stopPropagation(); if (!pan.hidden) return fecha(); pan.hidden = false; btn.setAttribute("aria-expanded", "true"); busca.value = ""; desenha(); const c = lista.querySelector('[aria-current="true"]'); c && c.scrollIntoView({ block: "nearest" }); if (matchMedia("(pointer:fine)").matches) busca.focus(); };
+  busca.oninput = desenha;
+  lista.onclick = e => {
+    const g = e.target.closest("[data-g]"); if (g) { const n = g.dataset.g; if (abertos.has(n) || (S.q && S.q.empresa === n && !abertos.has("!" + n))) { abertos.delete(n); if (S.q && S.q.empresa === n) abertos.add("!" + n); } else { abertos.add(n); abertos.delete("!" + n); } grava(); desenha(); return; }
+    const it = e.target.closest("[data-v]"); if (!it) return; fecha(); sel.value = it.dataset.v; sel.dispatchEvent(new Event("change")); rotulo();
+  };
+  document.addEventListener("click", e => { if (!e.composedPath().includes(box)) fecha(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !pan.hidden) { fecha(); btn.focus(); } });
+  window.qpSync = rotulo; rotulo();
+}
 async function carregar(silencioso) {
+  if (window.qpSync) window.qpSync();
   let c, k, m;
   if (S.marc) {
     const ids = S.outros.map(q => q.id);

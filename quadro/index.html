@@ -559,7 +559,7 @@ function montarSeletor(sel, emps) {
   window.qpSync = rotulo; rotulo();
 }
 async function carregar(silencioso) {
-  if (window.qpSync) window.qpSync();
+  if (window.qpSync) window.qpSync(); window.VITAL_EMP = (S.q && S.q.empresa) || "";
   let c, k, m;
   if (S.marc) {
     const ids = S.outros.map(q => q.id);
@@ -1018,6 +1018,13 @@ async function mover(k, colId, ordem) {
   Object.assign(k, patch); k._v = S.marc ? "v:" + para.nome : (S.cols.some(c => c.id === colId) ? colId : ((S.cols.find(c => c.nome === para.nome) || {}).id || vis)); render();
   const { error } = await sb.from("cq_cartoes").update(patch).eq("id", k.id);
   if (error) { toast("Não foi possível mover: " + error.message); return carregar(true); }
+  if (mudou && para.concluida && window.VitalEgg) { const hoje = new Date().toISOString().slice(0, 10), u = S.user && S.user.id;
+    const nHoje = S.cards.filter(c => colDe(c.coluna).concluida && c.concluido_em && String(c.concluido_em).slice(0, 10) === hoje && (!u || c.responsavel === u || c.criado_por === u || (c.participantes || []).includes(u))).length;
+    const afz = S.cols.find(c => /a fazer/i.test(c.nome || "")), restam = afz ? S.cards.filter(c => c._v === afz.id || c.coluna === afz.id).length : -1;
+    const F = ["Porteira fechada, gado no curral! 🐄", "Mais uma pra conta! ✅", "Tá voando, hein? 🚀", "Isso que é produtividade de safra recorde! 🌾"];
+    if (restam === 0) window.VitalEgg.festa("🎉 Coluna A fazer zerada! Porteira fechada, gado no curral! 🐄");
+    else if (nHoje && nHoje % 10 === 0) window.VitalEgg.festa(`🏆 ${nHoje} tarefas concluídas hoje! ` + F[(nHoje / 10) % F.length]);
+    else if (Math.random() < 0.25) window.VitalEgg.aviso(F[Math.floor(Math.random() * F.length)], 2200); }
   if (mudou) await evento(para.concluida ? "concluiu" : "moveu", `${de.nome} → ${para.nome}` + (ag ? ` (aguardando ${ag.nome})` : ""), k.id, k.quadro);
   return true;
 }
@@ -1507,5 +1514,6 @@ $("#dlg").addEventListener("close", () => { S.abertoId = null; });
 iniciar().catch(e => falha("Erro: " + e.message));
 })();
 </script>
+<script src="/vitalagroenegocios/eggs.js?v=1" defer></script>
 </body>
 </html>

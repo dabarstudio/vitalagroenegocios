@@ -1111,8 +1111,17 @@ function marcaPainel(emp){ const m=marcaDe(emp), ed=podeMarca();
   return ed ? `<span class="pnlogo vazio" data-mlogo="1" role="button" tabindex="0" title="Enviar a logo deste cliente">+ logo</span>` : ""; }
 async function aplicarMarcaTopo(){ const box=$("#cMarca"), img=$("#cMarcaImg"); if (!box) return; if (typeof cur!=="undefined" && cur==="painel" && P.emp) return topoPainel(P.emp);
   let emp=null; if (S.papel==="cliente"||S.papel==="gestor") { if (!S.minhasEmp) { try { const g=await sb.from("gestor_empresas").select("empresa").eq("user_id",S.user.id); S.minhasEmp=(g.data||[]).map(x=>x.empresa); } catch { S.minhasEmp=[]; } } emp=(S.minhasEmp||[]).find(e=>marcaDe(e)); }
-  const m=emp?marcaDe(emp):null; box.classList.toggle("on",!!m); if (m) { img.src=m; img.alt="Logo "+emp; } }
-function topoPainel(emp){ const T=$("#topoT"), Su=$("#topoS"), box=$("#cMarca"), img=$("#cMarcaImg"); if (!T) return;
+  const m=emp?marcaDe(emp):null; box.classList.toggle("on",!!m); if (m) { img.src=m; img.alt="Logo "+emp; }
+  const eg=emp||(S.minhasEmp||[])[0]||""; window.VITAL_EMP=eg; if (eg && (S.papel==="cliente"||S.papel==="gestor")) egAniversario(eg); }
+/* aniversário de parceria (ano do 1º marco da jornada) vira fala da mascote e um confete por mês */
+async function egAniversario(emp){ if (S.egAniv===emp) return; S.egAniv=emp; try {
+  const r=await sb.from("jor_marcos").select("titulo,descricao,ordem").eq("empresa",emp).order("ordem").limit(3); const t=(r.data||[]).map(x=>(x.titulo||"")+" "+(x.descricao||"")).join(" ");
+  const a=(t.match(/\b(20[0-3]\d)\b/)||[])[1]; if (!a) return; const n=new Date().getFullYear()-(+a); if (n<1) return;
+  window.VITAL_EGG_EXTRA=[`🎂 ${n} ano${n>1?"s":""} de parceria com a Vital, desde ${a}! Obrigado pela confiança 💚`];
+  const k="vegg.aniv."+new Date().toISOString().slice(0,7); let ja=null; try { ja=localStorage.getItem(k); } catch {}
+  if (!ja && window.VitalEgg) { setTimeout(()=>window.VitalEgg.festa(`🎂 ${n} ano${n>1?"s":""} de parceria com a Vital!`),1800); try { localStorage.setItem(k,"1"); } catch {} }
+} catch {} }
+function topoPainel(emp){ window.VITAL_EMP=emp||""; const T=$("#topoT"), Su=$("#topoS"), box=$("#cMarca"), img=$("#cMarcaImg"); if (!T) return;
   if (!emp) { T.textContent="Área do cliente"; Su.textContent="Entregáveis da Vital Agro & Negócios"; if (img) { img.removeAttribute("data-mlogo"); img.style.cursor=""; img.removeAttribute("title"); } aplicarMarcaTopo(); return; }
   const aba=(document.querySelector("#v-painel [data-mzs][aria-selected=true]")||document.querySelector("#v-painel .pns [aria-selected=true]")||{}).textContent||"";
   T.textContent=emp; Su.textContent="Painéis financeiros"+(aba?" · "+aba.trim():"");
@@ -2104,5 +2113,6 @@ boot();
 </script>
 <script src="/vitalagroenegocios/cliente/jornada.js?v=3"></script>
 <script src="/vitalagroenegocios/cliente/fichas.js?v=1"></script>
+<script src="/vitalagroenegocios/eggs.js?v=1" defer></script>
 </body>
 </html>

@@ -1675,7 +1675,7 @@ async function mzExt(D){
 function renderMatriz(el, D, emps){
   if (D.ext && !D.__ext && !D.__extErr) { el.innerHTML=`<div class="card"><p class="note" style="margin:0">Carregando lançamentos do painel…</p></div>`;
     mzExt(D).catch(e=>{ D.__extErr=String(e.message||e); console.warn("mzExt",e); }).finally(()=>renderMatriz(el,D,emps)); return; }
-  const secs=[["resumo","Resumo"],...["dre","dfc","bp","cli"].filter(s=>D.tabs.some(t=>t.sec===s)).map(s=>[s,{dre:"DRE",dfc:"DFC",bp:"Balanço (BP)",cli:"Clientes e recebimento"}[s]])];
+  const secs=[["resumo","Resumo"],...["dre","dfc","bp","cli","capex"].filter(s=>D.tabs.some(t=>t.sec===s)).map(s=>[s,{dre:"DRE",dfc:"DFC",bp:"Balanço (BP)",cli:"Clientes e recebimento",capex:"Investimentos (CAPEX)"}[s]])];
   if (D.tabs.some(t=>t.ativ==="Agricultura")) secs.push(["safra","Propriedade e safra"]);
   if (temAbaTarefas()) secs.push(["tar","Tarefas"]);
   if (window.FT_TEM && window.FT_TEM(P.emp)) secs.push(["ft","Fichas e preços"]);

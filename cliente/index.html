@@ -1903,6 +1903,17 @@ function mzCult(D,t,ti,j){
   });
   return h+`</tbody></table></div></div>`;
 }
+/* ===== blocos visuais (gamificação): meta com barra, trilha de etapas e conquistas/missões ===== */
+function mzGami(t){
+ if (!t.meta && !t.trilha && !t.badges) return "";
+ const pc=v=>Math.max(0,Math.min(100,Math.round(v*100)));
+ let h=`<style>.gm{display:grid;gap:14px;margin:12px 0}.gmm{padding:16px;border-radius:16px;background:linear-gradient(135deg,#eaf6ec,#f6fbf3);border:1px solid #cfe7d3}.gmm h4{margin:0 0 4px;font-size:1.05rem;color:var(--brand,#00582F)}.gmb{height:22px;border-radius:999px;background:#dfe9e1;overflow:hidden;position:relative;margin:10px 0 6px}.gmb i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#79C25B,#007941)}.gmb b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.8rem;color:#123}.gmt{display:grid;grid-template-columns:repeat(var(--gc,4),minmax(0,1fr));gap:10px}@media(max-width:700px){.gmt{grid-template-columns:repeat(2,minmax(0,1fr))}}.gmc{padding:12px;border-radius:14px;border:1px solid var(--line,#e3e8e4);background:var(--surface,#fff);display:grid;gap:4px}.gmc .ic{font-size:1.6rem;line-height:1}.gmc b{font-size:.95rem}.gmc small{color:var(--muted,#667)}.gms{height:8px;border-radius:999px;background:#eef1ee;overflow:hidden}.gms i{display:block;height:100%;background:#D69E2E}.gmg{display:flex;flex-wrap:wrap;gap:8px}.gmd{display:flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;border:1px solid;font-size:.85rem}.gmd.ok{background:#eef8ef;border-color:#bfe3c3}.gmd.no{background:#fff7e6;border-color:#f3d79a}.gmd span{font-size:1.2rem}</style><div class="gm">`;
+ if (t.meta) { const m=t.meta, p=m.alvo?m.atual/m.alvo:0; h+=`<div class="gmm"><h4>${esc(m.ic||"🎯")} ${esc(m.t)}</h4><div class="gmb"><i style="width:${pc(p)}%"></i><b>${Math.round(p*100)}%${p>=1?" 🎉 meta batida":""}</b></div><small>${esc(m.s||"")}</small></div>`; }
+ if (t.trilha) h+=`<div><b style="display:block;margin-bottom:8px">${esc(t.trilhaT||"Trilha")}</b><div class="gmt" style="--gc:${t.trilha.length<=6?t.trilha.length:Math.ceil(t.trilha.length/2)}">${t.trilha.map(x=>`<div class="gmc"><span class="ic">${esc(x.ic||"📍")}</span><b>${esc(x.n)}</b><small>${esc(x.s||"")}</small>${x.pct!=null?`<div class="gms" title="${pc(x.pct)}%"><i style="width:${pc(x.pct)}%"></i></div><small>${esc(x.ps||"")} ${pc(x.pct)}%</small>`:""}</div>`).join("")}</div></div>`;
+ if (t.badges) { const ok=t.badges.filter(b=>b.ok), no=t.badges.filter(b=>!b.ok);
+  h+=`<div><b style="display:block;margin-bottom:8px">🏆 Conquistas (${ok.length}) · 🎯 Missões (${no.length})</b><div class="gmg">${[...ok,...no].map(b=>`<div class="gmd ${b.ok?"ok":"no"}" title="${esc(b.s||"")}"><span>${esc(b.ic||(b.ok?"🏅":"🎯"))}</span><div><b>${esc(b.t)}</b>${b.s?`<br><small>${esc(b.s)}</small>`:""}</div></div>`).join("")}</div></div>`; }
+ return h+`</div>`;
+}
 function mzTabela(D,t,ti){
   const idx=mzIdx(t); if (t.met && idx.length===1 && t.met[idx[0]]) return mzCult(D,t,ti,idx[0]); if (!idx.length) return `<div class="card"><h3 class="pnt">${esc(t.titulo)}</h3><p class="note">Sem dados no período escolhido.</p></div>`;
   // grupos: cada linha "grp" abre/fecha as linhas "item" logo abaixo dela
@@ -1911,7 +1922,7 @@ function mzTabela(D,t,ti){
   const showTot = t.meses || t.tot!==false;
   let h=`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3 class="pnt" style="margin:0">${esc(t.titulo)}${t.meses?" · "+esc(mzPerNome()):""}</h3>
     <div class="row" style="gap:6px">${temGrp?`<button class="btn sm ghost" data-mzab="${ti}">Abrir tudo</button>`:""}<button class="btn sm ghost" data-mzcsv="${ti}">Baixar planilha (CSV)</button></div></div>
-    ${t.cards?`<div class="kpis" style="margin:12px 0">${t.cards.map(c=>kcard(c.ic,c.t,c.v,c.s,c.neg,{ser:c.ser,ti,li:c.lin?t.linhas.findIndex(l=>l.n===c.lin):null})).join("")}</div>`:""}${insHTML(t.ins)}
+    ${t.cards?`<div class="kpis" style="margin:12px 0">${t.cards.map(c=>kcard(c.ic,c.t,c.v,c.s,c.neg,{ser:c.ser,ti,li:c.lin?t.linhas.findIndex(l=>l.n===c.lin):null})).join("")}</div>`:""}${mzGami(t)}${insHTML(t.ins)}
     ${t.nota?`<p class="note">${esc(t.nota)}</p>`:""}${temGrp?`<p class="note">Toque numa linha com ▸ para abrir o grupo.${mzTemLc(D,t)?" Toque no nome de uma conta sublinhada para ver os lançamentos, ou num valor para ver os lançamentos daquele mês.":""}</p>`:""}
     <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${idx.map(i=>`<th>${esc(mzCol(t,i))}</th>`).join("")}${showTot&&t.meses?"<th>Total</th>":""}</tr></thead><tbody>`;
   t.linhas.forEach((l,i)=>{

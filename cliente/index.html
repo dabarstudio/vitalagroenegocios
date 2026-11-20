@@ -1123,6 +1123,7 @@ function renderPainel(){
   if (D.tipo==="matriz") return renderMatriz(el, D, emps);
   const secs=[["resumo","Resumo"],["dre","DRE"],["dfc","DFC e conciliação"],["bp","Balanço (BP)"],["lanc","Lançamentos"],["an","Análises"],["pend","Pendências"]];
   if (temAbaTarefas()) secs.push(["tar","Tarefas"]); else if (P.sec==="tar") P.sec="resumo";
+  if (window.FT_TEM && window.FT_TEM(P.emp)) secs.push(["ft","Fichas e preços"]); else if (P.sec==="ft") P.sec="resumo";
   el.innerHTML = `<div class="pnh"><div>${marcaPainel(P.emp)}<div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
       <p class="note" style="margin:2px 0 0">Dados até ${mesC(D.meses[D.meses.length-1])} · atualizado em ${esc(D.gerado.split(" ")[0].split("-").reverse().join("/"))} · fonte: planilha Gestão BPO (lançamentos confirmados)</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
@@ -1137,7 +1138,7 @@ function renderPainel(){
   el.querySelectorAll("[data-pns]").forEach(b=>b.onclick=()=>{ P.sec=b.dataset.pns; P.an=null; el.querySelectorAll("[data-pns]").forEach(x=>x.setAttribute("aria-selected", x===b)); corpo(); });
   corpo();
 }
-function corpo(){ QB.length=0; const D=pac(), b=$("#pnBody"); if (P.sec==="tar") { tarCorpo(b); return; } b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, lanc:secLanc, an:secAN, pend:secPend})[P.sec](D); ligar(D);
+function corpo(){ QB.length=0; const D=pac(), b=$("#pnBody"); if (P.sec==="tar") { tarCorpo(b); return; } if (P.sec==="ft") { window.renderFT && window.renderFT(b, P.emp); return; } b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, lanc:secLanc, an:secAN, pend:secPend})[P.sec](D); ligar(D);
   if (P.sec==="bp" && !(S.pnBens && P.emp in S.pnBens)) carregarBens().then(corpo);
   if ((P.sec==="lanc"||precisaLanc()) && !(S.lanc && P.emp in S.lanc)) carregarLanc().then(corpo); }
 /* ===== imobilizado editável pelo cliente (pn_bens) e sugestões de reclassificação (pn_sugestoes) ===== */
@@ -1677,6 +1678,7 @@ function renderMatriz(el, D, emps){
   const secs=[["resumo","Resumo"],...["dre","dfc","bp"].filter(s=>D.tabs.some(t=>t.sec===s)).map(s=>[s,{dre:"DRE",dfc:"DFC",bp:"Balanço (BP)"}[s]])];
   if (D.tabs.some(t=>t.ativ==="Agricultura")) secs.push(["safra","Propriedade e safra"]);
   if (temAbaTarefas()) secs.push(["tar","Tarefas"]);
+  if (window.FT_TEM && window.FT_TEM(P.emp)) secs.push(["ft","Fichas e preços"]);
   if (!secs.some(s=>s[0]===MZ.sec)) MZ.sec="resumo";
   const anos=mzAnos(D), ult=mzUlt(D);
   el.innerHTML = `<div class="pnh"><div>${marcaPainel(P.emp)}<div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
@@ -1698,6 +1700,7 @@ function mzLigarFiltros(D){ const f=$("#mzFil"); if(!f) return; const re=()=>{ f
 function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return;
   if (MZ.sec==="safra") { agrCorpo(b); return; }
   if (MZ.sec==="tar") { tarCorpo(b); return; }
+  if (MZ.sec==="ft") { window.renderFT ? window.renderFT(b, P.emp) : (b.innerHTML=`<div class="card">Carregando…</div>`); return; }
   b.innerHTML = (D.verif&&D.verif[MZ.sec]?`<div class="card" role="status" style="border-left:4px solid #D69E2E;padding:10px 14px"><p class="note" style="margin:0;color:#B7791F"><b>⚠ Em verificação</b> · ${esc(String(D.verif[MZ.sec]).replace(/^Em verificação:\s*/,""))}</p></div>`:"") + (MZ.sec==="resumo" ? mzResumo(D) : (D.tabs.map((t,ti)=>t.sec===MZ.sec&&mzTabVis(t)?mzTabela(D,t,ti):"").join("")||(MZ.sec!=="resumo"&&(MZ.ativ||MZ.cul)?`<div class="card"><p class="note" style="margin:0">Nenhuma tabela desta seção para o filtro escolhido.</p></div>`:"")) + (D.obs&&D.obs[MZ.sec]?`<div class="card"><p class="note" style="margin:0">${esc(D.obs[MZ.sec])}</p></div>`:""));
   mzLigar(D); }
 
@@ -1985,7 +1988,7 @@ function mzLanc(D,ti,i,mi){
   d.showModal(); reg("ver_lancamentos", P.emp+" · "+l.n).catch(()=>{});
 }
 
-window.VITAL = { S, sb, esc, toast, fmtD, MC, empresasConhecidas };
+window.VITAL = { S, sb, esc, toast, fmtD, MC, empresasConhecidas, renderPainel, marcaDe: typeof marcaDe==="function"?marcaDe:null };
 boot();
 })();
 </script>
@@ -2005,5 +2008,6 @@ boot();
 })();
 </script>
 <script src="/vitalagroenegocios/cliente/jornada.js?v=3"></script>
+<script src="/vitalagroenegocios/cliente/fichas.js?v=1"></script>
 </body>
 </html>

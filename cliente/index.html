@@ -994,7 +994,7 @@ function tarCorpo(b){ const emp=P.emp, qs=quadrosDe(emp), time=S.papel==="admin"
   const s=$("#tqSel"); if (s) s.onchange = () => { TQ[emp] = s.value; tarCorpo(b); };
 }
 async function carregarPaineis(){ if (!sb) return; await carregarMarcas(); const r = await sb.from("ent_paineis").select("empresa,chave,dados,atualizado_em").neq("chave","lancamentos"); S.paineis = r.error ? [] : (r.data||[]).filter(x=>x.dados && (x.dados.fatos || x.dados.tipo==="matriz") && !(x.dados.rascunho && (S.papel==="cliente"||S.papel==="gestor"))).sort((a,b)=>a.empresa.localeCompare(b.empresa,"pt")); }
-function pac(){ const l=S.paineis||[]; const x = l.find(p=>p.empresa===P.emp) || l[0]; if (x) P.emp = x.empresa; return x && x.dados; }
+function pac(){ const l=S.paineis||[]; if (!P.emp) { try { P.emp = localStorage.getItem("vital_pn_emp") || ""; } catch {} } const x = l.find(p=>p.empresa===P.emp) || l[0]; if (x) { P.emp = x.empresa; try { localStorage.setItem("vital_pn_emp", P.emp); } catch {} } return x && x.dados; }
 function mesesPrev(D){ const u=D.meses[D.meses.length-1]; let y=+u.slice(0,4), m=+u.slice(5,7); const o=[]; for(let i=0;i<4;i++){ m++; if(m>12){m=1;y++;} o.push(y+"-"+String(m).padStart(2,"0")); } return o; }
 function idxPer(D){ const n=D.meses.length, a=[...Array(n).keys()];
   if (P.per==="12") return a.slice(Math.max(0,n-12)); if (P.per==="tudo") return a; return a.filter(i=>D.meses[i].startsWith(P.per)); }
@@ -1632,7 +1632,7 @@ function baixarDRE(D){
 }
 
 /* ===== painéis "matriz": DRE, DFC e BP extraídos das planilhas de gestão de cada cliente ===== */
-const MZ = { per:"12", sec:"resumo", ab:{}, ativ:"", cul:"", saf:"" };
+const MZ = { per:"12", sec:(()=>{ try { return localStorage.getItem("vital_pn_sec") || "resumo"; } catch { return "resumo"; } })(), ab:{}, ativ:"", cul:"", saf:"" };
 // Filtros de atividade/cultura/safra: tabs podem ter "ativ" (ex.: "Agricultura", "Pecuária") e "cult" (lista paralela a cols, "Cultura|Safra" ou null)
 const mzCultOk = c => !!c && (!MZ.cul || c.split("|")[0]===MZ.cul) && (!MZ.saf || c.split("|")[1]===MZ.saf);
 function mzTabVis(t){ if (MZ.ativ && t.ativ!==MZ.ativ) return false; if (MZ.cul) return !!(t.cult && t.cult.some(mzCultOk)); return true; }
@@ -1697,7 +1697,7 @@ function mzLigarFiltros(D){ const f=$("#mzFil"); if(!f) return; const re=()=>{ f
   if ($("#mzAt")) $("#mzAt").onchange=e=>{ MZ.ativ=e.target.value; if (MZ.ativ==="Pecuária") { MZ.cul=""; MZ.saf=""; } re(); };
   if ($("#mzCu")) $("#mzCu").onchange=e=>{ MZ.cul=e.target.value; MZ.saf=""; if (MZ.cul && !MZ.ativ) MZ.ativ="Agricultura"; re(); };
   if ($("#mzSa")) $("#mzSa").onchange=e=>{ MZ.saf=e.target.value; re(); }; }
-function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return;
+function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return; try { localStorage.setItem("vital_pn_sec", MZ.sec); } catch {}
   if (MZ.sec==="safra") { agrCorpo(b); return; }
   if (MZ.sec==="tar") { tarCorpo(b); return; }
   if (MZ.sec==="ft") { window.renderFT ? window.renderFT(b, P.emp) : (b.innerHTML=`<div class="card">Carregando…</div>`); return; }

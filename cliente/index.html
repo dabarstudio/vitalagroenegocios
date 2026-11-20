@@ -1973,10 +1973,10 @@ function mzLanc(D,ti,i,mi){
   const dem = (mi!=null ? [mi] : mzIdx(t)).reduce((a,j)=>a+(+l.v[j]||0),0);
   const mc = c => /^\d{4}-\d{2}$/.test(c) ? mesC(c) : c;
   const per = mi!=null ? mc(t.cols[mi]) : (t.meses ? mzPerNome() : mzIdx(t).map(j=>t.cols[j]).join(" · "));
-  let h = `<div class="lch"><div><div class="eyebrow">${esc(t.titulo)}</div><h3 style="margin:2px 0 0">${esc(l.n)}</h3><p class="note" style="margin:2px 0 0">${esc(per)} · ${sel.length} lançamento${sel.length===1?"":"s"} · total <b>${fRc(tot)}</b></p></div>
+  let h = `<div class="lch"><div><div class="eyebrow">${esc(t.titulo)}</div><h3 style="margin:2px 0 0">${esc(l.n)}</h3><p class="note" style="margin:2px 0 0">${esc(per)} · ${sel.length} ${l.qt?"registro"+(sel.length===1?"":"s")+" · soma "+fRc(tot):"lançamento"+(sel.length===1?"":"s")+" · total <b>"+fRc(tot)+"</b>"}</p></div>
     <button type="button" class="btn sm ghost" data-lcx aria-label="Fechar">Fechar</button></div>`;
   if (!sel.length) h += `<p class="note">Nenhum lançamento desta conta no período.</p>`;
-  if (Math.abs(tot-dem)>=1) h += `<p class="note lcw">A soma dos lançamentos (${fRc(tot)}) é diferente do valor do demonstrativo (${fRc(dem)}). A diferença vem de ajustes feitos direto na planilha de gestão.</p>`;
+  if (!l.qt && Math.abs(tot-dem)>=1) h += `<p class="note lcw">A soma dos lançamentos (${fRc(tot)}) é diferente do valor do demonstrativo (${fRc(dem)}). A diferença vem de ajustes feitos direto na planilha de gestão.</p>`;
   h += ordem.map(m=>{ const xs=porMes[m].slice().sort((a,b)=>(b[1].slice(6)+b[1].slice(3,5)+b[1].slice(0,2)).localeCompare(a[1].slice(6)+a[1].slice(3,5)+a[1].slice(0,2)));
     const st=xs.reduce((a,x)=>a+x[4],0);
     return `<div class="lcm"><div class="lcmh"><b>${esc(mc(m))}</b><span>${fRc(st)}</span></div>${xs.map(x=>`<div class="lci"><div class="lcl"><b>${esc(x[1]||"sem data")}</b><span class="${x[4]<0?"neg":""}">${fRc(x[4])}</span></div><div class="lcd">${esc(x[2]||"Sem fornecedor")}${x[3]?" · "+esc(x[3]):""}</div><div class="lcd note">${x[5]?"Conta: "+esc(x[5]):""}${x[6]?" · Nota "+esc(x[6]):""}</div></div>`).join("")}</div>`; }).join("");

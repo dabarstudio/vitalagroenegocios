@@ -162,6 +162,7 @@ a.btn{color:var(--fg)} a.btn.primary{color:var(--on-brand)}
 .gtip{position:absolute;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.82rem;display:grid;gap:3px;box-shadow:0 6px 18px rgba(0,0,0,.12);pointer-events:none;min-width:170px}
 .gtip span{display:flex;align-items:center;gap:6px}.gtip i{width:10px;height:10px;border-radius:2px;display:inline-block}
 .tw{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;overscroll-behavior-x:contain;scrollbar-width:auto;scrollbar-color:#8aa892 #eef3ee;touch-action:pan-x pan-y}.tw::-webkit-scrollbar{height:12px;width:12px}.tw::-webkit-scrollbar-thumb{background:#8aa892;border-radius:8px;border:3px solid #eef3ee}.tw::-webkit-scrollbar-track{background:#eef3ee;border-radius:8px}
+.dre.nm th,.dre.nm td{text-align:left;white-space:normal;vertical-align:middle}.dre.nm th:first-child,.dre.nm td:first-child{position:static;min-width:170px}.dre.nm td.num,.dre.nm th.num{text-align:right;white-space:nowrap}.dre.nm td:last-child{text-align:right}.acb{white-space:nowrap}.acok{white-space:nowrap;font-size:.82rem;color:var(--ok,#007941);font-weight:600}.acdet{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}.acdet div{background:var(--surface-2);border-radius:10px;padding:8px 10px;display:grid;gap:2px}.acdet small{color:var(--muted);font-size:.75rem}.acf{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.acf label{display:grid;gap:4px;font-size:.85rem;font-weight:600}.acf select,.acf input{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
 .dre thead th{z-index:2;box-shadow:0 1px 0 var(--line)}.dre thead th:first-child{z-index:3}
 .dre tr.lc td[data-mzm]{cursor:pointer}.dre tr.lc td[data-mzm]:hover{background:var(--surface-2);text-decoration:underline dotted}
 .lcb{all:unset;cursor:pointer;color:inherit;text-decoration:underline dotted;text-underline-offset:3px}.lcb:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
@@ -1914,6 +1915,40 @@ function mzGami(t){
   h+=`<div><b style="display:block;margin-bottom:8px">🏆 Conquistas (${ok.length}) · 🎯 Missões (${no.length})</b><div class="gmg">${[...ok,...no].map(b=>`<div class="gmd ${b.ok?"ok":"no"}" title="${esc(b.s||"")}"><span>${esc(b.ic||(b.ok?"🏅":"🎯"))}</span><div><b>${esc(b.t)}</b>${b.s?`<br><small>${esc(b.s)}</small>`:""}</div></div>`).join("")}</div></div>`; }
  return h+`</div>`;
 }
+/* ===== Ação do painel → cartão no quadro de tarefas ===== */
+MZ.env = MZ.env || {};
+function mzAcChave(t,l){ const b=[l.n,...(l.v||[]).slice(0,2)].join("|"); let h=0; for (const c of b) h=(h*31+c.charCodeAt(0))|0; return (t.acao.prefixo||"painel-")+(h>>>0).toString(36); }
+function mzAcEnv(t){ const k=P.emp+"|"+(t.acao.prefixo||""); const e=MZ.env[k];
+  if (e===undefined && sb) { MZ.env[k]=null; sb.rpc("cq_acoes_enviadas",{p_empresa:P.emp,p_prefixo:t.acao.prefixo||"painel-"}).then(({data})=>{ const m={}; (data||[]).forEach(r=>m[r.chave]=r); MZ.env[k]=m; mzCorpo(); }); }
+  return e||{}; }
+function mzAcBtn(t,ti,i){ const l=t.linhas[i], txt=String(l.v[t.acao.col]||"Enviar"), e=mzAcEnv(t)[mzAcChave(t,l)];
+  if (e) return `<span class="acok" title="Já está no quadro de tarefas">${e.concluido?"✅ Feito":"📋 No quadro"}${e.responsavel?" · "+esc(e.responsavel.split(" ")[0]):""}</span>`;
+  return `<button type="button" class="btn sm acb" data-mzac="${ti}:${i}" title="Enviar como cartão para o quadro de tarefas">📋 ${esc(txt.split(":")[0])}</button>`; }
+async function mzAcAbrir(D,ti,i){ const t=D.tabs[ti], l=t.linhas[i], a=t.acao, c=t.cols;
+  if (!sb) return toast("Faça login para enviar ao quadro.");
+  const { data: ps, error } = await sb.rpc("cq_pessoas",{p_empresa:P.emp}); if (error) return toast("Não consegui carregar as pessoas: "+error.message);
+  const pess=(ps||[]).filter(p=>p.nome).sort((x,y)=>x.nome.localeCompare(y.nome)); if(!pess.length) return toast("Esta empresa ainda não tem quadro de tarefas.");
+  const def=pess.find(p=>p.nome.toLowerCase().startsWith((a.resp||"").toLowerCase()))||pess[0];
+  const pz=new Date(Date.now()+(a.prazo||7)*864e5).toISOString().slice(0,10);
+  const det=c.map((h,j)=>j===a.col?null:[h,l.v[j]]).filter(x=>x&&x[1]!=null&&x[1]!=="");
+  const fv=v=>typeof v==="number"?fRc(v):String(v);
+  let d=document.getElementById("mzAc"); if(!d){ d=document.createElement("dialog"); d.id="mzAc"; d.className="lcdlg"; document.body.appendChild(d); d.addEventListener("click",e=>{ if(e.target===d) d.close(); }); }
+  d.innerHTML=`<div class="lch"><div><div class="eyebrow">Enviar ao quadro de tarefas</div><h3 style="margin:2px 0 0">${esc(l.n)}</h3></div><button type="button" class="btn sm ghost" data-x>Fechar</button></div>
+   <div class="acdet">${det.map(([h,v])=>`<div><small>${esc(h)}</small><b>${esc(fv(v))}</b></div>`).join("")}</div>
+   <p class="note" style="margin:8px 0">${esc(l.v[a.col]||"")}</p>
+   <div class="acf"><label>Responsável<select data-r>${pess.map(p=>`<option value="${p.user_id}"${p===def?" selected":""}>${esc(p.nome)}</option>`).join("")}</select></label>
+   <label>Prazo<input type="date" data-p value="${pz}"></label>
+   <label>Prioridade<select data-pr><option value="baixa">Baixa</option><option value="media" selected>Média</option><option value="alta">Alta</option></select></label></div>
+   <p class="note" style="margin:8px 0 0">O cartão vai para a coluna “A fazer” do quadro do responsável.</p>
+   <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px"><button type="button" class="btn sm ghost" data-x>Cancelar</button><button type="button" class="btn sm" data-ok>📋 Criar cartão</button></div>`;
+  d.querySelectorAll("[data-x]").forEach(x=>x.onclick=()=>d.close());
+  d.querySelector("[data-ok]").onclick=async ev=>{ const bt=ev.currentTarget; bt.disabled=true; bt.textContent="Enviando…";
+    const acao=String(l.v[a.col]||""), tit=(a.titulo||"Reclassificar")+": "+l.n+(l.v[0]?" · "+l.v[0]:"")+(typeof l.v[1]==="number"?" · "+fRc(l.v[1]):"");
+    const desc=det.map(([h,v])=>h+": "+fv(v)).join("\n")+(acao?"\n\n"+acao:"")+"\n\nOrigem: painel "+P.emp+", aba "+t.titulo+".";
+    const { data: r, error: e2 } = await sb.rpc("cq_enviar_acao",{p_empresa:P.emp,p_resp:d.querySelector("[data-r]").value,p_titulo:tit,p_desc:desc,p_chave:mzAcChave(t,l),p_prazo:d.querySelector("[data-p]").value||null,p_prioridade:d.querySelector("[data-pr]").value,p_checklist:[{t:(acao.split(":")[0]||"Ajustar")+" no IXC",ok:false}],p_origem:a.origem||"vital-painel"});
+    if (e2) { bt.disabled=false; bt.textContent="📋 Criar cartão"; return toast("Não consegui criar o cartão: "+e2.message); }
+    d.close(); delete MZ.env[P.emp+"|"+(a.prefixo||"")]; toast(r.novo?"Cartão criado no "+r.quadro+".":"Este lançamento já estava no "+r.quadro+"."); mzCorpo(); reg("enviar_acao_quadro",P.emp+" · "+l.n).catch(()=>{}); };
+  d.showModal(); }
 function mzTabela(D,t,ti){
   const idx=mzIdx(t); if (t.met && idx.length===1 && t.met[idx[0]]) return mzCult(D,t,ti,idx[0]); if (!idx.length) return `<div class="card"><h3 class="pnt">${esc(t.titulo)}</h3><p class="note">Sem dados no período escolhido.</p></div>`;
   // grupos: cada linha "grp" abre/fecha as linhas "item" logo abaixo dela
@@ -1924,16 +1959,16 @@ function mzTabela(D,t,ti){
     <div class="row" style="gap:6px">${temGrp?`<button class="btn sm ghost" data-mzab="${ti}">Abrir tudo</button>`:""}<button class="btn sm ghost" data-mzcsv="${ti}">Baixar planilha (CSV)</button></div></div>
     ${t.cards?`<div class="kpis" style="margin:12px 0">${t.cards.map(c=>kcard(c.ic,c.t,c.v,c.s,c.neg,{ser:c.ser,ti,li:c.lin?t.linhas.findIndex(l=>l.n===c.lin):null})).join("")}</div>`:""}${mzGami(t)}${insHTML(t.ins)}
     ${t.nota?`<p class="note">${esc(t.nota)}</p>`:""}${temGrp?`<p class="note">Toque numa linha com ▸ para abrir o grupo.${mzTemLc(D,t)?" Toque no nome de uma conta sublinhada para ver os lançamentos, ou num valor para ver os lançamentos daquele mês.":""}</p>`:""}
-    <div class="tw"><table class="dre"><thead><tr><th>Conta</th>${idx.map(i=>`<th>${esc(mzCol(t,i))}</th>`).join("")}${showTot&&t.meses?"<th>Total</th>":""}</tr></thead><tbody>`;
+    <div class="tw"><table class="dre${t.meses?"":" nm"}"><thead><tr><th>${esc(t.col0||"Conta")}</th>${idx.map(i=>`<th>${esc(mzCol(t,i))}</th>`).join("")}${showTot&&t.meses?"<th>Total</th>":""}</tr></thead><tbody>`;
   t.linhas.forEach((l,i)=>{
     if (l.oculto) return; if (pai[i]>=0 && !MZ.ab[ti+":"+pai[i]]) return;
     const cls = l.t==="tot"?"dt dtf": l.t==="saldo"?"dt": l.t==="grp"?"dg": l.t==="cab"?"dsub": l.t==="rot"?"di": l.t==="pct"?"di":"dcat";
     const nv = l.t==="item" ? (pai[i]>=0?2:1) : l.t==="rot" ? 1 : 0;
     const tg = l.t==="grp" && t.linhas.some((x,j)=>pai[j]===i) ? `<span class="tg">${MZ.ab[ti+":"+i]?"▾":"▸"}</span>` : "";
-    const cel = x => { if (x==null||x==="") return `<td></td>`; if (typeof x==="string") return `<td>${esc(x)}</td>`; if (l.t==="pct") return `<td>${fP(x)}</td>`; return `<td class="${x<0?"neg":""}">${fN(x)}</td>`; };
+    const cel = (x,j) => { if (t.acao && j===t.acao.col && l.t==="item") return `<td>${mzAcBtn(t,ti,i)}</td>`; if (x==null||x==="") return `<td></td>`; if (typeof x==="string") return `<td>${esc(x)}</td>`; if (l.t==="pct") return `<td>${fP(x)}</td>`; return `<td class="num${x<0?" neg":""}">${fN(x)}</td>`; };
     const tot = showTot&&t.meses ? mzTot(t,l,idx) : undefined;
     const lc = mzLcDe(D,t,l);
-    h+=`<tr class="${cls}${lc?" lc":""}" ${tg?`data-mzg="${ti}:${i}"`:""}${lc?` data-mzl="${ti}:${i}"`:""}><td style="padding-left:${8+nv*16}px">${tg}${lc?`<button type="button" class="lcb" data-mzl="${ti}:${i}">${esc(l.n)}</button>`:esc(l.n)}</td>${l.t==="cab"?idx.map(()=>"<td></td>").join(""):idx.map(j=>lc?cel(l.v[j]).replace("<td",`<td data-mzm="${j}"`):cel(l.v[j])).join("")}${tot===undefined?"":tot==null?"<td></td>":`<td class="${tot<0?"neg":""}"><b>${l.t==="pct"?"":fN(tot)}</b></td>`}</tr>`;
+    h+=`<tr class="${cls}${lc?" lc":""}" ${tg?`data-mzg="${ti}:${i}"`:""}${lc?` data-mzl="${ti}:${i}"`:""}><td style="padding-left:${8+nv*16}px">${tg}${lc?`<button type="button" class="lcb" data-mzl="${ti}:${i}">${esc(l.n)}</button>`:esc(l.n)}</td>${l.t==="cab"?idx.map(()=>"<td></td>").join(""):idx.map(j=>lc?cel(l.v[j],j).replace("<td",`<td data-mzm="${j}"`):cel(l.v[j],j)).join("")}${tot===undefined?"":tot==null?"<td></td>":`<td class="${tot<0?"neg":""}"><b>${l.t==="pct"?"":fN(tot)}</b></td>`}</tr>`;
   });
   return h+`</tbody></table></div></div>`;
 }
@@ -1944,6 +1979,7 @@ function mzLigar(D){ const b=$("#pnBody"); if(!b) return;
     mzLanc(D,ti,i,td?+td.dataset.mzm:null); });
   b.querySelectorAll("[data-mzab]").forEach(x=>x.onclick=()=>{ const ti=+x.dataset.mzab, t=D.tabs[ti]; const ks=t.linhas.map((l,i)=>l.t==="grp"?ti+":"+i:null).filter(Boolean); const abrir=!ks.some(k=>MZ.ab[k]); ks.forEach(k=>MZ.ab[k]=abrir); mzCorpo(); });
   b.querySelectorAll("[data-mzcsv]").forEach(x=>x.onclick=()=>mzCsv(D,D.tabs[+x.dataset.mzcsv]));
+  b.querySelectorAll("[data-mzac]").forEach(x=>x.onclick=e=>{ e.stopPropagation(); const [ti,i]=x.dataset.mzac.split(":").map(Number); mzAcAbrir(D,ti,i); });
 }
 function mzCsv(D,t){ const idx=mzIdx(t), f=v=>v==null||v===""?"":typeof v==="number"?v.toFixed(2).replace(".",","):String(v);
   const L=[["Conta",...idx.map(i=>t.cols[i]),...(t.meses?["Total"]:[])]];

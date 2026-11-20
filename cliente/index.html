@@ -226,7 +226,7 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface-2)}
   <div class="wrap">
     <a class="logo" href="/vitalagroenegocios/" title="Página inicial da Vital"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a>
     <span class="cmarca" id="cMarca" aria-hidden="true"><i>×</i><img id="cMarcaImg" alt=""></span>
-    <div class="brandtxt"><b role="heading" aria-level="1">Área do cliente</b><span>Entregáveis da Vital Agro &amp; Negócios</span></div>
+    <div class="brandtxt"><b role="heading" aria-level="1" id="topoT">Área do cliente</b><span id="topoS">Entregáveis da Vital Agro &amp; Negócios</span></div>
     <div class="spacer"></div>
     <nav class="tabs" id="tabsTop" role="tablist" aria-label="Seções"></nav>
   </div>
@@ -328,6 +328,7 @@ function go(k){
   cur = k; definirAbas();
   document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== "v-"+k);
   ({painel:renderPainel, inicio:renderInicio, login:renderLogin, termos:renderTermos, docs:renderDocs, conta:renderConta, pub:renderPub, acessos:renderAcessos, midias:renderMidias, vitrine:renderVitrine, papo:renderPapo, dabar:renderDabar, jornada:()=>window.renderJornada?.(), nps:()=>window.renderNPS?.()})[k]?.();
+  if (k!=="painel") topoPainel(null);
   subNav(k); setTimeout(() => subNav(k), 400); setTimeout(() => subNav(k), 1500);
   try{ if (location.hash.slice(1) !== k) history.pushState(null,"","#"+k); }catch{}
   window.scrollTo({top:0});
@@ -1108,9 +1109,14 @@ const podeMarca = () => S.papel==="admin" || !!(S.perfil && S.perfil.socio);
 function marcaPainel(emp){ const m=marcaDe(emp), ed=podeMarca();
   if (m) return `<img class="pnlogo${ed?" edit":""}" src="${m}" alt="Logo ${esc(emp)}" ${ed?`data-mlogo="1" title="Trocar a logo deste cliente"`:""}>`;
   return ed ? `<span class="pnlogo vazio" data-mlogo="1" role="button" tabindex="0" title="Enviar a logo deste cliente">+ logo</span>` : ""; }
-async function aplicarMarcaTopo(){ const box=$("#cMarca"), img=$("#cMarcaImg"); if (!box) return;
+async function aplicarMarcaTopo(){ const box=$("#cMarca"), img=$("#cMarcaImg"); if (!box) return; if (typeof cur!=="undefined" && cur==="painel" && P.emp) return topoPainel(P.emp);
   let emp=null; if (S.papel==="cliente"||S.papel==="gestor") { if (!S.minhasEmp) { try { const g=await sb.from("gestor_empresas").select("empresa").eq("user_id",S.user.id); S.minhasEmp=(g.data||[]).map(x=>x.empresa); } catch { S.minhasEmp=[]; } } emp=(S.minhasEmp||[]).find(e=>marcaDe(e)); }
   const m=emp?marcaDe(emp):null; box.classList.toggle("on",!!m); if (m) { img.src=m; img.alt="Logo "+emp; } }
+function topoPainel(emp){ const T=$("#topoT"), Su=$("#topoS"), box=$("#cMarca"), img=$("#cMarcaImg"); if (!T) return;
+  if (!emp) { T.textContent="Área do cliente"; Su.textContent="Entregáveis da Vital Agro & Negócios"; if (img) { img.removeAttribute("data-mlogo"); img.style.cursor=""; img.removeAttribute("title"); } aplicarMarcaTopo(); return; }
+  const aba=(document.querySelector("#v-painel [data-mzs][aria-selected=true]")||document.querySelector("#v-painel .pns [aria-selected=true]")||{}).textContent||"";
+  T.textContent=emp; Su.textContent="Painéis financeiros"+(aba?" · "+aba.trim():"");
+  const m=marcaDe(emp); if (box&&img) { box.classList.toggle("on",!!m); if (m) { img.src=m; img.alt="Logo "+emp; if (podeMarca()) { img.dataset.mlogo="1"; img.title="Trocar a logo deste cliente"; img.style.cursor="pointer"; } } } }
 async function trocarMarca(file){ if (!file || !podeMarca()) return; const emp=P.emp;
   try { const url=await new Promise((ok,er)=>{ const fr=new FileReader(); fr.onerror=er; fr.onload=()=>{ const im=new Image(); im.onerror=er; im.onload=()=>{ const k=Math.min(1,300/Math.max(im.width,im.height)), c=document.createElement("canvas"); c.width=Math.round(im.width*k); c.height=Math.round(im.height*k); c.getContext("2d").drawImage(im,0,0,c.width,c.height); let u=c.toDataURL("image/webp",0.85); if (!u.startsWith("data:image/webp")) u=c.toDataURL("image/png"); ok(u); }; im.src=fr.result; }; fr.readAsDataURL(file); });
     const r=await sb.from("cli_marcas").upsert({empresa:emp, logo:url, atualizado_em:new Date().toISOString()}); if (r.error) throw r.error;
@@ -1125,7 +1131,7 @@ function renderPainel(){
   const secs=[["resumo","Resumo"],["dre","DRE"],["dfc","DFC e conciliação"],["bp","Balanço (BP)"],["lanc","Lançamentos"],["an","Análises"],["pend","Pendências"]];
   if (temAbaTarefas()) secs.push(["tar","Tarefas"]); else if (P.sec==="tar") P.sec="resumo";
   if (window.FT_TEM && window.FT_TEM(P.emp)) secs.push(["ft","Fichas e preços"]); else if (P.sec==="ft") P.sec="resumo";
-  el.innerHTML = `<div class="pnh"><div>${marcaPainel(P.emp)}<div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
+  el.innerHTML = `<div class="pnh"><div>${marcaDe(P.emp)?"":marcaPainel(P.emp)}
       <p class="note" style="margin:2px 0 0">Dados até ${mesC(D.meses[D.meses.length-1])} · atualizado em ${esc(D.gerado.split(" ")[0].split("-").reverse().join("/"))} · fonte: planilha Gestão BPO (lançamentos confirmados)</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
       <label>Empresa<select id="pnVer"><option value="c">Consolidado</option><option value="l">Arcanjos Life</option><option value="h">Arcanjos Health</option></select></label>
@@ -1136,7 +1142,8 @@ function renderPainel(){
   $("#pnVer").value=P.ver; $("#pnPer").value=P.per;
   $("#pnVer").onchange=e=>{P.ver=e.target.value; corpo();}; $("#pnPer").onchange=e=>{P.per=e.target.value; corpo();}; $("#pnPrev").onchange=e=>{P.prev=e.target.checked; corpo();};
   if ($("#pnEmp")) $("#pnEmp").onchange=e=>{P.emp=e.target.value; renderPainel();};
-  el.querySelectorAll("[data-pns]").forEach(b=>b.onclick=()=>{ P.sec=b.dataset.pns; P.an=null; el.querySelectorAll("[data-pns]").forEach(x=>x.setAttribute("aria-selected", x===b)); corpo(); });
+  el.querySelectorAll("[data-pns]").forEach(b=>b.onclick=()=>{ P.sec=b.dataset.pns; P.an=null; el.querySelectorAll("[data-pns]").forEach(x=>x.setAttribute("aria-selected", x===b)); corpo(); topoPainel(P.emp); });
+  topoPainel(P.emp);
   corpo();
 }
 function corpo(){ QB.length=0; const D=pac(), b=$("#pnBody"); if (P.sec==="tar") { tarCorpo(b); return; } if (P.sec==="ft") { window.renderFT && window.renderFT(b, P.emp); return; } b.innerHTML=({resumo:secResumo, dre:secDRE, dfc:secDFC, bp:secBP, lanc:secLanc, an:secAN, pend:secPend})[P.sec](D); ligar(D);
@@ -1682,7 +1689,7 @@ function renderMatriz(el, D, emps){
   if (window.FT_TEM && window.FT_TEM(P.emp)) secs.push(["ft","Fichas e preços"]);
   if (!secs.some(s=>s[0]===MZ.sec)) MZ.sec="resumo";
   const anos=mzAnos(D), ult=mzUlt(D);
-  el.innerHTML = `<div class="pnh"><div>${marcaPainel(P.emp)}<div class="eyebrow">Painéis financeiros</div><h2 style="font-size:1.3rem;margin:0">${esc(P.emp)}</h2>
+  el.innerHTML = `<div class="pnh"><div>${marcaDe(P.emp)?"":marcaPainel(P.emp)}
       ${D.rascunho?`<p class="note" style="margin:2px 0 0;color:var(--c-desp)"><b>Em revisão</b> · visível só para a equipe Vital até ser liberado ao cliente.</p>`:""}<p class="note" style="margin:2px 0 0">${ult?"Dados até "+mesC(ult)+" · ":""}atualizado em ${esc(String(D.gerado||"").split(" ")[0].split("-").reverse().join("/"))} · fonte: ${esc(D.fonte||"planilha de gestão")}</p></div>
     <div class="pnf">${emps.length>1?`<label>Cliente<select id="pnEmp">${emps.map(e=>`<option ${e===P.emp?"selected":""}>${esc(e)}</option>`).join("")}</select></label>`:""}
       <span id="mzFil" style="display:contents">${mzFiltrosHTML(D)}</span>${anos.length?`<label>Período<select id="mzPer"><option value="12">Últimos 12 meses</option>${anos.map(a=>`<option value="${a}">${a}</option>`).join("")}<option value="tudo">Tudo</option></select></label>`:""}</div></div>
@@ -1692,13 +1699,14 @@ function renderMatriz(el, D, emps){
   if ($("#pnEmp")) $("#pnEmp").onchange=e=>{P.emp=e.target.value; MZ.ab={}; MZ.ativ=MZ.cul=MZ.saf=""; renderPainel();};
   mzLigarFiltros(D);
   el.querySelectorAll("[data-mzs]").forEach(b=>b.onclick=()=>{ MZ.sec=b.dataset.mzs; el.querySelectorAll("[data-mzs]").forEach(x=>x.setAttribute("aria-selected", x===b)); mzCorpo(); });
+  topoPainel(P.emp);
   mzCorpo();
 }
 function mzLigarFiltros(D){ const f=$("#mzFil"); if(!f) return; const re=()=>{ f.innerHTML=mzFiltrosHTML(D); mzLigarFiltros(D); mzCorpo(); };
   if ($("#mzAt")) $("#mzAt").onchange=e=>{ MZ.ativ=e.target.value; if (MZ.ativ==="Pecuária") { MZ.cul=""; MZ.saf=""; } re(); };
   if ($("#mzCu")) $("#mzCu").onchange=e=>{ MZ.cul=e.target.value; MZ.saf=""; if (MZ.cul && !MZ.ativ) MZ.ativ="Agricultura"; re(); };
   if ($("#mzSa")) $("#mzSa").onchange=e=>{ MZ.saf=e.target.value; re(); }; }
-function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return; try { localStorage.setItem("vital_pn_sec", MZ.sec); } catch {}
+function mzCorpo(){ const D=pac(), b=$("#pnBody"); if(!D||!b) return; try { localStorage.setItem("vital_pn_sec", MZ.sec); } catch {} topoPainel(P.emp);
   if (MZ.sec==="safra") { agrCorpo(b); return; }
   if (MZ.sec==="tar") { tarCorpo(b); return; }
   if (MZ.sec==="ft") { window.renderFT ? window.renderFT(b, P.emp) : (b.innerHTML=`<div class="card">Carregando…</div>`); return; }

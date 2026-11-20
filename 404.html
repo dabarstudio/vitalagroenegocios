@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Porteira errada · Vital Agro &amp; Negócios</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/vitalagroenegocios/favicon.png">
+<style>
+:root{--bg:#F3F6F1;--surface:#fff;--line:#D3DECD;--fg:#18241B;--muted:#57665A;--brand:#00582F;--leaf:#79C25B}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 16px}
+header img{height:44px}
+main{flex:1;display:grid;place-items:center;padding:16px}
+.box{max-width:620px;width:100%;text-align:center}
+.cena{font-size:clamp(64px,18vw,120px);line-height:1;margin:0 0 6px;user-select:none}
+.cena .vaca{display:inline-block;cursor:pointer;transform-origin:bottom center;animation:mexe 3.2s ease-in-out infinite}
+@keyframes mexe{0%,100%{transform:rotate(0)}50%{transform:rotate(-6deg)}}
+@media (prefers-reduced-motion:reduce){.cena .vaca{animation:none}}
+.n{font-weight:900;font-size:clamp(40px,12vw,76px);color:var(--brand);letter-spacing:-2px;margin:0}
+h1{font-size:clamp(22px,5.5vw,32px);margin:4px 0 8px}
+p{color:var(--muted);margin:0 0 18px}
+.fala{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:10px 14px;margin:0 0 18px;min-height:44px;color:var(--fg)}
+.bts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.bts a{display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;border-radius:12px;font-weight:700;text-decoration:none;border:1px solid var(--brand)}
+.bts a.p{background:var(--brand);color:#fff}.bts a.s{color:var(--brand);background:var(--surface)}
+footer{padding:14px 16px;text-align:center;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+<header><a class="logo" href="/vitalagroenegocios/"><img src="/vitalagroenegocios/logo.png" alt="Vital Agro &amp; Negócios"></a></header>
+<main><div class="box">
+  <div class="cena" aria-hidden="true">🚪<span class="vaca" id="vaca" title="Toque na vaca">🐄</span>🌾</div>
+  <p class="n">404</p>
+  <h1>Ops! Você abriu a porteira errada.</h1>
+  <p>Essa estrada não leva a lugar nenhum… mas a gente te leva de volta pra roça certa.</p>
+  <div class="fala" id="fala" role="status">🐄 Muuu? Também não achei essa página no pasto.</div>
+  <div class="bts"><a class="p" href="/vitalagroenegocios/">Voltar para o início</a><a class="s" href="/vitalagroenegocios/cliente/">Área do cliente</a></div>
+</div></main>
+<footer>Vital Agro &amp; Negócios · Gestão, controladoria e inteligência tributária</footer>
+<script>
+(function(){ var F=["🐄 Muuu? Também não achei essa página no pasto.","🐄 Procurei atrás do curral, no silo e até no Livro Caixa. Nada!","🐄 Essa página deve ter ido pro leilão.","🐄 Se fosse um boleto, a gente achava rapidinho. 😅","🐄 Página fugiu da cerca. A Vital já mandou o peão buscar.","🐄 Dica: toque em mim mais umas vezes… 😉"], i=0, n=0;
+  document.getElementById("vaca").onclick=function(){ i=(i+1)%F.length; document.getElementById("fala").textContent=F[i]; n++; if(n>=5&&window.VitalEgg){ n=0; window.VitalEgg.modo(); } }; })();
+</script>
+<script src="/vitalagroenegocios/eggs.js" defer></script>
+</body>
+</html>

@@ -369,3 +369,6 @@ window.Midias = (function () {
   s.textContent = JSON.stringify({ "@context": "https://schema.org", "@graph": g });
   head.appendChild(s);
 })();
+
+/* Easter eggs da Vital (mascote, logo, Konami, frase do dia) */
+(function(){ if (document.querySelector('script[src*="eggs.js"]')) return; var e=document.createElement("script"); e.src="/vitalagroenegocios/eggs.js?v=1"; e.defer=true; document.head.appendChild(e); })();

@@ -1216,29 +1216,40 @@ async function verCofre(ref, alvo){
 /* ---------- CLIENTES ---------- */
 function renderClientes(){ comQ(desenhaClientes); }
 function desenhaClientes(){
+  if (Q.rxOculto===undefined) { try { Q.rxOculto=!!localStorage.getItem("vital.rxOculto"); } catch { Q.rxOculto=false; } }
+  if (!Q.rx) { rxCarregar().then(desenhaClientes).catch(()=>{ Q.rx={}; desenhaClientes(); }); return; }
   const v=$("#v-clientes"), f=Q.cf, b=f.busca.trim().toLowerCase();
   const abertos = id => Q.cartoes.filter(k=>k.cliente===id && colDe(k.coluna).tipo==="etapa").length;
   let L = Q.clientes.filter(c => (f.sit==="ativos" ? c.situacao==="ativo" : !f.sit || c.situacao===f.sit) && (!f.serv || c.servicos.includes(f.serv)) && (!b || (c.nome+" "+c.observacoes+" "+c.servicos.join(" ")).toLowerCase().includes(b)));
+  if (f.cad) L = L.filter(c => (Q.rx[c.id]?.cadeias||[]).includes(f.cad));
+  if (f.rx==="pouco") L = L.filter(c => rxScore(Q.rx[c.id]) < 40); else if (f.rx==="parte") L = L.filter(c => { const x=rxScore(Q.rx[c.id]); return x>=40 && x<75; }); else if (f.rx==="bem") L = L.filter(c => rxScore(Q.rx[c.id]) >= 75); else if (f.rx==="mudou") L = L.filter(c => rxMudou(Q.rx[c.id]).length);
+  const cadsUso = [...new Set(Object.values(Q.rx).flatMap(p=>p.cadeias||[]))].sort((a,c)=>a.localeCompare(c,"pt-BR"));
   const servs=[...new Set(Q.clientes.flatMap(c=>c.servicos).concat(SERV_CLI))].sort((a,c)=>a.localeCompare(c,"pt-BR"));
   const precisaCriar = S.papel==="admin" && !Q.cofreCfg;
   v.innerHTML = `<div class="row" style="justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><div class="eyebrow">Equipe Vital · uso interno</div><h2 style="font-size:1.35rem">Cadastro de clientes</h2></div>
       <div class="row" style="gap:6px;flex-wrap:wrap"><span id="cfStatus" class="cfst ${Q.chave?"aberto":""}">${Q.cofreOk?(Q.chave?`🔓 Cofre aberto <button class="lk" id="cfTr">trancar</button>`:`🔒 Cofre trancado`):"🔒 Sem acesso ao cofre"}</span><button class="btn primary sm" id="cNovo">+ Cliente</button></div></div>
     ${precisaCriar?`<div class="card stack cofreBox"><b>🔐 Falta criar a senha do cofre</b><span>${Q.pendentes} registro(s) vindos do Trello aguardam ser trancados. Até lá, só a administração consegue lê-los.</span><div><button class="btn primary sm" id="cfCriar">Criar senha do cofre</button></div></div>`:""}
     ${S.papel==="admin"&&Q.cofreCfg&&Q.pendentes?`<div class="card cofreBox">${Q.pendentes} registro(s) aguardam ser trancados. <button class="btn sm" id="cfPend">Destrancar e trancar agora</button></div>`:""}
+    ${rxPainel()}
     <div class="qbar"><div class="field"><label for="cB">Buscar</label><input id="cB" type="search" value="${esc(f.busca)}" placeholder="nome ou observação"></div>
       <div class="field"><label for="cS">Serviço</label><select id="cS"><option value="">Todos</option>${servs.map(s=>`<option>${esc(s)}</option>`).join("")}</select></div>
-      <div class="field"><label for="cSi">Situação</label><select id="cSi"><option value="ativos">Ativos</option><option value="">Todos</option>${Object.entries(SIT).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div></div>
-    <div class="tablewrap"><table><thead><tr><th>Cliente</th><th>Serviços</th><th>Situação</th><th class="num">Projetos ativos</th><th class="num">Demandas abertas</th><th class="num">Cofre</th></tr></thead><tbody>
-      ${L.map(c=>`<tr class="clk" data-cli="${c.id}" tabindex="0"><td><b>${esc(c.nome)}</b></td><td>${c.servicos.map(s=>`<span class="qe" style="background:var(--surface-2)">${esc(s)}</span>`).join(" ")}</td><td>${SIT[c.situacao]}</td><td class="num">${S.projetos.filter(p=>p.cliente_id===c.id&&["planejado","andamento","pausado"].includes(p.status)).length||""}</td><td class="num">${abertos(c.id)||""}</td><td class="num">${Q.cofre.cli.has(c.id)?"🔒":""}</td></tr>`).join("") || `<tr><td colspan="6" class="note">Nenhum cliente com esse filtro.</td></tr>`}
+      <div class="field"><label for="cSi">Situação</label><select id="cSi"><option value="ativos">Ativos</option><option value="">Todos</option>${Object.entries(SIT).map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>
+      <div class="field"><label for="cCa">Cadeia</label><select id="cCa"><option value="">Todas</option>${cadsUso.map(x=>`<option ${x===f.cad?"selected":""}>${esc(x)}</option>`).join("")}</select></div>
+      <div class="field"><label for="cRx">Raio-X</label><select id="cRx">${[["","Todos"],["pouco","Pouco conhecidos"],["parte","Conhecidos em parte"],["bem","Conhecemos de verdade"],["mudou","Mudaram desde que entraram"]].map(([k,l])=>`<option value="${k}" ${k===(f.rx||"")?"selected":""}>${l}</option>`).join("")}</select></div></div>
+    <div class="tablewrap"><table><thead><tr><th>Cliente</th><th>Serviços</th><th>Situação</th><th class="num">Projetos ativos</th><th class="num">Demandas abertas</th><th class="num">Cofre</th><th class="num">Raio-X</th></tr></thead><tbody>
+      ${L.map(c=>`<tr class="clk" data-cli="${c.id}" tabindex="0"><td><b>${esc(c.nome)}</b></td><td>${c.servicos.map(s=>`<span class="qe" style="background:var(--surface-2)">${esc(s)}</span>`).join(" ")}</td><td>${SIT[c.situacao]}</td><td class="num">${S.projetos.filter(p=>p.cliente_id===c.id&&["planejado","andamento","pausado"].includes(p.status)).length||""}</td><td class="num">${abertos(c.id)||""}</td><td class="num">${Q.cofre.cli.has(c.id)?"🔒":""}</td><td class="num">${(()=>{ const x=rxScore(Q.rx[c.id]), n=rxNivel(x), m=rxMudou(Q.rx[c.id]).length; return `<button type="button" class="btn sm ghost" data-rx="${c.id}" title="${n[0]}${m?" · mudou desde que entrou":""}" style="color:${n[1]};font-weight:700;white-space:nowrap">${m?"📈 ":""}${x}%</button>`; })()}</td></tr>`).join("") || `<tr><td colspan="7" class="note">Nenhum cliente com esse filtro.</td></tr>`}
     </tbody></table></div><p class="note2">${L.length} cliente(s). Senhas e códigos de acesso ficam só no cofre, criptografados; cada abertura fica registrada.</p>`;
   $("#cS").value=f.serv; $("#cSi").value=f.sit;
   $("#cB").oninput = e => { f.busca=e.target.value; clearTimeout(Q.tb); Q.tb=setTimeout(()=>{ const p=e.target.selectionStart; desenhaClientes(); const i=$("#cB"); i.focus(); try{i.setSelectionRange(p,p);}catch{} },200); };
-  $("#cS").onchange = e => { f.serv=e.target.value; desenhaClientes(); }; $("#cSi").onchange = e => { f.sit=e.target.value; desenhaClientes(); };
+  $("#cS").onchange = e => { f.serv=e.target.value; desenhaClientes(); };
+  $("#cCa").onchange = e => { f.cad=e.target.value; desenhaClientes(); }; $("#cRx").onchange = e => { f.rx=e.target.value; desenhaClientes(); };
+  const rt=$("#rxTog"); if (rt) rt.onclick = () => { Q.rxOculto=!Q.rxOculto; try { localStorage.setItem("vital.rxOculto", Q.rxOculto?"1":""); } catch {} desenhaClientes(); }; $("#cSi").onchange = e => { f.sit=e.target.value; desenhaClientes(); };
   $("#cNovo").onclick = () => dlgCliente();
   const cc=$("#cfCriar"); if (cc) cc.onclick = dlgCriarCofre;
   const cp=$("#cfPend"); if (cp) cp.onclick = async () => { if (await pedirSenha()) { try { await trancarPendentes(); } catch(x) { toast(x.message); } desenhaClientes(); } };
   const tr=$("#cfTr"); if (tr) tr.onclick = () => { trancar(); toast("Cofre trancado."); };
-  v.onclick = e => { const r=e.target.closest("[data-cli]"); if (r) dlgCliente(Q.clientes.find(c=>c.id===r.dataset.cli)); };
+  v.onclick = e => { const x=e.target.closest("[data-rx],[data-rxc]"); if (x) { e.stopPropagation(); const c=Q.clientes.find(k=>k.id===(x.dataset.rx||x.dataset.rxc)); if (x.dataset.rx) dlgRaioX(c); else dlgCliente(c); return; }
+    const r=e.target.closest("[data-cli]"); if (r) dlgCliente(Q.clientes.find(c=>c.id===r.dataset.cli)); };
   v.onkeydown = e => { const r=e.target.closest("[data-cli]"); if (r && e.key==="Enter") dlgCliente(Q.clientes.find(c=>c.id===r.dataset.cli)); };
 }
 function dlgCliente(c){
@@ -1253,7 +1264,7 @@ function dlgCliente(c){
     ${novo?`<p class="note2" style="margin:0">Depois de salvar, abra o cliente de novo para guardar CPF/CNPJ, senhas e códigos de acesso no cofre.</p>`
       :`<div class="cofreBox" id="clCf">${Q.cofreOk?`🔒 ${Q.cofre.cli.has(c.id)?"Dados cadastrais e de acesso guardados no cofre.":"Nada no cofre ainda."} <button type="button" class="btn sm" id="clCfv">${Q.cofre.cli.has(c.id)?"Ver":"Adicionar"}</button>`:"🔒 Dados cadastrais e de acesso ficam no cofre. Você não tem acesso — peça à administração."}</div>`}
     ${dem.length?`<details open><summary class="note2">Demandas nos quadros (${dem.length})</summary><ul class="hist">${dem.slice(0,15).map(k=>`<li>${esc(k.titulo)} · <i>${esc(colDe(k.coluna).nome||"")}</i></li>`).join("")}</ul></details>`:""}
-    <div class="row" style="gap:8px;flex-wrap:wrap">${!novo?`<button type="button" class="btn sm" id="clVt">👤 Ver tudo deste cliente</button>`:""}${c.trello_url?`<a class="btn sm ghost" href="${esc(c.trello_url)}" target="_blank" rel="noopener">Ver no Trello</a>`:""}${!novo&&S.socio?`<button type="button" class="btn sm ghost" id="clDel">Excluir</button>`:""}</div>`,
+    <div class="row" style="gap:8px;flex-wrap:wrap">${!novo?`<button type="button" class="btn sm" id="clVt">👤 Ver tudo deste cliente</button><button type="button" class="btn sm" id="clRx">🌾 Raio-X da porteira (${rxScore((Q.rx||{})[c.id])}%)</button>`:""}${c.trello_url?`<a class="btn sm ghost" href="${esc(c.trello_url)}" target="_blank" rel="noopener">Ver no Trello</a>`:""}${!novo&&S.socio?`<button type="button" class="btn sm ghost" id="clDel">Excluir</button>`:""}</div>`,
   async () => { const d={nome:$("#clN").value.trim(), servicos:[...sel], situacao:$("#clSi").value, observacoes:$("#clO").value.trim()};
     if (!d.nome) throw new Error("informe o nome");
     if (/senha|c[oó]digo de acesso/i.test(d.observacoes)) throw new Error("parece haver senha nas observações — guarde no cofre");
@@ -1263,9 +1274,126 @@ function dlgCliente(c){
   $("#clS").onclick = e => { const b=e.target.closest("[data-s]"); if (!b) return; const n=b.dataset.s; sel.has(n)?sel.delete(n):sel.add(n); b.setAttribute("aria-pressed", sel.has(n)); };
   const cv=$("#clCfv"); if (cv) cv.onclick = () => verCofre({cliente:c.id}, $("#clCf"));
   const vt=$("#clVt"); if (vt) vt.onclick=()=>{ $("#dlg").close(); setTimeout(()=>dlgVisaoCliente(c),60); };
+  const rb=$("#clRx"); if (rb) rb.onclick=async()=>{ $("#dlg").close(); await rxCarregar(); setTimeout(()=>dlgRaioX(c),60); };
   const del=$("#clDel"); if (del) del.onclick = async () => { if (!await pergunta(`Excluir o cliente "${c.nome}" e os dados dele no cofre? Não dá para desfazer.`)) return;
     const r=await sb.from("cad_clientes").delete().eq("id",c.id); if (r.error) { toast(r.error.message); return; }
     Q.clientes=Q.clientes.filter(x=>x.id!==c.id); $("#dlg").close(); toast("Cliente excluído."); desenhaClientes(); };
+}
+
+/* ---------- RAIO-X DA PORTEIRA (conhecer o cliente da porteira para dentro) ---------- */
+const RX_CADEIAS = ["Soja","Milho","Sorgo","Feijão","Algodão","Café","Cana","Hortifrúti","Pecuária de corte","Pecuária de leite","Avicultura","Suinocultura","Piscicultura","Florestal","Agroindústria","Comércio","Serviços","Indústria","Tecnologia","Saúde","Construção","Alimentação","Terceiro setor","Pessoa física"];
+const RX_ORIGEM = { ir:["Cooperativa","Sindicato rural","Dia de campo / evento do agro","Banco","Agrônomo / consultor técnico","Agroindústria / comprador","Palestra ou curso (SENAR, CRC…)"], ser:["Google","Instagram","WhatsApp","TikTok","Site da Vital"], outros:["Indicação de cliente","Indicação de parceiro","Já conhecia a equipe","Outro"] };
+const RX_ORIGEM_TODAS = [...RX_ORIGEM.ir, ...RX_ORIGEM.ser, ...RX_ORIGEM.outros];
+const RX_ESTR = ["Produtor PF","PF com mais de um produtor (condomínio/parceria)","PF + empresa (PJ)","Empresa (PJ)","Holding familiar"];
+const RX_AGRO = /soja|milho|sorgo|feij|algod|caf|cana|horti|pecu|avic|suin|pisc|flores|agroind/i;
+const rxProdutor = p => (p && p.cadeias || []).some(c => RX_AGRO.test(c));
+/* o que conta para "conhecer de verdade" */
+const RX_ITENS = [
+  ["Atividade / cadeia", p => (p.cadeias||[]).length>0],
+  ["Porte (área, rebanho ou faturamento)", p => !!(p.area || p.rebanho || p.faturamento)],
+  ["Próxima safra / próximo ciclo", p => !!(p.safra_plano || p.safra_cultura)],
+  ["Investimentos previstos", p => !!p.invest || p.invest_nao],
+  ["Sucessão", p => !!p.sucessao],
+  ["Parceiros (cooperativa, banco, agrônomo…)", p => !!(p.coop || p.banco || p.agronomo || p.agroind || p.sindicato)],
+  ["Como chegou até a Vital", p => !!p.origem],
+  ["Visita ou conversa nos últimos 6 meses", p => !!p.visita && (Date.now()-new Date(p.visita))/864e5 <= 183]
+];
+const rxScore = p => { if (!p) return 0; const ok = RX_ITENS.filter(([,f]) => { try { return f(p); } catch { return false; } }).length; return Math.round(100*ok/RX_ITENS.length); };
+const rxNivel = s => s>=75 ? ["Conhece de verdade","#2F855A"] : s>=40 ? ["Conhece em parte","#B7791F"] : ["Pouco conhecido","#C53030"];
+/* oportunidades por época e atividade (calendário do campo + tributário) */
+const RX_OPORT = [
+  { meses:[2,3,4], titulo:"IRPF e Livro Caixa (LCDPR)", quem:p=>rxProdutor(p)||(p.cadeias||[]).includes("Pessoa física"), serv:/irpf|lcdpr|livro caixa/i, porque:"Declaração do IR vence em maio; produtor rural precisa do Livro Caixa." },
+  { meses:[7,8,9], titulo:"ITR", quem:p=>rxProdutor(p)||!!p.area, serv:/itr/i, porque:"ITR é entregue entre agosto e setembro." },
+  { meses:[6,7,8], titulo:"Plano Safra · crédito rural e projeto", quem:p=>rxProdutor(p)&&(p.credito==="sim"||!!p.banco), serv:/cr[eé]dito|projeto|plano safra/i, porque:"Plano Safra começa em julho; banco pede DRE, fluxo de caixa e projeto." },
+  { meses:[5,6,7], titulo:"Planejamento da safra (orçamento e fluxo de caixa)", quem:p=>(p.cadeias||[]).some(c=>/soja|milho|sorgo|feij|algod/i.test(c)), serv:/planejamento|bpo|controladoria|assessoria/i, porque:"Antes do plantio: custo por hectare, compra de insumos e caixa até a colheita." },
+  { meses:[1,2,3,4], titulo:"Colheita e venda da safra", quem:p=>(p.cadeias||[]).some(c=>/soja|milho|algod/i.test(c)), serv:/bpo|controladoria|assessoria|financeir/i, porque:"Hora de travar preço, pagar custeio e separar o caixa da próxima safra." },
+  { meses:[1,2,3,4,5,6,7,8,9,10,11,12], titulo:"Sucessão e holding familiar", quem:p=>p.sucessao==="discutindo"||p.sucessao==="nao", serv:/holding|sucess|societ/i, porque:"Família sem plano de sucessão definido." },
+  { meses:[10,11,12], titulo:"Planejamento tributário do próximo ano", quem:p=>!!(p.faturamento||p.area), serv:/planejamento tribut/i, porque:"Escolha de regime e da forma de tributação vale para o ano inteiro." },
+  { meses:[1,2,3,4,5,6,7,8,9,10,11,12], titulo:"Cliente cresceu: revisar a entrega e os honorários", quem:p=>rxMudou(p).length>0, serv:/^$/, porque:"O produtor mudou desde que entrou. A entrega da Vital evoluiu junto?" },
+  { meses:[1,2,3,4,5,6,7,8,9,10,11,12], titulo:"Reforma Tributária (IBS/CBS) no agro", quem:p=>rxProdutor(p), serv:/reforma|ibs|cbs/i, porque:"A partir de 2027 o produtor decide se é contribuinte do IBS/CBS (limite de R$ 3,6 milhões de receita) e como isso mexe com crédito e preço." },
+  { meses:[1,2,3,4,5,6,7,8,9,10,11,12], titulo:"Investimento previsto: projeto e financiamento", quem:p=>!!p.invest, serv:/projeto|cr[eé]dito|viabilidade/i, porque:"Cliente contou que vai investir: viabilidade, linha de crédito e impacto no caixa." }
+];
+const rxNum = x => { const n = parseFloat(String(x||"").replace(/\./g,"").replace(",",".").replace(/[^\d.]/g,"")); return isFinite(n) ? n : null; };
+/* "Seu produtor mudou. Seu escritório percebeu?" — compara quando entrou × hoje */
+function rxMudou(p){ if (!p) return []; const m = [];
+  const a0 = rxNum(p.entrada_area), a1 = rxNum(p.area); if (a0 && a1 && a1 >= a0*1.3) m.push(`área ${a0.toLocaleString("pt-BR")} → ${a1.toLocaleString("pt-BR")} ha`);
+  if (p.entrada_estrutura && p.estrutura && p.entrada_estrutura !== p.estrutura) m.push(`${p.entrada_estrutura} → ${p.estrutura}`);
+  const c0 = String(p.entrada_cadeias||"").toLowerCase(); const novas = (p.cadeias||[]).filter(c => c0 && !c0.includes(c.toLowerCase().split(" ")[0])); if (c0 && novas.length) m.push("nova(s) atividade(s): " + novas.join(", "));
+  if (p.familia_gestao && !p.entrada_familia) m.push("família/filhos na gestão");
+  return m; }
+async function rxCarregar(force){ if (Q.rx && !force) return Q.rx; const r = await sb.from("cli_perfil").select("cliente,dados,atualizado_em"); Q.rx = {}; (r.data||[]).forEach(x => Q.rx[x.cliente] = {...x.dados, _em:x.atualizado_em}); return Q.rx; }
+function rxPainel(){
+  const ativos = Q.clientes.filter(c=>c.situacao==="ativo"), P = id => Q.rx[id] || null;
+  const prod = ativos.filter(c=>rxProdutor(P(c.id))), conhece = ativos.filter(c=>rxScore(P(c.id))>=75);
+  const sabe = (k) => ativos.filter(c=>{ const p=P(c.id); return p && (k==="safra" ? (p.safra_plano||p.safra_cultura) : k==="invest" ? (p.invest||p.invest_nao) : p.sucessao); }).length;
+  const pc = n => ativos.length ? Math.round(100*n/ativos.length)+"%" : "–";
+  const cad = {}; ativos.forEach(c=>(P(c.id)?.cadeias||[]).forEach(x=>cad[x]=(cad[x]||0)+1)); const cadL = Object.entries(cad).sort((a,b)=>b[1]-a[1]).slice(0,8); const cadMax = Math.max(1,...cadL.map(x=>x[1]));
+  const org = {ir:0, ser:0, outros:0, sem:0}; ativos.forEach(c=>{ const o=P(c.id)?.origem; if (!o) org.sem++; else if (RX_ORIGEM.ir.includes(o)) org.ir++; else if (RX_ORIGEM.ser.includes(o)) org.ser++; else org.outros++; });
+  const parc = {}; ativos.forEach(c=>{ const p=P(c.id)||{}; [["Cooperativa",p.coop],["Banco",p.banco],["Agrônomo",p.agronomo],["Agroindústria",p.agroind],["Sindicato",p.sindicato],["Indicação",p.origem_quem]].forEach(([t,v])=>{ String(v||"").split(/[,;\/]/).map(s=>s.trim()).filter(Boolean).forEach(n=>{ const k=t+" · "+n; parc[k]=(parc[k]||0)+1; }); }); });
+  const parcL = Object.entries(parc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const mes = new Date().getMonth()+1; const ops = [];
+  RX_OPORT.filter(o=>o.meses.includes(mes)).forEach(o=>{ const L = ativos.filter(c=>{ const p=P(c.id); return p && o.quem(p) && !(c.servicos||[]).some(s=>o.serv.test(s)); }); if (L.length) ops.push({o, L}); });
+  return `<div class="card stack" style="gap:12px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div class="eyebrow">Raio-X da carteira</div><h3 style="margin:0">Quanto a Vital conhece os clientes da porteira para dentro?</h3></div><button type="button" class="btn sm ghost" id="rxTog">${Q.rxOculto?"Mostrar":"Recolher"}</button></div>
+    ${Q.rxOculto?"":`<div class="kpis">
+      <div class="kpi"><span class="l">Clientes ativos</span><span class="v">${ativos.length}</span><span class="l">${prod.length} produtores rurais</span></div>
+      <div class="kpi"><span class="l">Conhecemos de verdade</span><span class="v" style="color:#2F855A">${conhece.length}</span><span class="l">${pc(conhece.length)} da carteira (Raio-X ≥ 75%)</span></div>
+      <div class="kpi"><span class="l">Sabemos da próxima safra</span><span class="v">${pc(sabe("safra"))}</span><span class="l">${sabe("safra")} cliente(s)</span></div>
+      <div class="kpi"><span class="l">Sabemos dos investimentos</span><span class="v">${pc(sabe("invest"))}</span><span class="l">${sabe("invest")} cliente(s)</span></div>
+      <div class="kpi"><span class="l">Sabemos da sucessão</span><span class="v">${pc(sabe("suc"))}</span><span class="l">${sabe("suc")} cliente(s)</span></div>
+      <div class="kpi"><span class="l">Sem conversa há +90 dias</span><span class="v" style="color:#C53030">${ativos.filter(c=>{ const v=P(c.id)?.visita; return !v || (Date.now()-new Date(v))/864e5>90; }).length}</span><span class="l">crie um momento na propriedade</span></div>
+      <div class="kpi"><span class="l">Mudaram desde que entraram</span><span class="v" style="color:#B7791F">${ativos.filter(c=>rxMudou(P(c.id)).length).length}</span><span class="l">a entrega evoluiu junto?</span></div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+      <div><b>Nicho: cadeias da carteira</b>${cadL.length?cadL.map(([n,v])=>`<div class="row" style="gap:8px;margin-top:6px;font-size:.9rem"><span style="flex:0 0 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n)}</span><span style="flex:1;height:10px;border-radius:9px;background:var(--surface-2)"><span style="display:block;height:10px;border-radius:9px;width:${Math.round(100*v/cadMax)}%;background:var(--brand)"></span></span><b style="flex:0 0 22px;text-align:right">${v}</b></div>`).join(""):`<p class="note2">Preencha a atividade no Raio-X dos clientes.</p>`}</div>
+      <div><b>Como os clientes chegaram</b><div class="stack" style="gap:6px;margin-top:6px;font-size:.9rem"><div>🚜 Fomos até o cliente <b>${org.ir}</b> <span class="note2">(cooperativa, sindicato, dia de campo, banco, agrônomo)</span></div><div>📱 Fomos encontrados <b>${org.ser}</b> <span class="note2">(Google, Instagram, WhatsApp, TikTok)</span></div><div>🤝 Indicação e outros <b>${org.outros}</b></div>${org.sem?`<div class="note2">❔ Sem origem informada: ${org.sem}</div>`:""}</div></div>
+      <div><b>Parcerias que trazem e cuidam de clientes</b>${parcL.length?`<ul class="hist" style="margin:6px 0 0">${parcL.map(([n,v])=>`<li>${esc(n)} · <b>${v}</b> cliente(s)</li>`).join("")}</ul>`:`<p class="note2">Cadastre cooperativa, banco, agrônomo e quem indicou no Raio-X.</p>`}</div></div>
+    ${(()=>{ const hoje=new Date().toISOString().slice(0,10), lim=new Date(Date.now()-90*864e5).toISOString().slice(0,10), sem=ativos.filter(c=>{ const v=P(c.id)?.visita; return !v || v<lim; }), prox=ativos.filter(c=>{ const x=P(c.id)?.proximo; return x && x<=new Date(Date.now()+7*864e5).toISOString().slice(0,10); }).sort((a,b)=>P(a.id).proximo.localeCompare(P(b.id).proximo));
+      return `<div><b>Momentos de relacionamento</b> <span class="note2">— sem relacionamento não se identifica necessidade; sem necessidade, não existe oportunidade qualificada.</span>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:6px">
+        <div><span class="note2">📅 Contatos marcados para esta semana ou atrasados (${prox.length})</span><div class="chips" style="margin-top:4px">${prox.map(c=>{ const x=P(c.id).proximo; return `<button type="button" class="chip" data-rx="${c.id}" style="${x<hoje?"border-color:#C53030;color:#C53030":""}">${esc(c.nome)} · ${x.split("-").reverse().slice(0,2).join("/")}</button>`; }).join("")||'<span class="note2">Nenhum.</span>'}</div></div>
+        <div><span class="note2">🚜 Sem visita ou conversa de negócio há mais de 90 dias (${sem.length})</span><div class="chips" style="margin-top:4px">${sem.slice(0,24).map(c=>`<button type="button" class="chip" data-rx="${c.id}">${esc(c.nome)}</button>`).join("")}${sem.length>24?`<span class="note2">e mais ${sem.length-24}</span>`:""}</div></div></div></div>`; })()}
+    <div><b>O que os clientes precisam hoje e a Vital ainda não está ajudando a resolver</b> <span class="note2">(pela época do ano e pela atividade · ${["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"][mes-1]})</span>${ops.length?ops.map(({o,L})=>`<details style="margin-top:6px"><summary><b>${esc(o.titulo)}</b> · ${L.length} cliente(s) <span class="note2">— ${esc(o.porque)}</span></summary><div class="chips" style="margin-top:6px">${L.map(c=>`<button type="button" class="chip" data-rxc="${c.id}">${esc(c.nome)}</button>`).join("")}</div></details>`).join(""):`<p class="note2">Nada a apontar neste mês com os dados atuais. Quanto mais Raio-X preenchido, mais necessidades aparecem.</p>`}</div>`}</div>`;
+}
+function dlgRaioX(c){
+  const p = {...(Q.rx[c.id]||{})}; const sel = new Set(p.cadeias||[]);
+  const v = k => esc(p[k]||""); const opt = (arr, cur) => arr.map(o=>`<option ${o===cur?"selected":""}>${esc(o)}</option>`).join("");
+  const sc = rxScore(p), nv = rxNivel(sc);
+  const nec = RX_OPORT.filter(o => { try { return o.quem(p) && !(c.servicos||[]).some(s=>o.serv.test(s)); } catch { return false; } });
+  abrir(`<h3 style="margin:0">🌾 Raio-X da porteira · ${esc(c.nome)}</h3>
+    <p class="note2" style="margin:0">Quanto a Vital conhece este cliente: <b style="color:${nv[1]}">${sc}% · ${nv[0]}</b>. ${RX_ITENS.filter(([,f])=>{ try { return !f(p); } catch { return true; } }).map(([n])=>n).slice(0,3).map(n=>"falta: "+n.toLowerCase()).join(" · ")}</p>
+    ${rxMudou(p).length?`<p class="note2" style="margin:0;padding:8px 10px;border-radius:10px;background:#FEF3C7;color:#7A4B00">📈 <b>Este cliente mudou desde que entrou:</b> ${esc(rxMudou(p).join(" · "))}. A entrega e os honorários acompanharam?</p>`:""}
+    <fieldset class="stack" style="gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px"><legend><b>Quando entrou na Vital</b></legend>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><div class="field" style="flex:1 1 100px"><label for="rxEy">Ano</label><input id="rxEy" inputmode="numeric" value="${v("entrada_ano")}"></div><div class="field" style="flex:1 1 120px"><label for="rxEa">Área (ha)</label><input id="rxEa" inputmode="decimal" value="${v("entrada_area")}"></div><div class="field" style="flex:1 1 160px"><label for="rxEe">Estrutura</label><select id="rxEe"><option value="">—</option>${opt(RX_ESTR,p.entrada_estrutura)}</select></div></div>
+      <div class="field"><label for="rxEc">Atividades e operação na época</label><input id="rxEc" value="${v("entrada_cadeias")}" placeholder="ex.: só soja, operação simples"></div>
+      <label style="font-size:.85rem"><input type="checkbox" id="rxEf" ${p.entrada_familia?"checked":""}> Família/filhos já participavam da gestão</label></fieldset>
+    <fieldset class="stack" style="gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px"><legend><b>Hoje: atividade e porte</b></legend>
+      <div class="field"><span class="lbl">Cadeias / atividades</span><div class="chips" id="rxCad">${[...new Set(RX_CADEIAS.concat(p.cadeias||[]))].map(s=>`<button type="button" class="chip" data-s="${esc(s)}" aria-pressed="${sel.has(s)}">${esc(s)}</button>`).join("")}</div></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><div class="field" style="flex:1 1 140px"><label for="rxA">Área (ha)</label><input id="rxA" inputmode="decimal" value="${v("area")}"></div><div class="field" style="flex:1 1 140px"><label for="rxR">Rebanho (cabeças)</label><input id="rxR" inputmode="numeric" value="${v("rebanho")}"></div><div class="field" style="flex:1 1 160px"><label for="rxF">Faturamento anual aprox.</label><input id="rxF" value="${v("faturamento")}" placeholder="ex.: R$ 2 milhões"></div></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><div class="field" style="flex:1 1 160px"><label for="rxEs">Estrutura hoje</label><select id="rxEs"><option value="">—</option>${opt(RX_ESTR,p.estrutura)}</select></div><div class="field" style="flex:2 1 220px"><label for="rxL">Municípios / propriedades</label><input id="rxL" value="${v("local")}" placeholder="ex.: Faz. Retiro, Cumari-GO"></div></div>
+      <label style="font-size:.85rem"><input type="checkbox" id="rxFg" ${p.familia_gestao?"checked":""}> Família/filhos participam da gestão</label></fieldset>
+    <fieldset class="stack" style="gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px"><legend><b>Próxima safra, investimentos e sucessão</b></legend>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><div class="field" style="flex:1 1 160px"><label for="rxSc">Próxima safra / ciclo</label><input id="rxSc" value="${v("safra_cultura")}" placeholder="ex.: Soja 26/27 + sorgo safrinha"></div><div class="field" style="flex:1 1 140px"><label for="rxCr">Vai usar crédito rural?</label><select id="rxCr"><option value="">—</option>${[["sim","Sim"],["nao","Não"],["talvez","Talvez"]].map(([k,l])=>`<option value="${k}" ${p.credito===k?"selected":""}>${l}</option>`).join("")}</select></div></div>
+      <div class="field"><label for="rxSp">O que planeja para a safra (área, insumos, venda, riscos)</label><textarea id="rxSp" rows="2" maxlength="2000" style="border:1px solid var(--line);border-radius:10px;padding:8px">${v("safra_plano")}</textarea></div>
+      <div class="field"><label for="rxI">Investimentos previstos (máquinas, terra, benfeitorias, abertura de empresa…)</label><textarea id="rxI" rows="2" maxlength="2000" style="border:1px solid var(--line);border-radius:10px;padding:8px">${v("invest")}</textarea><label style="font-size:.85rem"><input type="checkbox" id="rxIn" ${p.invest_nao?"checked":""}> Não pretende investir agora (já perguntamos)</label></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><div class="field" style="flex:1 1 200px"><label for="rxSu">Sucessão</label><select id="rxSu"><option value="">—</option>${[["definida","Definida (sucessor já atua)"],["discutindo","Em discussão na família"],["nao","Não há plano"],["nao_se_aplica","Não se aplica"]].map(([k,l])=>`<option value="${k}" ${p.sucessao===k?"selected":""}>${l}</option>`).join("")}</select></div><div class="field" style="flex:1 1 200px"><label for="rxSq">Quem são os sucessores / holding?</label><input id="rxSq" value="${v("sucessao_obs")}"></div></div></fieldset>
+    <fieldset class="stack" style="gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px"><legend><b>Parceiros e origem</b></legend>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><div class="field" style="flex:1 1 160px"><label for="rxCo">Cooperativa</label><input id="rxCo" value="${v("coop")}"></div><div class="field" style="flex:1 1 160px"><label for="rxBa">Banco(s)</label><input id="rxBa" value="${v("banco")}"></div><div class="field" style="flex:1 1 160px"><label for="rxAg">Agrônomo / consultor técnico</label><input id="rxAg" value="${v("agronomo")}"></div></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><div class="field" style="flex:1 1 160px"><label for="rxAi">Agroindústria / comprador</label><input id="rxAi" value="${v("agroind")}"></div><div class="field" style="flex:1 1 160px"><label for="rxSi">Sindicato rural</label><input id="rxSi" value="${v("sindicato")}"></div></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><div class="field" style="flex:1 1 200px"><label for="rxO">Como chegou até a Vital</label><select id="rxO"><option value="">—</option><optgroup label="Fomos até o cliente">${opt(RX_ORIGEM.ir,p.origem)}</optgroup><optgroup label="Fomos encontrados">${opt(RX_ORIGEM.ser,p.origem)}</optgroup><optgroup label="Indicação e outros">${opt(RX_ORIGEM.outros,p.origem)}</optgroup></select></div><div class="field" style="flex:1 1 200px"><label for="rxOq">Quem indicou / qual parceiro</label><input id="rxOq" value="${v("origem_quem")}"></div></div></fieldset>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><div class="field" style="flex:1 1 180px"><label for="rxV">Último momento com o cliente</label><input id="rxV" type="date" value="${v("visita")}"></div><div class="field" style="flex:1 1 180px"><label for="rxVt">Como foi</label><select id="rxVt"><option value="">—</option>${opt(["Visita à propriedade","Reunião de resultados","Café / almoço","Dia de campo ou evento","Ligação ou vídeo"],p.visita_tipo)}</select></div><div class="field" style="flex:1 1 180px"><label for="rxP">Próximo contato</label><input id="rxP" type="date" value="${v("proximo")}"></div></div>
+    <div class="stack" style="gap:6px;padding:10px;border-radius:12px;background:var(--surface-2)"><b>O que este cliente precisa hoje que a Vital ainda não está ajudando a resolver?</b>
+      ${nec.length?`<ul class="hist" style="margin:0">${nec.map(o=>`<li><b>${esc(o.titulo)}</b> · <span class="note2">${esc(o.porque)}</span></li>`).join("")}</ul>`:`<span class="note2">Nada apontado pelo Raio-X. Complete os campos ou escreva abaixo.</span>`}
+      <div class="field" style="margin:0"><label for="rxNe">Outras necessidades que ainda não resolvemos</label><textarea id="rxNe" rows="2" maxlength="2000" style="border:1px solid var(--line);border-radius:10px;padding:8px">${v("necessidades")}</textarea></div></div>
+    <div class="field"><label for="rxD">Dores e objetivos do cliente (na língua dele)</label><textarea id="rxD" rows="2" maxlength="3000" style="border:1px solid var(--line);border-radius:10px;padding:8px">${v("dores")}</textarea></div>`,
+  async () => {
+    const g = id => $(id).value.trim();
+    const d = { cadeias:[...sel], area:g("#rxA"), rebanho:g("#rxR"), faturamento:g("#rxF"), local:g("#rxL"), safra_cultura:g("#rxSc"), credito:g("#rxCr"), safra_plano:g("#rxSp"), invest:g("#rxI"), invest_nao:$("#rxIn").checked,
+      sucessao:g("#rxSu"), sucessao_obs:g("#rxSq"), coop:g("#rxCo"), banco:g("#rxBa"), agronomo:g("#rxAg"), agroind:g("#rxAi"), sindicato:g("#rxSi"), origem:g("#rxO"), origem_quem:g("#rxOq"), visita:g("#rxV"), visita_tipo:g("#rxVt"), proximo:g("#rxP"), dores:g("#rxD"), necessidades:g("#rxNe"),
+      entrada_ano:g("#rxEy"), entrada_area:g("#rxEa"), entrada_estrutura:g("#rxEe"), entrada_cadeias:g("#rxEc"), entrada_familia:$("#rxEf").checked, estrutura:g("#rxEs"), familia_gestao:$("#rxFg").checked };
+    if (/senha|c[oó]digo de acesso/i.test(JSON.stringify(d))) throw new Error("parece haver senha no Raio-X — guarde no cofre");
+    Object.keys(d).forEach(k=>{ if (d[k]==="" || d[k]===false) delete d[k]; });
+    const r = await sb.from("cli_perfil").upsert({cliente:c.id, dados:d, atualizado_em:new Date().toISOString()}); if (r.error) throw r.error;
+    Q.rx[c.id] = {...d, _em:new Date().toISOString()}; toast(`Raio-X salvo · ${rxScore(d)}% de conhecimento.`); desenhaClientes(); });
+  $("#rxCad").onclick = e => { const b=e.target.closest("[data-s]"); if (!b) return; const n=b.dataset.s; sel.has(n)?sel.delete(n):sel.add(n); b.setAttribute("aria-pressed", sel.has(n)); };
 }
 
 /* ---------- COMERCIAL (indicadores do funil) ---------- */

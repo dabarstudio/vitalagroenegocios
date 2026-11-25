@@ -73,7 +73,7 @@ function falar(){ const s=setor(); const extra=window.VITAL_EGG_EXTRA||[]; const
   bolha.innerHTML=`<button class="vegg-x" type="button" aria-label="Esconder a mascote por 7 dias" title="Esconder por 7 dias">esconder ✕</button><b>${s.masc} ${s.nome} diz:</b><span></span><small>Toque de novo para outra… ou 5 vezes seguidas 😉</small>`;
   bolha.querySelector("span").textContent=txt; document.body.appendChild(bolha);
   bolha.querySelector(".vegg-x").onclick=()=>{ LS.set("vegg.off", String(Date.now()+7*864e5)); fechaBolha(); const m=document.querySelector(".vegg-m"); m&&m.remove(); document.body.classList.remove("vegg-on"); };
-  clearTimeout(bolha._t); bolha._t=setTimeout(fechaBolha, 9000); }
+  /* a frase fica na tela até o próximo toque na mascote (sem troca automática) */ }
 function mascote(){ if (embed()) return; const off=+(LS.get("vegg.off")||0); if (off>Date.now()) return; if (document.querySelector(".vegg-m")) return;
   const b=document.createElement("button"); b.type="button"; b.className="vegg-m"; b.setAttribute("aria-label","Mascote da Vital: toque para uma surpresa");
   const pinta=()=>{ const s=setor(); b.textContent=s.masc; b.title=`${s.nome} · toque aqui 👀`; }; pinta(); document.body.appendChild(b); document.body.classList.add("vegg-on");

@@ -623,7 +623,7 @@ async function carregar(silencioso) {
   const emp = S.marc ? (S.outros[0] || {}).empresa : S.q.empresa;
   aplicarMarca(emp);
   if (S.q) { const sg = S.q.segmento || "geral"; if (S.seg && S.seg !== sg) { S.seg = sg; carregarTicker(); } }
-  { const lg = $("#cliLogo"), tq = S.q && TEMAS_QUADRO[S.q.nome], src = tq ? tq.logo : LOGOS[emp]; document.body.classList.toggle("tema-papo", !!(tq && tq.cls === "tema-papo")); if (tq) document.querySelectorAll('meta[name="theme-color"]').forEach(e => e.setAttribute("content", tq.cor)); if (src) { lg.src = src; lg.alt = tq ? S.q.nome : emp; lg.hidden = false; } else lg.hidden = true; }
+  { const lg = $("#cliLogo"), tq = S.q && (TEMAS_QUADRO[S.q.nome] || TEMAS_QUADRO[emp]), src = tq ? tq.logo : LOGOS[emp]; document.body.classList.toggle("tema-papo", !!(tq && tq.cls === "tema-papo")); if (tq) document.querySelectorAll('meta[name="theme-color"]').forEach(e => e.setAttribute("content", tq.cor)); if (src) { lg.src = src; lg.alt = tq ? S.q.nome : emp; lg.hidden = false; } else lg.hidden = true; }
   if (emp && S.empP !== emp) { const { data } = await sb.rpc("cq_pessoas", { p_empresa: emp }); S.pessoas = (data || []).sort((a, b) => a.nome.localeCompare(b.nome)); S.empP = emp; try { const r = await sb.rpc("cq_pessoas_vital", { p_empresa: emp }); S.vital = new Set((r.data || []).map(x => typeof x === "string" ? x : Object.values(x)[0])); } catch { S.vital = new Set(); } }
   const ids = S.cards.map(x => x.id);
   S.coms = {};

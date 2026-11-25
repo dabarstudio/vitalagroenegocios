@@ -461,7 +461,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 try { S.ordem = localStorage.getItem("cq.ordem") || ""; } catch { S.ordem = ""; }
 const LOGOS = { "Agro TNZ": "../clientes/agro-tnz.png" };
 const TEMAS_QUADRO = { "Papo de Porteira": { cls: "tema-papo", logo: "../papo-de-porteira/logo-branca.svg", cor: "#1D5C2F" } };
-const MARCAS = { "Agro TNZ": { titulo: "Agro TNZ", manifest: "manifest-agro-tnz.webmanifest", apple: "tnz-180.png", cor: "#1071B9" } };
+const MARCAS = { "Agro TNZ": { titulo: "Agro TNZ", manifest: "manifest-agro-tnz.webmanifest", apple: "tnz-180.png", cor: "#1071B9" }, "Papo de Porteira": { titulo: "Papo de Porteira", manifest: "manifest-papo.webmanifest", apple: "papo-180.png", cor: "#1D5C2F" } };
 function aplicarMarca(emp) {
   const m = MARCAS[emp]; if (!m || S.marcaAtual === emp) return; S.marcaAtual = emp; S.marcaNome = m.titulo;
   const set = (id, attr, v) => { const e = document.getElementById(id); if (e) e.setAttribute(attr, v); };

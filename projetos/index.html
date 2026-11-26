@@ -1749,6 +1749,54 @@ function contaSocio(socio, ate){
   return {L, saldo:s, aberto, adiant, partic};
 }
 
+/* ---------- receitas fixas: carteira de contratos mensais (base da receita por competência e da projeção) ---------- */
+async function fReceitasFixas(){
+  const c=$("#fCorpo");
+  F.rfix = (await todos("fin_receitas_fixas")).map(x=>({...x, valor:+x.valor})).sort((a,b)=>b.ativo-a.ativo || b.valor-a.valor);
+  const hojeM = hoje().slice(0,7)+"-01", vig = x=>x.ativo && x.inicio<=hojeM && (!x.fim || x.fim>=hojeM);
+  const V = F.rfix.filter(vig), mrr = r2(V.reduce((a,x)=>a+x.valor,0)), porCat={}; V.forEach(x=>porCat[x.categoria]=r2((porCat[x.categoria]||0)+x.valor));
+  const naoConf = F.rfix.filter(x=>x.ativo && !x.confirmada).length;
+  const catsRec = F.cats.filter(k=>k.tipo==="receita").map(k=>k.nome);
+  c.innerHTML = `<div class="kpis">
+      <div class="kpi"><span class="l">Receita contratada por mês (vigente)</span><span class="v">${brl2(mrr)}</span><span class="l">${V.length} contrato(s) · ${brl2(mrr*12)} por ano</span></div>
+      ${Object.entries(porCat).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`<div class="kpi"><span class="l">${esc(k)}</span><span class="v">${brl2(v)}</span><span class="l">${mrr?Math.round(v/mrr*100):0}% da carteira</span></div>`).join("")}
+    </div>
+    ${naoConf?`<div class="callout">⚠️ ${naoConf} contrato(s) foram montados a partir do histórico de recebimentos ou do portal Dabar e ainda <b>não foram confirmados</b>. Confira valor, início e serviço e marque “Confirmado”.</div>`:""}
+    <div class="card stack"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><h3 class="fh">Carteira de contratos fixos</h3><button class="btn sm primary" id="rfNovo">+ Novo contrato fixo</button></div>
+      <p class="note2" style="margin:0">É a base da receita por competência: todo mês vigente o valor entra como receita do mês, recebido ou não. A diferença para o que foi recebido aparece em “A receber” no Painel BSC, e os meses futuros entram na projeção.</p>
+      <div class="tablewrap"><table><thead><tr><th>Cliente</th><th>Serviço</th><th class="num">Valor mensal</th><th>Início</th><th>Fim</th><th>Vínculo no financeiro</th><th>Situação</th></tr></thead><tbody>
+      ${F.rfix.map(x=>`<tr class="clk" data-rf="${x.id}"><td><b>${esc(x.cliente)}</b>${x.obs?`<br><span class="note2">${esc(x.obs)}</span>`:""}</td><td>${esc(x.categoria)}</td><td class="num"><b>${brl2(x.valor)}</b></td><td>${fmtD(x.inicio)}</td><td>${x.fim?fmtD(x.fim):"–"}</td><td>${x.projeto?esc(x.projeto):`<span class="late">sem vínculo</span>`}</td><td>${!x.ativo?`<span class="qd">Encerrado</span>`:x.confirmada?`<span class="qd ok">Confirmado</span>`:`<span class="qd warn">A confirmar</span>`}</td></tr>`).join("")}
+      </tbody><tfoot><tr><td colspan="2"><b>Total vigente</b></td><td class="num"><b>${brl2(mrr)}</b></td><td colspan="4"></td></tr></tfoot></table></div></div>`;
+  $("#rfNovo").onclick=()=>dlgRFix(null, catsRec);
+  c.querySelectorAll("[data-rf]").forEach(r=>r.onclick=()=>dlgRFix(F.rfix.find(x=>x.id===r.dataset.rf), catsRec));
+}
+function dlgRFix(x, catsRec){
+  const ov=document.createElement("div"); ov.className="dmov"; ov.setAttribute("role","dialog"); ov.setAttribute("aria-modal","true");
+  const projs = F.projetos.filter(p=>p.ativo!==false).map(p=>p.nome);
+  ov.innerHTML = `<div class="dmbox" style="width:min(640px,100%);grid-template-rows:auto auto auto"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h3 style="margin:0">${x?"Contrato fixo · "+esc(x.cliente):"Novo contrato fixo"}</h3><button class="btn ghost" type="button" data-x aria-label="Fechar">✕</button></div>
+    <div class="grid2">
+      <div class="field"><label>Cliente</label><input id="rfC" value="${esc(x?x.cliente:"")}"></div>
+      <div class="field"><label>Vínculo no financeiro (projeto que recebe)</label><select id="rfP"><option value="">— sem vínculo —</option>${projs.map(n=>`<option ${x&&x.projeto===n?"selected":""}>${esc(n)}</option>`).join("")}</select></div>
+      <div class="field"><label>Serviço (categoria de receita)</label><select id="rfK">${catsRec.map(n=>`<option ${x&&x.categoria===n?"selected":""}>${esc(n)}</option>`).join("")}</select></div>
+      <div class="field"><label>Valor mensal</label><input id="rfV" inputmode="decimal" value="${x?String(x.valor).replace(".",","):""}"></div>
+      <div class="field"><label>Dia de vencimento</label><input id="rfD" type="number" min="1" max="31" value="${x&&x.dia||10}"></div>
+      <div class="field"><label>Início (1º mês cobrado)</label><input id="rfI" type="month" value="${x?x.inicio.slice(0,7):hoje().slice(0,7)}"></div>
+      <div class="field"><label>Fim (deixe vazio se não tem)</label><input id="rfF" type="month" value="${x&&x.fim?x.fim.slice(0,7):""}"></div>
+      <div class="field"><label>Observação</label><input id="rfO" value="${esc(x&&x.obs||"")}"></div>
+    </div>
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div class="row" style="gap:14px"><label class="chk"><input type="checkbox" id="rfOk" ${!x||x.confirmada?"checked":""}><span>Confirmado</span></label><label class="chk"><input type="checkbox" id="rfA" ${!x||x.ativo?"checked":""}><span>Ativo</span></label></div>
+      <button class="btn primary" type="button" id="rfS">Salvar</button></div></div>`;
+  document.body.appendChild(ov);
+  const fecha=()=>ov.remove(); ov.querySelector("[data-x]").onclick=fecha; ov.onclick=e=>{ if(e.target===ov) fecha(); };
+  ov.querySelector("#rfS").onclick=async()=>{ const g=id=>ov.querySelector(id);
+    const reg={cliente:g("#rfC").value.trim(), projeto:g("#rfP").value||null, categoria:g("#rfK").value, valor:+g("#rfV").value.replace(/[R$\s.]/g,"").replace(",","."), dia:+g("#rfD").value||null,
+      inicio:g("#rfI").value+"-01", fim:g("#rfF").value?g("#rfF").value+"-01":null, obs:g("#rfO").value.trim()||null, confirmada:g("#rfOk").checked, ativo:g("#rfA").checked, atualizado_em:new Date().toISOString()};
+    if (!reg.cliente || !(reg.valor>=0) || !g("#rfI").value) return toast("Preencha cliente, valor e início.");
+    if (!x) reg.origem="manual";
+    const r = x ? await sb.from("fin_receitas_fixas").update(reg).eq("id",x.id) : await sb.from("fin_receitas_fixas").insert(reg);
+    if (r.error) return toast("Não foi possível salvar: "+r.error.message); fecha(); toast("Contrato salvo."); fReceitasFixas(); };
+}
+
 /* ---------- cartão de crédito Cora: faturas, compras (analítico) e pagamentos/reservas ---------- */
 const CARTAO = "cartao_cora", CAT_CARTAO = "Cartão de crédito (pagamento e reserva)";
 const ehMovCartao = t => /37\.880\.206|cora scfi/i.test(t.descricao||"");
@@ -1763,7 +1811,7 @@ async function fCartao(){
   const semFat = compras.filter(t=>!t.fatura), movSemFat = movs.filter(t=>!t.fatura);
   const nSemCat = compras.filter(semClass).length;
   const linhaFat = f => { const {compras:cp, pagos:pg} = porFat(f.id), tc=-soma(cp), tp=-soma(pg), saldo=r2(tc-tp), info=f.valor_informado!=null?+f.valor_informado:null;
-    const st = !cp.length && info==null ? ["Sem compras lançadas","warn"] : saldo<=0.009 ? ["Paga","ok"] : f.vencimento && f.vencimento<hoje() ? ["Vencida","bad"] : ["Em aberto","warn"];
+    const st = !cp.length && info==null ? ["Sem compras lançadas","warn"] : saldo<=0.009 ? ["Paga","ok"] : f.vencimento && f.vencimento<hoje() ? ["Vencida","late"] : ["Em aberto","warn"];
     return `<tr class="clk" data-fat="${f.id}"><td><b>${MESES[+f.mes.slice(5,7)-1]}/${f.mes.slice(0,4)}</b></td><td>${f.fechamento?fmtD(f.fechamento):"–"}</td><td>${f.vencimento?fmtD(f.vencimento):"–"}</td><td class="num">${cp.length}</td><td class="num">${brl2(tc)}</td><td class="num">${info==null?"–":brl2(info)}${info!=null&&cp.length&&Math.abs(info-tc)>0.009?`<br><span class="late" style="font-size:.78rem">difere ${brl2(info-tc)}</span>`:""}</td><td class="num">${brl2(tp)}</td><td class="num ${saldo>0.009?"neg":""}"><b>${brl2(saldo)}</b></td><td><span class="qd ${st[1]}">${st[0]}</span></td></tr>`; };
   c.innerHTML = `<div class="kpis">
       <div class="kpi"><span class="l">Reserva de limite (pré-pago) líquida</span><span class="v">${brl2(reservado)}</span><span class="l">${reservas.length} reserva(s) · ${resgates.length} resgate(s)</span></div>
@@ -1848,7 +1896,7 @@ function sugestao(t){
 /* ---------- tela ---------- */
 function desenhaF(){
   const v=$("#v-financeiro");
-  const subs=[["painel","Painel"],["lanc","Lançamentos"],["contas","Contas a pagar"],["orcamento","Orçado × realizado"],["comissoes","Comissões"],["projetos","Projetos e clientes"],["pessoas","Pessoas"],["balanco","Balanço"],["cartao","Cartão de crédito"],["importar","Importar extrato"]];
+  const subs=[["painel","Painel"],["lanc","Lançamentos"],["contas","Contas a pagar"],["rfix","Receitas fixas"],["orcamento","Orçado × realizado"],["comissoes","Comissões"],["projetos","Projetos e clientes"],["pessoas","Pessoas"],["balanco","Balanço"],["cartao","Cartão de crédito"],["importar","Importar extrato"]];
   const nAl = alertasContas().length;
   const nSem = F.tx.filter(semClass).length;
   v.innerHTML = `<div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-end">
@@ -1856,7 +1904,7 @@ function desenhaF(){
       <div class="chips" role="tablist" aria-label="Financeiro">${subs.map(([k,l])=>`<button class="chip" role="tab" data-fsub="${k}" aria-pressed="${F.sub===k}">${l}${k==="lanc"&&nSem?` <b class="fbadge">${nSem}</b>`:""}${k==="contas"&&nAl?` <b class="fbadge">${nAl}</b>`:""}</button>`).join("")}</div></div>
     <div id="fCorpo" class="stack"></div>`;
   v.querySelectorAll("[data-fsub]").forEach(b=>b.onclick=()=>{ F.sub=b.dataset.fsub; desenhaF(); });
-  ({painel:fPainel, lanc:fLanc, contas:fContas, orcamento:fOrcamento, comissoes:fComissoes, projetos:fProjetos, pessoas:fPessoas, balanco:fBalanco, cartao:fCartao, importar:fImportar})[F.sub]();
+  ({painel:fPainel, lanc:fLanc, contas:fContas, rfix:fReceitasFixas, orcamento:fOrcamento, comissoes:fComissoes, projetos:fProjetos, pessoas:fPessoas, balanco:fBalanco, cartao:fCartao, importar:fImportar})[F.sub]();
 }
 const anosF = () => [...new Set(F.tx.map(t=>+t.data.slice(0,4)))].sort();
 const chipsAno = () => `<div class="chips" aria-label="Ano">${anosF().map(a=>`<button class="chip" data-fano="${a}" aria-pressed="${a===F.ano}">${a}</button>`).join("")}</div>`;

@@ -43,7 +43,10 @@ async function carregar() {
   $("#app").innerHTML = `<p class="note">Carregando o painel…</p>`;
   const { data, error } = await sb.rpc("bsc_painel", { p_mes: S.mes + "-01" });
   if (error) { $("#app").innerHTML = `<div class="sec bloq"><h2>Não foi possível carregar</h2><p class="note">${esc(error.message)}</p></div>`; return; }
-  S.d = data; desenhar();
+  S.d = data;
+  const rc = await sb.rpc("bsc_cobranca", { p_tipo: "receber", p_mes: S.mes + "-01" });
+  S.receber = rc.error ? null : (rc.data.rows || []).reduce((a, r) => a + (+r[4] || 0), 0); S.receberN = rc.error ? 0 : (rc.data.rows || []).length;
+  desenhar();
 }
 
 /* ---------- componentes ---------- */
@@ -102,6 +105,8 @@ function desenhar() {
         ${mi("Ticket médio por cliente pagante", brl(ticket(cur)))}
         ${mi("Caixa (conta Cora)", brl(d.caixa))}
         ${mi("Honorários vencidos", brl(inad.valor), sinal("inadimplencia_max", +inad.valor), `<span class="meta">${nf(inad.qtd)} guia(s) no portal Dabar</span>`)}
+        ${mi("A receber (recorrentes)", brl(S.receber), S.receber ? "s-at" : "s-ok", `<span class="meta">${nf(S.receberN)} cliente(s) com mês em aberto</span>`)}
+        ${mi("Previsto × realizado por cliente", "Ver quem cobrar")}
         ${mi("Receita 12 meses", brl(d.receita_12m))}
         ${mi("Concentração nos 5 maiores", pc(conc), sinal("concentracao_max", conc), metaTxt("concentracao_max"))}
       </div>
@@ -189,7 +194,7 @@ const DET = { "Clientes ativos": "ativos", "Receita do mês": "orcado", "Receita
   "Concentração nos 5 maiores": "concentracao", "Ativos": "ativos", "Pagaram no mês": "pagantes", "Novos no mês": "novos", "Inativos / encerrados": "inativos",
   "Leads novos no mês": "leads", "Ganhos no mês": "ganhos", "Conversão · 12 meses": "ganhos", "Ciclo médio de venda": "ganhos", "Em negociação (pipeline)": "abertos", "Sem próxima ação": "sem_acao",
   "Obrigações do mês no prazo": "obrig_mes", "Obrigações atrasadas": "obrig_atrasadas", "Projetos em andamento": "projetos", "Receita por pessoa · 12m": "servicos12",
-  "Investido em treinamento · 12m": "categoria|Cursos e Treinamentos",
+  "Investido em treinamento · 12m": "categoria|Cursos e Treinamentos", "A receber (recorrentes)": "receber", "Previsto × realizado por cliente": "cobrar",
   "Tarefas concluídas no mês (todos os quadros)": "@/vitalagroenegocios/kpi/", "Tarefas no prazo": "@/vitalagroenegocios/kpi/", "Dias médios para concluir": "@/vitalagroenegocios/kpi/" };
 function ligarDet() {
   document.querySelectorAll(".ft .k, .mi > span:first-child").forEach((l) => { const box = l.parentElement, t = DET[l.textContent.trim()]; if (!t || box.dataset.det) return;
@@ -199,24 +204,55 @@ function ligarDet() {
     el.onclick = abre; el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abre(); } }; });
 }
 const fmtCel = (v, t) => v == null || v === "" ? "–" : t === "brl" ? brl(v) : t === "pct" ? String(v).replace(".", ",") + "%" : t === "n" ? nf(v) : t === "data" ? new Date(String(v).slice(0, 10) + "T12:00").toLocaleDateString("pt-BR") : t === "mes" ? mesRot(String(v).slice(0, 7)) : esc(v);
-async function detalhe(tipo, filtro) {
-  const f = $("#dlgF"); f.innerHTML = `<p class="note">Carregando o detalhamento…</p>`; $("#dlg").classList.add("largo"); $("#dlg").showModal();
-  const { data, error } = await sb.rpc("bsc_detalhe", { p_tipo: tipo, p_mes: S.mes + "-01", p_filtro: filtro });
+const COBR = new Set(["cobrar", "receber", "cliente"]);
+const RECEITA_GRUPOS = new Set(["Prestação de Serviço", "Outras Receitas"]);
+const PILHA = [];   // navegação dentro do analítico (voltar)
+/* para onde vai o clique numa linha de cada analítico */
+function linkLinha(tipo, data, r) {
+  if (tipo === "orcado" || tipo === "custos") return RECEITA_GRUPOS.has(r[0]) ? ["cobrar", r[1]] : ["categoria", r[1]];
+  if (data.links === "cliente" || ["pagantes", "recorrente", "ticket", "novos", "concentracao", "top"].includes(tipo)) return r[0] && r[0] !== "(sem cliente)" ? ["cliente", r[0]] : null;
+  if (["ativos", "inativos", "servico"].includes(tipo)) return ["cliente", r[0]];
+  if (tipo === "servicos12" || tipo === "receita12") return ["cobrar", r[0]];
+  return null;
+}
+async function detalhe(tipo, filtro, mes, voltando) {
+  mes = mes || S.mes;
+  const f = $("#dlgF"); if (!$("#dlg").open) { PILHA.length = 0; $("#dlg").classList.add("largo"); $("#dlg").showModal(); }
+  if (!voltando && PILHA.length && PILHA[PILHA.length - 1].tipo === tipo && PILHA[PILHA.length - 1].filtro === filtro) PILHA.pop();
+  if (!voltando) PILHA.push({ tipo, filtro, mes });
+  f.innerHTML = `<p class="note">Carregando o detalhamento…</p>`;
+  const { data, error } = await sb.rpc(COBR.has(tipo) ? "bsc_cobranca" : "bsc_detalhe", { p_tipo: tipo, p_mes: mes + "-01", p_filtro: filtro });
   if (error) { f.innerHTML = `<p class="err">Não foi possível carregar: ${esc(error.message)}</p><div class="row" style="justify-content:flex-end"><button class="btn" value="cancel">Fechar</button></div>`; return; }
   const cols = data.cols || [], rows = data.rows || [];
-  const tot = cols.map(([, t], i) => t === "brl" ? rows.reduce((a, r) => a + (+r[i] || 0), 0) : null);
-  const somar = tot.some((x) => x != null) && !["resultado", "orcado"].includes(tipo);
+  const grupo = tipo === "orcado" || tipo === "custos";
+  const somar = cols.some((c) => c[1] === "brl") && !["resultado", "orcado", "custos", "cobrar"].includes(tipo) || tipo === "custos" || tipo === "cobrar";
+  const soma = (L, i) => L.reduce((a, r) => a + (+r[i] || 0), 0);
+  const linhaTot = (rot, L, cls) => `<tr class="${cls}">${cols.map(([, t], i) => `<td class="${t === "txt" ? "" : "num"}">${i === 0 ? esc(rot) : t === "brl" ? brl(soma(L, i)) : t === "pct" && cols[2] && cols[2][0] === "Orçado" && soma(L, 2) ? Math.round(soma(L, 3) / soma(L, 2) * 100) + "%" : ""}</td>`).join("")}</tr>`;
+  const linha = (r) => { const lk = linkLinha(tipo, data, r);
+    return `<tr class="${String(r[0]).startsWith("(=)") ? "tot" : ""}${lk ? " lk" : ""}"${lk ? ` data-lt="${lk[0]}" data-lf="${esc(lk[1])}" tabindex="0" title="Ver o detalhe"` : ""}>${r.map((v, i) => `<td class="${cols[i][1] === "txt" ? "" : "num"}${cols[i][1] === "brl" && +v < 0 ? " neg" : ""}">${fmtCel(v, cols[i][1])}</td>`).join("")}</tr>`; };
   const desenhaT = (q) => { const L = q ? rows.filter((r) => r.join(" ").toLowerCase().includes(q)) : rows;
-    return `<table class="t dt"><thead><tr>${cols.map(([n, t]) => `<th class="${t === "txt" ? "" : "num"}">${esc(n)}</th>`).join("")}</tr></thead><tbody>${L.map((r) => `<tr class="${String(r[0]).startsWith("(=)") ? "tot" : ""}">${r.map((v, i) => `<td class="${cols[i][1] === "txt" ? "" : "num"}${cols[i][1] === "brl" && +v < 0 ? " neg" : ""}">${fmtCel(v, cols[i][1])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${cols.length}" class="note">Nada para mostrar.</td></tr>`}</tbody>
-      ${somar && L.length > 1 ? `<tfoot><tr class="tot">${cols.map(([, t], i) => `<td class="${t === "txt" ? "" : "num"}">${i === 0 ? "Total" : t === "brl" ? brl(L.reduce((a, r) => a + (+r[i] || 0), 0)) : ""}</td>`).join("")}</tr></tfoot>` : ""}</table>`; };
-  f.innerHTML = `<div class="row" style="justify-content:space-between;align-items:start"><div><h2 style="font-size:1.2rem">${esc(data.titulo)}</h2><p class="note">${esc(data.sub || "")} · ${mesRot(S.mes)} · ${rows.length} linha(s)</p></div><button class="btn ghost" value="cancel" aria-label="Fechar">✕</button></div>
-    <div class="row"><input id="dtQ" type="search" placeholder="Filtrar" style="flex:1;min-width:160px;border:1px solid var(--line);border-radius:10px;padding:9px 12px"><button class="btn sm" type="button" id="dtCsv">Baixar planilha (CSV)</button></div>
+    let corpo = "";
+    if (grupo) { const gs = [...new Set(L.map((r) => r[0]))]; gs.forEach((g) => { const G = L.filter((r) => r[0] === g); corpo += G.map(linha).join("") + linhaTot("Subtotal · " + g, G, "sub"); });
+      const R = L.filter((r) => RECEITA_GRUPOS.has(r[0])), D = L.filter((r) => !RECEITA_GRUPOS.has(r[0]));
+      if (R.length && D.length) corpo += linhaTot("Total receitas", R, "tot") + linhaTot("Total custos e despesas", D, "tot"); }
+    else corpo = L.map(linha).join("");
+    return `<table class="t dt"><thead><tr>${cols.map(([n, t]) => `<th class="${t === "txt" ? "" : "num"}">${esc(n)}</th>`).join("")}</tr></thead><tbody>${corpo || `<tr><td colspan="${cols.length}" class="note">Nada para mostrar.</td></tr>`}</tbody>
+      ${somar && L.length > 1 ? `<tfoot>${linhaTot("Total", L, "tot")}</tfoot>` : ""}</table>`; };
+  const temMes = !["concentracao", "top", "ativos", "inativos", "servico", "abertos", "sem_acao", "etapa", "projetos", "obrig_atrasadas", "inadimplencia"].includes(tipo);
+  f.innerHTML = `<div class="row" style="justify-content:space-between;align-items:start;flex-wrap:nowrap"><div style="min-width:0">${PILHA.length > 1 ? `<button class="btn ghost sm" type="button" id="dtVolta" style="padding-left:0">‹ Voltar para ${esc(PILHA[PILHA.length - 2].titulo || "o anterior")}</button>` : ""}<h2 style="font-size:1.2rem">${esc(data.titulo)}</h2><p class="note">${esc(data.sub || "")} · ${rows.length} linha(s)${rows.some((r) => linkLinha(tipo, data, r)) ? " · toque numa linha para abrir o detalhe" : ""}</p></div><button class="btn ghost" value="cancel" aria-label="Fechar">✕</button></div>
+    <div class="row">${temMes ? `<div class="mesnav" role="group" aria-label="Mês do detalhe"><button type="button" id="dtA" aria-label="Mês anterior">‹</button><b>${mesRot(mes)}</b><button type="button" id="dtP" aria-label="Próximo mês">›</button></div>` : ""}<input id="dtQ" type="search" placeholder="Filtrar" style="flex:1;min-width:160px;border:1px solid var(--line);border-radius:10px;padding:9px 12px"><button class="btn sm" type="button" id="dtCsv">Baixar planilha (CSV)</button></div>
     <div class="tablewrap" id="dtT" style="max-height:60vh;overflow:auto">${desenhaT("")}</div>`;
-  $("#dtQ").oninput = (e) => { $("#dtT").innerHTML = desenhaT(e.target.value.trim().toLowerCase()); };
+  PILHA[PILHA.length - 1].titulo = data.titulo;
+  const ligaLinhas = () => $("#dtT").querySelectorAll("tr.lk").forEach((tr) => { const go = () => detalhe(tr.dataset.lt, tr.dataset.lf, mes); tr.onclick = go; tr.onkeydown = (e) => { if (e.key === "Enter") go(); }; });
+  ligaLinhas();
+  $("#dtQ").oninput = (e) => { $("#dtT").innerHTML = desenhaT(e.target.value.trim().toLowerCase()); ligaLinhas(); };
+  if ($("#dtVolta")) $("#dtVolta").onclick = () => { PILHA.pop(); const a = PILHA[PILHA.length - 1]; detalhe(a.tipo, a.filtro, a.mes, true); };
+  if ($("#dtA")) { $("#dtA").onclick = () => { PILHA[PILHA.length - 1].mes = addMes(mes, -1); detalhe(tipo, filtro, addMes(mes, -1), true); }; $("#dtP").onclick = () => { PILHA[PILHA.length - 1].mes = addMes(mes, 1); detalhe(tipo, filtro, addMes(mes, 1), true); }; }
   $("#dtCsv").onclick = () => { const linhas = [cols.map((c) => c[0])].concat(rows.map((r) => r.map((v, i) => cols[i][1] === "brl" || cols[i][1] === "pct" || cols[i][1] === "n" ? String(v ?? "").replace(".", ",") : v ?? "")));
     const csv = "\ufeff" + linhas.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\r\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = (data.titulo || "detalhe").replace(/[^\p{L}\p{N}]+/gu, "-") + "-" + S.mes + ".csv"; a.click(); };
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = (data.titulo || "detalhe").replace(/[^\p{L}\p{N}]+/gu, "-") + "-" + mes + ".csv"; a.click(); };
 }
+
 const addMes = (ym, n) => { const d = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + n, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
 
 /* dica ao passar o mouse ou tocar numa barra */

@@ -620,6 +620,8 @@ async function carregar(silencioso) {
     }
   }
   if (c.error || k.error) { if (!silencioso) falha("Erro ao carregar: " + (c.error || k.error).message); return; }
+  { const vc = new Set(), vk = new Set(); /* quadro geral com dono junta os mesmos cartões por dois caminhos: um de cada */
+    c.data = (c.data || []).filter(x => !vc.has(x.id) && vc.add(x.id)); k.data = (k.data || []).filter(x => !vk.has(x.id) && vk.add(x.id)); }
   S.colsAll = c.data || []; S.cards = k.data || []; S.mem = m.data || [];
   if (S.marc) {
     const vist = new Map();

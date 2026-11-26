@@ -51,7 +51,7 @@ const tile = (k, rot, v, det, cls) => `<div class="ft ${cls || ""}"><span class=
 const delta = (a, b, fmt, inv) => { if (a == null || b == null || !isFinite(a) || !isFinite(b) || b === 0) return `<span class="d">sem comparação</span>`;
   const x = (a - b) / Math.abs(b) * 100, bom = inv ? x < 0 : x > 0; return `<span class="d ${Math.abs(x) < 0.5 ? "" : bom ? "up" : "dn"}">${x > 0 ? "▲" : x < 0 ? "▼" : "="} ${Math.abs(Math.round(x))}% vs mês anterior</span>`; };
 const mi = (rot, v, cls, extra) => `<div class="mi ${cls || ""}"><span>${rot}</span><b>${v}</b>${extra || ""}</div>`;
-const barras = (L, fmt) => { const mx = Math.max(1, ...L.map((x) => x[1])); return `<div class="hb">${L.map(([n, v]) => `<div class="r"><span title="${esc(n)}">${esc(n)}</span><i style="width:${Math.max(1, v / mx * 100)}%"></i><em>${fmt ? fmt(v) : nf(v)}</em></div>`).join("")}</div>`; };
+const barras = (L, fmt, det) => { const mx = Math.max(1, ...L.map((x) => x[1])); return `<div class="hb">${L.map(([n, v]) => `<div class="r"${det ? ` data-det="${det}" data-f="${esc(n)}"` : ""}><span title="${esc(n)}">${esc(n)}</span><i style="width:${Math.max(1, v / mx * 100)}%"></i><em>${fmt ? fmt(v) : nf(v)}</em></div>`).join("")}</div>`; };
 function colunas(serie, val, orc, rot) {
   const mx = Math.max(1, ...serie.map((s) => Math.max(+val(s) || 0, +(orc ? orc(s) : 0) || 0)));
   return `<div class="cc">${serie.map((s, i) => { const v = +val(s) || 0, o = orc ? +orc(s) || 0 : 0;
@@ -105,8 +105,8 @@ function desenhar() {
         ${mi("Receita 12 meses", brl(d.receita_12m))}
         ${mi("Concentração nos 5 maiores", pc(conc), sinal("concentracao_max", conc), metaTxt("concentracao_max"))}
       </div>
-      <div><div class="st">Receita por serviço · 12 meses</div>${(d.por_servico_12m || []).length ? barras((d.por_servico_12m || []).map((x) => [x.categoria, +x.valor]), brl) : `<p class="vazio">Sem receitas classificadas.</p>`}</div>
-      <div><div class="st">5 maiores clientes · 12 meses</div>${top.length ? barras(top.map((x) => [x.cliente, +x.valor]), brl) : `<p class="vazio">Sem dados.</p>`}</div>
+      <div><div class="st">Receita por serviço · 12 meses</div>${(d.por_servico_12m || []).length ? barras((d.por_servico_12m || []).map((x) => [x.categoria, +x.valor]), brl, "categoria") : `<p class="vazio">Sem receitas classificadas.</p>`}</div>
+      <div><div class="st">5 maiores clientes · 12 meses</div>${top.length ? barras(top.map((x) => [x.cliente, +x.valor]), brl, "concentracao") : `<p class="vazio">Sem dados.</p>`}</div>
       <a class="btn sm" href="/vitalagroenegocios/projetos/#financeiro">Abrir o financeiro</a>
     </section>
 
@@ -117,7 +117,7 @@ function desenhar() {
         ${mi("Novos no mês", nf(cur.novos), "", `<span class="meta">1º pagamento no mês</span>`)}
         ${mi("Inativos / encerrados", nf((+sit.inativo || 0) + (+sit.encerrado || 0)))}
       </div>
-      <div><div class="st">Clientes ativos por serviço</div>${(cl.por_servico || []).length ? barras(cl.por_servico.map((x) => [x.servico, +x.n])) : `<p class="vazio">Nenhum serviço marcado nos clientes ativos.</p>`}</div>
+      <div><div class="st">Clientes ativos por serviço</div>${(cl.por_servico || []).length ? barras(cl.por_servico.map((x) => [x.servico, +x.n]), null, "servico") : `<p class="vazio">Nenhum serviço marcado nos clientes ativos.</p>`}</div>
       <div><div class="st">Satisfação (NPS) · 12 meses</div>
         ${nps.n12 ? `<div class="npsb" role="img" aria-label="${nps.prom} promotores, ${nps.neut} neutros, ${nps.detr} detratores"><i style="width:${nps.prom / nps.n12 * 100}%;background:#2E8B57"></i><i style="width:${nps.neut / nps.n12 * 100}%;background:#D9A23A"></i><i style="width:${nps.detr / nps.n12 * 100}%;background:#C7432F"></i></div>
           <div class="leg" style="margin-top:6px"><span><span class="sw" style="background:#2E8B57"></span>${nps.prom} promotores</span><span><span class="sw" style="background:#D9A23A"></span>${nps.neut} neutros</span><span><span class="sw" style="background:#C7432F"></span>${nps.detr} detratores</span></div>`
@@ -140,17 +140,17 @@ function desenhar() {
       </div>
       <div class="persp" style="gap:18px">
         <div><div class="st">Onde estão os negócios abertos</div><div class="funil" style="margin-top:8px">${(() => { const E = fu.etapas || [], mx = Math.max(1, ...E.map((e) => +e.n));
-          return E.map((e) => `<div class="fe"><span>${esc(e.nome)}</span><div class="fb"><i style="width:${Math.max(12, e.n / mx * 100)}%">${nf(e.n)}${+e.valor ? " · " + brl(e.valor) : ""}</i></div></div>`).join("")
-            + `<div class="fe g"><span>Ganhos 12m</span><div class="fb"><i style="width:${Math.max(12, fu.ganhos_12m / Math.max(mx, fu.ganhos_12m, fu.perdidos_12m) * 100)}%">${nf(fu.ganhos_12m)}</i></div></div>`
-            + `<div class="fe p"><span>Perdidos 12m</span><div class="fb"><i style="width:${Math.max(12, fu.perdidos_12m / Math.max(mx, fu.ganhos_12m, fu.perdidos_12m) * 100)}%">${nf(fu.perdidos_12m)}</i></div></div>`; })()}</div></div>
+          return E.map((e) => `<div class="fe" data-det="etapa" data-f="${esc(e.nome)}"><span>${esc(e.nome)}</span><div class="fb"><i style="width:${Math.max(12, e.n / mx * 100)}%">${nf(e.n)}${+e.valor ? " · " + brl(e.valor) : ""}</i></div></div>`).join("")
+            + `<div class="fe g" data-det="ganhos"><span>Ganhos 12m</span><div class="fb"><i style="width:${Math.max(12, fu.ganhos_12m / Math.max(mx, fu.ganhos_12m, fu.perdidos_12m) * 100)}%">${nf(fu.ganhos_12m)}</i></div></div>`
+            + `<div class="fe p" data-det="perdidos"><span>Perdidos 12m</span><div class="fb"><i style="width:${Math.max(12, fu.perdidos_12m / Math.max(mx, fu.ganhos_12m, fu.perdidos_12m) * 100)}%">${nf(fu.perdidos_12m)}</i></div></div>`; })()}</div></div>
         <div><div class="st">Leads e ganhos por mês</div>
           <div class="leg" style="margin:6px 0"><span><span class="sw" style="background:var(--brand-2)"></span>Leads</span><span><span class="ln"></span>Ganhos</span></div>
           ${colunas(fu.serie || [], (s) => s.leads, (s) => s.ganhos, (s) => `${mesRot(s.m)}: ${s.leads} lead(s), ${s.ganhos} ganho(s)`)}
         </div>
       </div>
       <div class="persp" style="gap:18px">
-        <div><div class="st">De onde vêm os clientes ganhos · 12 meses</div>${(fu.origem_ganhos || []).length ? barras(fu.origem_ganhos.map((x) => [x.origem, +x.n])) : `<p class="vazio">Sem ganhos no período.</p>`}</div>
-        <div><div class="st">Por que perdemos · 12 meses</div>${(fu.motivos_perda || []).length ? barras(fu.motivos_perda.map((x) => [x.motivo, +x.n])) : `<p class="vazio">Sem perdas no período.</p>`}</div>
+        <div><div class="st">De onde vêm os clientes ganhos · 12 meses</div>${(fu.origem_ganhos || []).length ? barras(fu.origem_ganhos.map((x) => [x.origem, +x.n]), null, "origem") : `<p class="vazio">Sem ganhos no período.</p>`}</div>
+        <div><div class="st">Por que perdemos · 12 meses</div>${(fu.motivos_perda || []).length ? barras(fu.motivos_perda.map((x) => [x.motivo, +x.n]), null, "motivo") : `<p class="vazio">Sem perdas no período.</p>`}</div>
       </div>
       ${(fu.origem_ganhos || []).some((x) => x.origem === "Não informada") || (fu.motivos_perda || []).some((x) => x.motivo === "Não informado") ? `<p class="note">Dica: preencher a origem e o motivo de perda nos cartões do funil deixa estes gráficos úteis para decidir onde investir.</p>` : ""}
       <div class="row"><a class="btn sm primary" href="/vitalagroenegocios/projetos/#quadros">Abrir o funil de vendas</a><a class="btn sm" href="/vitalagroenegocios/projetos/#comercial">Comercial e indicadores</a></div>
@@ -181,7 +181,41 @@ function desenhar() {
   $("#mAnt").onclick = () => { S.mes = addMes(S.mes, -1); carregar(); };
   $("#mProx").onclick = () => { S.mes = addMes(S.mes, 1); carregar(); };
   $("#bMetas").onclick = dlgMetas;
-  ligarTips();
+  ligarTips(); ligarDet();
+}
+/* ---------- analíticos: cada indicador abre o detalhamento ---------- */
+const DET = { "Clientes ativos": "ativos", "Receita do mês": "orcado", "Receita recorrente": "recorrente", "Resultado do mês": "resultado", "NPS · 12 meses": "nps", "Obrigações no prazo": "obrig_mes",
+  "Custos + despesas do mês": "custos", "Ticket médio por cliente pagante": "pagantes", "Caixa (conta Cora)": "caixa", "Honorários vencidos": "inadimplencia", "Receita 12 meses": "servicos12",
+  "Concentração nos 5 maiores": "concentracao", "Ativos": "ativos", "Pagaram no mês": "pagantes", "Novos no mês": "novos", "Inativos / encerrados": "inativos",
+  "Leads novos no mês": "leads", "Ganhos no mês": "ganhos", "Conversão · 12 meses": "ganhos", "Ciclo médio de venda": "ganhos", "Em negociação (pipeline)": "abertos", "Sem próxima ação": "sem_acao",
+  "Obrigações do mês no prazo": "obrig_mes", "Obrigações atrasadas": "obrig_atrasadas", "Projetos em andamento": "projetos", "Receita por pessoa · 12m": "servicos12",
+  "Investido em treinamento · 12m": "categoria|Cursos e Treinamentos",
+  "Tarefas concluídas no mês (todos os quadros)": "@/vitalagroenegocios/kpi/", "Tarefas no prazo": "@/vitalagroenegocios/kpi/", "Dias médios para concluir": "@/vitalagroenegocios/kpi/" };
+function ligarDet() {
+  document.querySelectorAll(".ft .k, .mi > span:first-child").forEach((l) => { const box = l.parentElement, t = DET[l.textContent.trim()]; if (!t || box.dataset.det) return;
+    const [k, f] = t.split("|"); box.dataset.det = k; if (f) box.dataset.f = f; });
+  document.querySelectorAll("[data-det]").forEach((el) => { el.classList.add("clic"); el.tabIndex = 0; el.setAttribute("role", "button");
+    const abre = () => { const k = el.dataset.det; if (k.startsWith("@")) { location.href = k.slice(1); return; } detalhe(k, el.dataset.f || null); };
+    el.onclick = abre; el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abre(); } }; });
+}
+const fmtCel = (v, t) => v == null || v === "" ? "–" : t === "brl" ? brl(v) : t === "pct" ? String(v).replace(".", ",") + "%" : t === "n" ? nf(v) : t === "data" ? new Date(String(v).slice(0, 10) + "T12:00").toLocaleDateString("pt-BR") : t === "mes" ? mesRot(String(v).slice(0, 7)) : esc(v);
+async function detalhe(tipo, filtro) {
+  const f = $("#dlgF"); f.innerHTML = `<p class="note">Carregando o detalhamento…</p>`; $("#dlg").classList.add("largo"); $("#dlg").showModal();
+  const { data, error } = await sb.rpc("bsc_detalhe", { p_tipo: tipo, p_mes: S.mes + "-01", p_filtro: filtro });
+  if (error) { f.innerHTML = `<p class="err">Não foi possível carregar: ${esc(error.message)}</p><div class="row" style="justify-content:flex-end"><button class="btn" value="cancel">Fechar</button></div>`; return; }
+  const cols = data.cols || [], rows = data.rows || [];
+  const tot = cols.map(([, t], i) => t === "brl" ? rows.reduce((a, r) => a + (+r[i] || 0), 0) : null);
+  const somar = tot.some((x) => x != null) && !["resultado", "orcado"].includes(tipo);
+  const desenhaT = (q) => { const L = q ? rows.filter((r) => r.join(" ").toLowerCase().includes(q)) : rows;
+    return `<table class="t dt"><thead><tr>${cols.map(([n, t]) => `<th class="${t === "txt" ? "" : "num"}">${esc(n)}</th>`).join("")}</tr></thead><tbody>${L.map((r) => `<tr class="${String(r[0]).startsWith("(=)") ? "tot" : ""}">${r.map((v, i) => `<td class="${cols[i][1] === "txt" ? "" : "num"}${cols[i][1] === "brl" && +v < 0 ? " neg" : ""}">${fmtCel(v, cols[i][1])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${cols.length}" class="note">Nada para mostrar.</td></tr>`}</tbody>
+      ${somar && L.length > 1 ? `<tfoot><tr class="tot">${cols.map(([, t], i) => `<td class="${t === "txt" ? "" : "num"}">${i === 0 ? "Total" : t === "brl" ? brl(L.reduce((a, r) => a + (+r[i] || 0), 0)) : ""}</td>`).join("")}</tr></tfoot>` : ""}</table>`; };
+  f.innerHTML = `<div class="row" style="justify-content:space-between;align-items:start"><div><h2 style="font-size:1.2rem">${esc(data.titulo)}</h2><p class="note">${esc(data.sub || "")} · ${mesRot(S.mes)} · ${rows.length} linha(s)</p></div><button class="btn ghost" value="cancel" aria-label="Fechar">✕</button></div>
+    <div class="row"><input id="dtQ" type="search" placeholder="Filtrar" style="flex:1;min-width:160px;border:1px solid var(--line);border-radius:10px;padding:9px 12px"><button class="btn sm" type="button" id="dtCsv">Baixar planilha (CSV)</button></div>
+    <div class="tablewrap" id="dtT" style="max-height:60vh;overflow:auto">${desenhaT("")}</div>`;
+  $("#dtQ").oninput = (e) => { $("#dtT").innerHTML = desenhaT(e.target.value.trim().toLowerCase()); };
+  $("#dtCsv").onclick = () => { const linhas = [cols.map((c) => c[0])].concat(rows.map((r) => r.map((v, i) => cols[i][1] === "brl" || cols[i][1] === "pct" || cols[i][1] === "n" ? String(v ?? "").replace(".", ",") : v ?? "")));
+    const csv = "\ufeff" + linhas.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\r\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = (data.titulo || "detalhe").replace(/[^\p{L}\p{N}]+/gu, "-") + "-" + S.mes + ".csv"; a.click(); };
 }
 const addMes = (ym, n) => { const d = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + n, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
 
@@ -201,7 +235,7 @@ function dlgMetas() {
   f.innerHTML = `<h2 style="font-size:1.2rem">🎯 Metas dos sócios</h2><p class="note">Com a meta definida, o indicador fica verde quando atinge, amarelo quando está até 10% fora e vermelho quando passa disso. Deixe em branco para não usar meta.</p>
     <div class="grid2">${METAS.map(([k, rot, u]) => `<div class="field"><label for="mt_${k}">${rot}</label><input id="mt_${k}" inputmode="decimal" value="${metaDe(k) == null ? "" : String(metaDe(k)).replace(".", ",")}" placeholder="${u === "brl" ? "R$" : u === "pct" ? "%" : ""}"></div>`).join("")}</div>
     <div class="row" style="justify-content:flex-end"><button class="btn ghost" value="cancel">Cancelar</button><button class="btn primary" id="mtSalvar" type="button">Salvar metas</button></div>`;
-  $("#dlg").showModal();
+  $("#dlg").classList.remove("largo"); $("#dlg").showModal();
   $("#mtSalvar").onclick = async () => {
     const up = [], del = [];
     METAS.forEach(([k]) => { const t = $("#mt_" + k).value.trim().replace(/\./g, "").replace(",", "."); if (t === "") del.push(k); else if (!isNaN(+t)) up.push({ chave: k, valor: +t, atualizado_em: new Date().toISOString() }); });

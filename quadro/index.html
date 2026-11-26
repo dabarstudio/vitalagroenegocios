@@ -462,6 +462,14 @@ setInterval(checarVersao, 120000);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checarVersao(); });
 try { S.ordem = localStorage.getItem("cq.ordem") || ""; } catch { S.ordem = ""; }
 const LOGOS = { "Agro TNZ": "../clientes/agro-tnz.png" };
+/* logo enviada no portal do cliente (tabela cli_marcas), usada quando não há logo fixa acima */
+const _marcasCache = {};
+async function marcaPortal(emp) {
+  if (emp in _marcasCache) return _marcasCache[emp];
+  try { const r = await sb.from("cli_marcas").select("logo").eq("empresa", emp).maybeSingle(); _marcasCache[emp] = (r.data && r.data.logo) || null; }
+  catch { _marcasCache[emp] = null; }
+  return _marcasCache[emp];
+}
 const TEMAS_QUADRO = { "Papo de Porteira": { cls: "tema-papo", logo: "../papo-de-porteira/logo-branca.svg", cor: "#1D5C2F" } };
 const MARCAS = { "Agro TNZ": { titulo: "Agro TNZ", manifest: "manifest-agro-tnz.webmanifest", apple: "tnz-180.png", cor: "#1071B9" }, "Papo de Porteira": { titulo: "Papo de Porteira", manifest: "manifest-papo.webmanifest", apple: "papo-180.png", cor: "#1D5C2F" } };
 function aplicarMarca(emp) {
@@ -629,7 +637,7 @@ async function carregar(silencioso) {
   const emp = S.marc ? (S.outros[0] || {}).empresa : S.q.empresa;
   aplicarMarca(emp);
   if (S.q) { const sg = S.q.segmento || "geral"; if (S.seg && S.seg !== sg) { S.seg = sg; carregarTicker(); } }
-  { const lg = $("#cliLogo"), tq = S.q && (TEMAS_QUADRO[S.q.nome] || TEMAS_QUADRO[emp]), src = tq ? tq.logo : LOGOS[emp]; document.body.classList.toggle("tema-papo", !!(tq && tq.cls === "tema-papo")); if (tq) document.querySelectorAll('meta[name="theme-color"]').forEach(e => e.setAttribute("content", tq.cor)); if (src) { lg.src = src; lg.alt = tq ? S.q.nome : emp; lg.hidden = false; } else lg.hidden = true; }
+  { const lg = $("#cliLogo"), tq = S.q && (TEMAS_QUADRO[S.q.nome] || TEMAS_QUADRO[emp]), src = tq ? tq.logo : LOGOS[emp]; document.body.classList.toggle("tema-papo", !!(tq && tq.cls === "tema-papo")); if (tq) document.querySelectorAll('meta[name="theme-color"]').forEach(e => e.setAttribute("content", tq.cor)); S.marcaLogo = src ? null : emp; if (src) { lg.src = src; lg.alt = tq ? S.q.nome : emp; lg.hidden = false; } else if (emp) { const k = emp; marcaPortal(k).then(u => { if (S.marcaLogo !== k) return; if (u) { lg.src = u; lg.alt = k; lg.hidden = false; } else lg.hidden = true; }); } else lg.hidden = true; }
   if (emp && S.empP !== emp) { const { data } = await sb.rpc("cq_pessoas", { p_empresa: emp }); S.pessoas = (data || []).sort((a, b) => a.nome.localeCompare(b.nome)); S.empP = emp; try { const r = await sb.rpc("cq_pessoas_vital", { p_empresa: emp }); S.vital = new Set((r.data || []).map(x => typeof x === "string" ? x : Object.values(x)[0])); } catch { S.vital = new Set(); } }
   const ids = S.cards.map(x => x.id);
   S.coms = {};

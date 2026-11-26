@@ -1596,7 +1596,7 @@ function renderFinanceiro(){ comF(desenhaF); }
 /* ---------- saldos ---------- */
 function saldoAte(conta, d){
   const si = F.cfg.saldo_inicial_banco || {data:"2000-01-01", valor:0};
-  let s = conta==="dinheiro" ? 0 : +si.valor||0;
+  let s = (conta==="cora" || conta==="todas") ? +si.valor||0 : 0;
   for (const t of F.tx) if ((conta==="todas" || t.conta===conta) && t.data<=d && t.data>=si.data) s += t.valor;
   return r2(s);
 }
@@ -1749,21 +1749,106 @@ function contaSocio(socio, ate){
   return {L, saldo:s, aberto, adiant, partic};
 }
 
+/* ---------- cartão de crédito Cora: faturas, compras (analítico) e pagamentos/reservas ---------- */
+const CARTAO = "cartao_cora", CAT_CARTAO = "Cartão de crédito (pagamento e reserva)";
+const ehMovCartao = t => /37\.880\.206|cora scfi/i.test(t.descricao||"");
+async function fCartao(){
+  const c=$("#fCorpo");
+  if (!F.faturas) { try { F.faturas = (await todos("fin_cartao_faturas")).sort((a,b)=>b.mes.localeCompare(a.mes)); } catch(x) { F.faturas = []; } }
+  const compras = F.tx.filter(t=>t.conta===CARTAO), movs = F.tx.filter(t=>t.conta!==CARTAO && ehMovCartao(t));
+  const reservas = movs.filter(t=>/reserva de limite/i.test(t.descricao)), resgates = movs.filter(t=>/resgate/i.test(t.descricao)), pagtos = movs.filter(t=>/fatura/i.test(t.descricao));
+  const soma = L => r2(L.reduce((a,t)=>a+t.valor,0));
+  const reservado = r2(-soma(reservas) - soma(resgates));
+  const porFat = id => ({ compras: compras.filter(t=>t.fatura===id), pagos: movs.filter(t=>t.fatura===id) });
+  const semFat = compras.filter(t=>!t.fatura), movSemFat = movs.filter(t=>!t.fatura);
+  const nSemCat = compras.filter(semClass).length;
+  const linhaFat = f => { const {compras:cp, pagos:pg} = porFat(f.id), tc=-soma(cp), tp=-soma(pg), saldo=r2(tc-tp), info=f.valor_informado!=null?+f.valor_informado:null;
+    const st = !cp.length && info==null ? ["Sem compras lançadas","warn"] : saldo<=0.009 ? ["Paga","ok"] : f.vencimento && f.vencimento<hoje() ? ["Vencida","bad"] : ["Em aberto","warn"];
+    return `<tr class="clk" data-fat="${f.id}"><td><b>${MESES[+f.mes.slice(5,7)-1]}/${f.mes.slice(0,4)}</b></td><td>${f.fechamento?fmtD(f.fechamento):"–"}</td><td>${f.vencimento?fmtD(f.vencimento):"–"}</td><td class="num">${cp.length}</td><td class="num">${brl2(tc)}</td><td class="num">${info==null?"–":brl2(info)}${info!=null&&cp.length&&Math.abs(info-tc)>0.009?`<br><span class="late" style="font-size:.78rem">difere ${brl2(info-tc)}</span>`:""}</td><td class="num">${brl2(tp)}</td><td class="num ${saldo>0.009?"neg":""}"><b>${brl2(saldo)}</b></td><td><span class="qd ${st[1]}">${st[0]}</span></td></tr>`; };
+  c.innerHTML = `<div class="kpis">
+      <div class="kpi"><span class="l">Reserva de limite (pré-pago) líquida</span><span class="v">${brl2(reservado)}</span><span class="l">${reservas.length} reserva(s) · ${resgates.length} resgate(s)</span></div>
+      <div class="kpi"><span class="l">Faturas pagas pela conta</span><span class="v">${brl2(-soma(pagtos))}</span><span class="l">${pagtos.length} pagamento(s)</span></div>
+      <div class="kpi"><span class="l">Compras lançadas no cartão</span><span class="v">${brl2(-soma(compras))}</span><span class="l">${compras.length} compra(s)${nSemCat?` · <b>${nSemCat} a classificar</b>`:""}</span></div>
+      <div class="kpi ${movSemFat.length||semFat.length?"ruim":"bom"}"><span class="l">Sem fatura vinculada</span><span class="v">${movSemFat.length+semFat.length}</span><span class="l">pagamentos/reservas e compras</span></div>
+    </div>
+    <div class="callout">Como funciona: as <b>compras</b> da fatura entram como lançamentos do cartão (cada uma com a sua categoria, para a DRE ficar certa). O <b>pagamento da fatura</b> e a <b>reserva de limite</b> saem da conta Cora como transferência para o cartão (“${esc(CAT_CARTAO)}”), sem virar despesa duas vezes.</div>
+    <div class="card stack"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><h3 class="fh">Faturas</h3><div class="row" style="gap:6px"><button class="btn sm primary" id="cfNova">+ Nova fatura</button></div></div>
+      ${F.faturas.length?`<div class="tablewrap"><table><thead><tr><th>Fatura</th><th>Fechamento</th><th>Vencimento</th><th class="num">Compras</th><th class="num">Total das compras</th><th class="num">Valor da fatura (informado)</th><th class="num">Pago</th><th class="num">Saldo</th><th>Situação</th></tr></thead><tbody>${F.faturas.map(linhaFat).join("")}</tbody></table></div>`:`<p class="note2">Nenhuma fatura cadastrada. Clique em “+ Nova fatura” e importe as compras.</p>`}</div>
+    ${movSemFat.length?`<div class="card stack"><h3 class="fh">Pagamentos e reservas sem fatura vinculada</h3><div class="tablewrap"><table><thead><tr><th>Data</th><th>Descrição</th><th class="num">Valor</th><th>Fatura</th></tr></thead><tbody>${movSemFat.map(t=>`<tr><td>${fmtD(t.data)}</td><td>${esc(t.descricao)}</td><td class="num neg">${brl2(t.valor)}</td><td><select data-vinc="${t.id}"><option value="">Vincular…</option>${F.faturas.map(f=>`<option value="${f.id}">${MESES[+f.mes.slice(5,7)-1]}/${f.mes.slice(0,4)}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div></div>`:""}`;
+  $("#cfNova").onclick=()=>dlgFatura();
+  c.querySelectorAll("[data-fat]").forEach(r=>r.onclick=()=>dlgFatura(F.faturas.find(f=>f.id===r.dataset.fat)));
+  c.querySelectorAll("[data-vinc]").forEach(s=>s.onchange=async()=>{ if (!s.value) return; const {error}=await sb.from("fin_transacoes").update({fatura:s.value}).eq("id",s.dataset.vinc); if (error) return toast(error.message); F.txm.get(s.dataset.vinc).fatura=s.value; toast("Vinculado à fatura."); fCartao(); });
+}
+function lerItensFatura(txt, ano){
+  // aceita CSV (data;descrição;valor) ou linhas coladas do app: "12/10 POSTO X 120,50" / "12/10/2026 ... -120,50"
+  const L=[]; txt.split(/\r?\n/).forEach(l=>{ l=l.trim(); if (!l) return;
+    const m=l.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?[\s;,\t]+(.+?)[\s;\t]+(-?\s?R?\$?\s?-?[\d.]+,\d{2}|-?\d+\.\d{2})\s*$/i); if (!m) return;
+    let a=m[3]? (m[3].length===2?"20"+m[3]:m[3]) : String(ano); const d=`${a}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+    let v=m[5].replace(/R\$|\s/g,""); v = v.includes(",") ? +v.replace(/\./g,"").replace(",",".") : +v;
+    const desc=m[4].replace(/[;\t]+/g," ").trim(); if (/pagamento|estorno de pagamento|saldo anterior|total/i.test(desc) && !/estorno/i.test(desc)) return;
+    L.push({data:d, descricao:desc, valor: /estorno|crédito|credito/i.test(desc) ? Math.abs(v) : -Math.abs(v)}); });
+  return L;
+}
+function dlgFatura(f){
+  const novo=!f, ov=document.createElement("div"); ov.className="dmov"; ov.setAttribute("role","dialog"); ov.setAttribute("aria-modal","true");
+  const cp = f ? F.tx.filter(t=>t.conta===CARTAO && t.fatura===f.id).sort((a,b)=>a.data.localeCompare(b.data)) : [], pg = f ? F.tx.filter(t=>t.conta!==CARTAO && t.fatura===f.id) : [];
+  const hojeM = hoje().slice(0,7);
+  ov.innerHTML = `<div class="dmbox" style="grid-template-rows:auto auto auto minmax(0,1fr)"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h3 style="margin:0">${novo?"Nova fatura do cartão":"Fatura "+MESES[+f.mes.slice(5,7)-1]+"/"+f.mes.slice(0,4)}</h3><button class="btn ghost" type="button" data-x aria-label="Fechar">✕</button></div>
+    <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <div class="field"><label>Mês da fatura</label><input type="month" id="cfM" value="${f?f.mes.slice(0,7):hojeM}"></div>
+      <div class="field"><label>Fechamento</label><input type="date" id="cfF" value="${f&&f.fechamento||""}"></div>
+      <div class="field"><label>Vencimento</label><input type="date" id="cfV" value="${f&&f.vencimento||""}"></div>
+      <div class="field"><label>Valor da fatura</label><input id="cfT" inputmode="decimal" value="${f&&f.valor_informado!=null?String(f.valor_informado).replace(".",","):""}" placeholder="R$"></div>
+      <button class="btn primary" type="button" id="cfS">${novo?"Criar fatura":"Salvar"}</button></div>
+    ${novo?"":`<details ${cp.length?"":"open"}><summary>Importar as compras desta fatura</summary><p class="note2" style="margin:6px 0">Cole as linhas da fatura (data, descrição e valor) ou envie um CSV. Compras já lançadas não se repetem.</p>
+      <textarea id="cfTx" rows="5" style="width:100%" placeholder="12/10 POSTO ANTONELLI 120,50&#10;15/10 GOOGLE WORKSPACE 59,90"></textarea>
+      <div class="row" style="gap:8px;margin-top:6px"><input type="file" id="cfArq" accept=".csv,.txt"><button class="btn sm" type="button" id="cfPrev">Conferir</button><span id="cfRes" class="note2"></span></div></details>`}
+    <div class="dmb tablewrap">${novo?"":`<table class="dmt"><thead><tr><th>Data</th><th>Compra</th><th>Categoria</th><th class="num">Valor</th></tr></thead><tbody>${cp.map(t=>`<tr class="clk" data-ftx2="${t.id}"><td>${fmtD(t.data)}</td><td>${esc(t.descricao)}</td><td>${resumoPartes(t)}</td><td class="num neg">${brl2(t.valor)}</td></tr>`).join("")||`<tr><td colspan="4">Nenhuma compra lançada.</td></tr>`}</tbody><tfoot><tr><td colspan="3">Total das compras (${cp.length})</td><td class="num">${brl2(cp.reduce((a,t)=>a+t.valor,0))}</td></tr>${pg.map(t=>`<tr><td>${fmtD(t.data)}</td><td colspan="2">${esc(t.descricao)}</td><td class="num">${brl2(t.valor)}</td></tr>`).join("")}</tfoot></table>`}</div></div>`;
+  document.body.appendChild(ov);
+  const fecha=()=>{ ov.remove(); fCartao(); }; ov.querySelector("[data-x]").onclick=fecha; ov.onclick=e=>{ if(e.target===ov) fecha(); };
+  ov.querySelector("#cfS").onclick=async()=>{ const reg={cartao:CARTAO, mes:ov.querySelector("#cfM").value+"-01", fechamento:ov.querySelector("#cfF").value||null, vencimento:ov.querySelector("#cfV").value||null};
+    const tv=ov.querySelector("#cfT").value.trim(); reg.valor_informado = tv ? +tv.replace(/[R$\s.]/g,"").replace(",",".") : null;
+    const r = novo ? await sb.from("fin_cartao_faturas").insert(reg).select().single() : await sb.from("fin_cartao_faturas").update(reg).eq("id",f.id).select().single();
+    if (r.error) return toast("Não foi possível salvar: "+r.error.message);
+    F.faturas = null; toast(novo?"Fatura criada. Agora importe as compras.":"Fatura salva."); ov.remove(); await fCartao(); if (novo) dlgFatura(F.faturas.find(x=>x.id===r.data.id)); };
+  ov.querySelectorAll("[data-ftx2]").forEach(r=>r.onclick=()=>{ ov.remove(); dlgRateio(F.txm.get(r.dataset.ftx2)); });
+  if (novo) return;
+  let itens=[];
+  const conferir = () => { itens = lerItensFatura(ov.querySelector("#cfTx").value, +f.mes.slice(0,4));
+    const ja = new Set(F.tx.filter(t=>t.conta===CARTAO).map(t=>t.fitid)); itens.forEach(x=>{ x.fitid = "cc|"+x.data+"|"+x.valor.toFixed(2)+"|"+chave(x.descricao).slice(0,40); x.dup = ja.has(x.fitid); });
+    const nv=itens.filter(x=>!x.dup); ov.querySelector("#cfRes").innerHTML = itens.length ? `${itens.length} linha(s) lidas · ${nv.length} nova(s) · total ${brl2(nv.reduce((a,x)=>a+x.valor,0))} <button class="btn sm primary" type="button" id="cfImp">Importar ${nv.length}</button>` : `<span class="late">Nenhuma linha reconhecida. Use: data, descrição e valor.</span>`;
+    const b=ov.querySelector("#cfImp"); if (b) b.onclick=async()=>{ b.disabled=true;
+      const rows = nv.map(x=>({id:crypto.randomUUID(), conta:CARTAO, fitid:x.fitid, data:x.data, valor:x.valor, descricao:x.descricao, fatura:f.id}));
+      const {error}=await sb.from("fin_transacoes").insert(rows); if (error) { b.disabled=false; return toast("Não foi possível importar: "+error.message); }
+      toast(`${rows.length} compra(s) importada(s). Classifique em Lançamentos (conta Cartão).`); await carregarF(true); F.faturas=null; ov.remove(); await fCartao(); dlgFatura(F.faturas.find(x=>x.id===f.id)); }; };
+  ov.querySelector("#cfPrev").onclick=conferir;
+  ov.querySelector("#cfArq").onchange=async e=>{ const a=e.target.files[0]; if (!a) return; ov.querySelector("#cfTx").value = await a.text(); conferir(); };
+}
+
 /* ---------- sugestão de classificação pelo histórico ---------- */
 function sugestao(t){
-  const k=chave(t.descricao), contra = chave((t.descricao.split(" - ")[1])||"");
-  let alvo=null;
-  for (const o of F.tx) { if (o.id===t.id || semClass(o)) continue; if (chave(o.descricao)===k) { alvo=o; break; } }
-  if (!alvo && contra.length>3) for (const o of F.tx) { if (o.id===t.id || semClass(o) || Math.sign(o.valor)!==Math.sign(t.valor)) continue; if (chave((o.descricao.split(" - ")[1])||"")===contra) { alvo=o; break; } }
-  if (!alvo) return null;
-  const ps=(F.ptx.get(alvo.id)||[]).slice().sort((a,b)=>Math.abs(b.valor)-Math.abs(a.valor)); const p=ps[0];
-  return {categoria:p.categoria, projeto:p.projeto, socio:p.socio, reembolso:!!p.reembolso, pessoal:p.pessoal||"", de:alvo};
+  // cartão de crédito Cora: pagamento de fatura e reserva/resgate de limite são transferência para o cartão
+  if (ehMovCartao(t)) return {categoria:CAT_CARTAO, projeto:null, socio:null, reembolso:false, pessoal:"", de:t};
+  const k=chave(t.descricao), contraTxt=(t.descricao.split(" - ")[1])||"", contra = chave(contraTxt);
+  // usa a classificação MAIS FREQUENTE do histórico (não a última), para um lançamento atípico não contaminar as sugestões
+  let cand = F.tx.filter(o=>o.id!==t.id && !semClass(o) && chave(o.descricao)===k);
+  if (!cand.length && contra.length>3) cand = F.tx.filter(o=>o.id!==t.id && !semClass(o) && Math.sign(o.valor)===Math.sign(t.valor) && chave((o.descricao.split(" - ")[1])||"")===contra);
+  if (!cand.length) return null;
+  const cont = new Map();
+  cand.forEach(o=>{ const ps=(F.ptx.get(o.id)||[]).slice().sort((a,b)=>Math.abs(b.valor)-Math.abs(a.valor)); const p=ps[0]; if (!p) return;
+    const sg=[p.categoria,p.projeto||"",p.socio||"",p.pessoal||"",!!p.reembolso].join("|"); const x=cont.get(sg)||{n:0,p,o}; x.n++; cont.set(sg,x); });
+  const best=[...cont.values()].sort((a,b)=>b.n-a.n || b.o.data.localeCompare(a.o.data))[0]; if (!best) return null;
+  const p=best.p, s={categoria:p.categoria, projeto:p.projeto, socio:p.socio, reembolso:!!p.reembolso, pessoal:p.pessoal||"", de:best.o};
+  // transferência para um sócio: o sócio é sempre o dono da conta que recebeu
+  const dono = sociosAtivos().find(n=>{ const pn=chave(n).split(" ")[0]; return pn.length>2 && new RegExp("\\b"+pn+"\\b").test(contra); });
+  if (dono && t.valor<0) { if (s.socio) s.socio=dono; if (s.pessoal) s.pessoal=dono; }
+  return s;
 }
 
 /* ---------- tela ---------- */
 function desenhaF(){
   const v=$("#v-financeiro");
-  const subs=[["painel","Painel"],["lanc","Lançamentos"],["contas","Contas a pagar"],["orcamento","Orçado × realizado"],["comissoes","Comissões"],["projetos","Projetos e clientes"],["pessoas","Pessoas"],["balanco","Balanço"],["importar","Importar extrato"]];
+  const subs=[["painel","Painel"],["lanc","Lançamentos"],["contas","Contas a pagar"],["orcamento","Orçado × realizado"],["comissoes","Comissões"],["projetos","Projetos e clientes"],["pessoas","Pessoas"],["balanco","Balanço"],["cartao","Cartão de crédito"],["importar","Importar extrato"]];
   const nAl = alertasContas().length;
   const nSem = F.tx.filter(semClass).length;
   v.innerHTML = `<div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-end">
@@ -1771,7 +1856,7 @@ function desenhaF(){
       <div class="chips" role="tablist" aria-label="Financeiro">${subs.map(([k,l])=>`<button class="chip" role="tab" data-fsub="${k}" aria-pressed="${F.sub===k}">${l}${k==="lanc"&&nSem?` <b class="fbadge">${nSem}</b>`:""}${k==="contas"&&nAl?` <b class="fbadge">${nAl}</b>`:""}</button>`).join("")}</div></div>
     <div id="fCorpo" class="stack"></div>`;
   v.querySelectorAll("[data-fsub]").forEach(b=>b.onclick=()=>{ F.sub=b.dataset.fsub; desenhaF(); });
-  ({painel:fPainel, lanc:fLanc, contas:fContas, orcamento:fOrcamento, comissoes:fComissoes, projetos:fProjetos, pessoas:fPessoas, balanco:fBalanco, importar:fImportar})[F.sub]();
+  ({painel:fPainel, lanc:fLanc, contas:fContas, orcamento:fOrcamento, comissoes:fComissoes, projetos:fProjetos, pessoas:fPessoas, balanco:fBalanco, cartao:fCartao, importar:fImportar})[F.sub]();
 }
 const anosF = () => [...new Set(F.tx.map(t=>+t.data.slice(0,4)))].sort();
 const chipsAno = () => `<div class="chips" aria-label="Ano">${anosF().map(a=>`<button class="chip" data-fano="${a}" aria-pressed="${a===F.ano}">${a}</button>`).join("")}</div>`;
@@ -1811,7 +1896,7 @@ function fPainel(){
     <div class="card stack"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><h3 class="fh">DRE ${A} — por competência</h3><span class="note2">Clique numa linha com ▸ para abrir as categorias</span></div>
       ${tabelaMeses(LDRE, D, "d")}</div>
     <div class="card stack"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><h3 class="fh">DFC ${A} — pelo caixa</h3>
-      <div class="chips">${[["cora","Cora"],["dinheiro","Dinheiro"],["todas","Tudo"]].map(([k,l])=>`<button class="chip" data-fconta="${k}" aria-pressed="${F.conta===k}">${l}</button>`).join("")}</div></div>
+      <div class="chips">${[["cora","Cora"],["dinheiro","Dinheiro"],["cartao_cora","Cartão"],["todas","Tudo"]].map(([k,l])=>`<button class="chip" data-fconta="${k}" aria-pressed="${F.conta===k}">${l}</button>`).join("")}</div></div>
       ${tabelaMeses(LDFC, C, "c", [sIni, sFim])}</div>
     <div class="card stack"><h3 class="fh">DRE × DFC: por que o resultado não é igual ao caixa</h3>
       <div class="tablewrap"><table><tbody>
@@ -1840,7 +1925,7 @@ function fLanc(){
   c.innerHTML = `<div class="card stack" style="padding:12px 14px">
       <div class="qbar"><div class="field"><label for="fB">Buscar (nome, projeto, valor)</label><input id="fB" type="search" value="${esc(f.busca)}" placeholder="Ex.: Arcanjos, George, 2431"></div>
         <div class="field"><label for="fM">Mês</label><input id="fM" type="month" value="${esc(f.mes)}"></div>
-        <div class="field"><label for="fCt">Conta</label><select id="fCt"><option value="">Todas</option><option value="cora" ${f.conta==="cora"?"selected":""}>Cora</option><option value="dinheiro" ${f.conta==="dinheiro"?"selected":""}>Dinheiro</option></select></div>
+        <div class="field"><label for="fCt">Conta</label><select id="fCt"><option value="">Todas</option><option value="cora" ${f.conta==="cora"?"selected":""}>Cora</option><option value="dinheiro" ${f.conta==="dinheiro"?"selected":""}>Dinheiro</option><option value="cartao_cora" ${f.conta==="cartao_cora"?"selected":""}>Cartão Cora</option></select></div>
         <label class="chk" style="align-self:center"><input type="checkbox" id="fS" ${f.sem?"checked":""}><span>Só os que faltam classificar</span></label></div>
       <div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><span class="note2">${lista.length} lançamento(s) · entradas ${brl2(ent)} · saídas ${brl2(sai)}</span>
         <div class="row" style="gap:6px">${sug.length?`<button class="btn sm" id="fSug">Aplicar ${sug.length} sugestão(ões) do histórico</button>`:""}<button class="btn sm primary" id="fNovo">+ Lançamento em dinheiro</button></div></div></div>

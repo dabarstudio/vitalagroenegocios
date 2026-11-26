@@ -116,6 +116,12 @@ const CSS = `
 .nps-e{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit}
 .nps-e b{display:block}.nps-e[aria-pressed="true"]{border-color:var(--brand);box-shadow:0 0 0 2px var(--leaf)}
 .nps-com{display:grid;gap:8px}
+.nl-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:10px}
+.nl-it{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px}
+.nl-it:first-of-type{border-top:0;padding-top:0}
+.nl-it .note{display:block}
+.nl-emps{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px 10px;display:grid;gap:2px}
+.nl-emps label{display:flex;gap:8px;align-items:center;font-weight:500;padding:4px 0}
 .nps-c{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .nps-n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;color:#fff;font-weight:800;margin-right:8px}
 .jor-docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
@@ -367,6 +373,8 @@ window.renderNPS = async function(){
   const {data, error} = await sb.from("nps_respostas").select("*").order("em", {ascending:false}).limit(5000);
   if (error) { v.innerHTML = `<div class="card">O NPS ainda não está disponível (${esc(error.message)}).</div>`; return; }
   J.respostas = data||[];
+  const lk = await sb.from("nps_links").select("*").order("criado_em",{ascending:false});
+  J.links = lk.error ? null : (lk.data||[]);
   const de = new Date(Date.now()-90*864e5).toISOString();
   const ae = await sb.from("aut_eventos").select("empresa, item, acao, em").gte("em", de).order("em",{ascending:false}).limit(5000);
   J.aut = ae.error ? null : (ae.data||[]);
@@ -400,6 +408,7 @@ function desenharNPS(){
       <button class="nps-k d" data-f="d" aria-pressed="${F.f==="d"}"><b>${k.d}</b><span>😟 detratores (0–6)</span></button>
     </div>
     <p class="note">NPS = % de promotores − % de detratores. ${k.n} resposta(s). Toque num card para ver os comentários que formam o número.</p>
+    ${F.emp ? "" : linksHtml()}
     <h3>📈 Evolução mês a mês</h3>
     <div class="nps-meses">${porMes.map((c,i) => { const h = c.nps==null ? 0 : Math.max(4, (c.nps+100)/2); const cz = zona(c.nps)[1];
       return `<div class="nps-m" title="${c.n} resposta(s)"><b>${c.nps==null?"":c.nps}</b><i style="height:${h}%;background:${cz}"></i>${MC[+meses[i].slice(5,7)-1]}</div>`; }).join("")}</div>
@@ -407,11 +416,50 @@ function desenharNPS(){
     <div class="nps-emps">${emps.length ? emps.map(([e,c]) => `<button class="nps-e" data-emp="${esc(e)}" aria-pressed="${F.emp===e}"><b>${zona(c.nps)[0]} ${esc(e)}</b><span class="note">NPS ${c.nps} · ${c.n} resposta(s) · ${c.d} detrator(es)</span></button>`).join("") : `<p class="note">Ainda não há respostas. Elas chegam quando um marco da jornada é concluído e a cada 3 meses.</p>`}</div>
     ${F.emp ? "" : autHtml()}
     <h3>💬 O que os clientes disseram</h3>
-    <div class="nps-com">${lista.length ? lista.slice(0, F.todos ? 500 : 30).map(r => `<div class="nps-c"><span class="nps-n" style="background:${corNota(r.nota)}">${r.nota}</span><b>${esc(r.empresa)}</b> · ${esc(r.nome||"")} · ${fmtD(r.em)} · ${r.motivo==="marco"?"após um marco":"trimestral"}${r.comentario?`<p style="margin:6px 0 0">“${esc(r.comentario)}”</p>`:""}</div>`).join("") : `<p class="note">Nenhuma resposta neste filtro.</p>`}</div>${lista.length>30 && !F.todos ? `<button class="btn" id="npsMais">Ver todos os ${lista.length} comentários</button>` : ""}`;
+    <div class="nps-com">${lista.length ? lista.slice(0, F.todos ? 500 : 30).map(r => `<div class="nps-c"><span class="nps-n" style="background:${corNota(r.nota)}">${r.nota}</span><b>${esc(r.empresa)}</b> · ${esc(r.nome||"")} · ${fmtD(r.em)} · ${r.motivo==="marco"?"após um marco":r.motivo==="link"?"pelo link":"trimestral"}${r.comentario?`<p style="margin:6px 0 0">“${esc(r.comentario)}”</p>`:""}</div>`).join("") : `<p class="note">Nenhuma resposta neste filtro.</p>`}</div>${lista.length>30 && !F.todos ? `<button class="btn" id="npsMais">Ver todos os ${lista.length} comentários</button>` : ""}`;
   v.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { F.f = b.dataset.f; desenharNPS(); });
   v.querySelectorAll("[data-emp]").forEach(b => b.onclick = () => { F.emp = F.emp===b.dataset.emp ? "" : b.dataset.emp; desenharNPS(); });
   const t = $j("#npsTodos"); if (t) t.onclick = () => { F.emp = ""; desenharNPS(); };
   const m = $j("#npsMais"); if (m) m.onclick = () => { F.todos = true; desenharNPS(); };
+  ligarLinks(v);
+}
+/* ----- links públicos do NPS e pedidos de acesso ----- */
+const urlNps = t => location.origin + "/vitalagroenegocios/nps/?l=" + t;
+const msgNps = l => `Olá! Aqui é da Vital Agro & Negócios 💚\nQueremos saber como está sendo trabalhar com a gente. Leva 1 minuto:\n${urlNps(l.token)}\nObrigado!`;
+function linksHtml(){
+  if (!J.links) return "";
+  const ped = (J.respostas||[]).filter(r=>r.acesso_status==="pendente");
+  const ativos = J.links.filter(l=>l.ativo);
+  return `<h3>🔗 Links para enviar aos clientes</h3>
+    <div class="nl-box"><p class="note" style="margin:0">Cada cliente (ou grupo) tem o seu link. Quem abrir escolhe entre as empresas do link, dá a nota e, se ainda não tiver cadastro, pode pedir acesso à Área do Cliente.</p>
+      ${ativos.length ? ativos.map(l=>`<div class="nl-it"><div><b>${esc(l.rotulo)}</b><span class="note">${l.empresas.map(esc).join(" · ")} · ${(J.respostas||[]).filter(r=>r.link===l.token).length} resposta(s)</span></div>
+        <div class="row" style="gap:6px"><button class="btn sm" data-nlcp="${l.token}">Copiar link</button><a class="btn sm primary" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msgNps(l))}">WhatsApp</a><button class="btn sm ghost" data-nloff="${l.token}">Desativar</button></div></div>`).join("") : `<p class="note" style="margin:0">Nenhum link criado ainda.</p>`}
+      <div><button class="btn" id="nlNovo">+ Criar link</button></div><div id="nlForm"></div></div>
+    ${ped.length ? `<h3>🙋 Pedidos de acesso à Área do Cliente (${ped.length})</h3><div class="nl-box">${ped.map(r=>`<div class="nl-it"><div><b>${esc(r.nome||"")}</b><span class="note">${esc(r.empresa)} · ${esc(r.email||"")}${r.whatsapp?" · "+esc(r.whatsapp):""} · ${fmtD(r.em)}</span></div>
+      <div class="row" style="gap:6px"><button class="btn sm primary" data-nlac="${r.id}">Criar acesso</button><button class="btn sm ghost" data-nldis="${r.id}">Dispensar</button></div></div>`).join("")}</div>` : ""}`;
+}
+function ligarLinks(v){
+  v.querySelectorAll("[data-nlcp]").forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(urlNps(b.dataset.nlcp)); toast("Link copiado."); } catch { prompt("Copie o link:", urlNps(b.dataset.nlcp)); } });
+  v.querySelectorAll("[data-nloff]").forEach(b => b.onclick = async () => { const l = J.links.find(x=>x.token===b.dataset.nloff);
+    if (!confirm(`Desativar o link de ${l.rotulo}? Quem abrir não consegue mais responder. As respostas já recebidas continuam.`)) return;
+    const {error} = await sb.from("nps_links").update({ativo:false}).eq("token", l.token); if (error) return toast("Não foi possível: "+error.message); l.ativo = false; desenharNPS(); });
+  v.querySelectorAll("[data-nldis]").forEach(b => b.onclick = async () => { const {error} = await sb.from("nps_respostas").update({acesso_status:"dispensado"}).eq("id", b.dataset.nldis); if (error) return toast("Não foi possível: "+error.message); J.respostas.find(x=>x.id===b.dataset.nldis).acesso_status = "dispensado"; desenharNPS(); });
+  v.querySelectorAll("[data-nlac]").forEach(b => b.onclick = () => { const r = J.respostas.find(x=>x.id===b.dataset.nlac);
+    window.__acPre = {nome:r.nome||"", email:r.email||"", empresa:r.empresa, nps:r.id}; goV && goV("acessos"); });
+  const nv = $j("#nlNovo"); if (!nv) return;
+  nv.onclick = async () => { const box = $j("#nlForm"); if (box.innerHTML) { box.innerHTML = ""; return; }
+    const emps = [...new Set(await empresasConhecidas())].sort((a,b)=>a.localeCompare(b,"pt",{sensitivity:"base"}));
+    box.innerHTML = `<div class="stack" style="gap:8px"><div class="field"><label for="nlRot">Nome do cliente ou grupo *</label><input id="nlRot" maxlength="80" placeholder="Ex.: Grupo Agrovista"></div>
+      <div class="field"><label for="nlBusca">Empresas que a pessoa pode escolher *</label><input id="nlBusca" placeholder="Buscar empresa"><div class="nl-emps" id="nlEmps">${emps.map(e=>`<label><input type="checkbox" value="${esc(e)}"> ${esc(e)}</label>`).join("")}</div></div>
+      <div class="row" style="gap:8px"><button class="btn primary" id="nlSalvar">Criar link</button><span class="note" id="nlErr" role="alert"></span></div></div>`;
+    $j("#nlBusca").oninput = e => { const q = e.target.value.toLowerCase(); box.querySelectorAll("#nlEmps label").forEach(l => l.hidden = q && !l.textContent.toLowerCase().includes(q)); };
+    $j("#nlEmps").onchange = () => { const m = [...box.querySelectorAll("#nlEmps input:checked")]; if (m.length===1 && !$j("#nlRot").value) $j("#nlRot").value = m[0].value; };
+    $j("#nlSalvar").onclick = async () => { const rot = $j("#nlRot").value.trim(), es = [...box.querySelectorAll("#nlEmps input:checked")].map(x=>x.value);
+      if (!rot || !es.length) { $j("#nlErr").textContent = "Dê um nome e marque pelo menos uma empresa."; return; }
+      const {data, error} = await sb.from("nps_links").insert({rotulo:rot, empresas:es}).select().single();
+      if (error) { $j("#nlErr").textContent = "Não foi possível: "+error.message; return; }
+      J.links.unshift(data); desenharNPS(); toast("Link criado. Use Copiar ou WhatsApp para enviar."); };
+  };
 }
 /* ----- gatilho: antes de chamar a Vital no WhatsApp, mostrar o que já está no portal ----- */
 document.addEventListener("click", async e => {

@@ -744,6 +744,7 @@ async function renderAcessos(){
         ${log.map(l=>`<tr><td>${new Date(l.em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}</td><td>${esc(nomeDe[l.user_id]||"(removido)")}</td><td>${ACAO[l.acao]||esc(l.acao)}${l.acao==="baixar"?": "+esc(tituloDe[l.alvo]||"arquivo excluído"):""}</td><td>${esc(l.empresa)}</td></tr>`).join("")}
       </tbody></table></div>` : `<p class="note">Nenhum acesso registrado ainda.</p>`}</div>`;
   $("#aTipo").onchange = () => { $("#aEmpF").hidden = $("#aTipo").value!=="cliente"; };
+  const pre = window.__acPre; if (pre) { $("#aNome").value = pre.nome; $("#aEmail").value = pre.email; $("#aEmp").value = pre.empresa; $("#aLogin").value = (pre.email.split("@")[0]||"").toLowerCase().replace(/[^a-z0-9._-]/g,""); $("#fAc").scrollIntoView({block:"start"}); $("#aOk").innerHTML = `<div class="callout">Pedido de acesso vindo do NPS: confira os dados e clique em <b>Criar acesso</b>.</div>`; }
   $("#fAc").addEventListener("submit", async e => { e.preventDefault();
     const tsel=$("#aTipo").value, tipo=tsel==="cliente"?"cliente":"equipe", nome=$("#aNome").value.trim(), email=$("#aEmail").value.trim().toLowerCase(), login=$("#aLogin").value.trim().toLowerCase(), emp=$("#aEmp").value.trim(), err=$("#aErr");
     if (!nome||!email||!login||(tipo==="cliente"&&!emp)) { err.textContent="Preencha todos os campos."; return; }
@@ -753,6 +754,7 @@ async function renderAcessos(){
       const msg = msgAcesso({nome, login, senha});
       $("#aOk").innerHTML = `<div class="callout stack"><b>Acesso criado.</b><span>Envie a mensagem abaixo só para ${esc(nome)}, por um canal privado:</span><textarea readonly rows="7" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px">${esc(msg)}</textarea>
         <div class="row"><a class="btn sm primary" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">Enviar pelo WhatsApp</a></div></div>`;
+      if (window.__acPre && window.__acPre.nps && tipo==="cliente") { await sb.from("nps_respostas").update({acesso_status:"aprovado"}).eq("id", window.__acPre.nps); window.__acPre = null; }
       $("#aBtn").disabled=false; ["#aNome","#aEmail","#aLogin"].forEach(s=>$(s).value="");
     } catch (x) { err.textContent = x.message; $("#aBtn").disabled=false; }
   });

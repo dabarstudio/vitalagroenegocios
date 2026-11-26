@@ -11,7 +11,7 @@ const brl = (v) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("p
 const nf = (v) => (v == null || isNaN(v)) ? "–" : Number(v).toLocaleString("pt-BR");
 const pc = (v) => (v == null || !isFinite(v)) ? "–" : Math.round(v) + "%";
 const mesRot = (ym) => MC[+ym.slice(5, 7) - 1] + "/" + ym.slice(2, 4);
-const S = { mes: new Date().toISOString().slice(0, 7), d: null, equipe: [] };
+const S = { mes: new Date().toISOString().slice(0, 7), d: null, equipe: [], base: (() => { try { return localStorage.getItem("bsc.base") || "caixa"; } catch { return "caixa"; } })() };
 
 /* metas editáveis pelos sócios: chave, rótulo, unidade, sentido (maior é melhor?) */
 const METAS = [
@@ -44,6 +44,7 @@ async function carregar() {
   const { data, error } = await sb.rpc("bsc_painel", { p_mes: S.mes + "-01" });
   if (error) { $("#app").innerHTML = `<div class="sec bloq"><h2>Não foi possível carregar</h2><p class="note">${esc(error.message)}</p></div>`; return; }
   S.d = data;
+  const cx = await sb.rpc("bsc_caixa", { p_mes: S.mes + "-01" }); S.cx = cx.error ? null : cx.data;
   const rc = await sb.rpc("bsc_cobranca", { p_tipo: "receber", p_mes: S.mes + "-01" });
   S.receber = rc.error ? null : (rc.data.rows || []).reduce((a, r) => a + (+r[4] || 0), 0); S.receberN = rc.error ? 0 : (rc.data.rows || []).length;
   desenhar();
@@ -64,7 +65,8 @@ function colunas(serie, val, orc, rot) {
 
 /* ---------- desenho ---------- */
 function desenhar() {
-  const d = S.d, se = d.serie || [], cur = se[se.length - 1] || {}, ant = se[se.length - 2] || {};
+  const d = S.d, caixa = S.base === "caixa" && S.cx;
+  const se = caixa ? S.cx.map((c, i) => ({ ...(d.serie || [])[i], ...c, novos: ((d.serie || [])[i] || {}).novos })) : (d.serie || []), cur = se[se.length - 1] || {}, ant = se[se.length - 2] || {};
   const res = (s) => (+s.receita || 0) - (+s.custos || 0) - (+s.despesas || 0) - (+s.impostos || 0);
   const marg = (s) => +s.receita ? res(s) / +s.receita * 100 : null;
   const recPct = (s) => +s.receita ? +s.recorrente / +s.receita * 100 : null;
@@ -83,13 +85,13 @@ function desenhar() {
 
   $("#app").innerHTML = `
   <div class="bhead"><div><div class="eyeb">Gestão · sócios · Balanced Scorecard</div><h1>Como está a Vital</h1>
-      <p class="note">Financeiro lançado até ${ult}${mesAtual ? " · mês em andamento" : ""}. Toque numa barra para ver o valor.</p></div>
+      <p class="note">Financeiro lançado até ${ult}${mesAtual ? " · mês em andamento" : ""}. ${caixa ? "Valores <b>pelo caixa</b> (data em que o dinheiro entrou ou saiu), iguais à DFC do Financeiro." : "Valores <b>por competência</b> (mês a que o serviço se refere), iguais à DRE. Honorários de um mês costumam ser pagos no mês seguinte."}</p></div>
     <div class="row"><div class="mesnav" role="group" aria-label="Mês"><button type="button" id="mAnt" aria-label="Mês anterior">‹</button><b>${mesRot(S.mes)}</b><button type="button" id="mProx" aria-label="Próximo mês" ${mesAtual ? "disabled" : ""}>›</button></div>
-      <button class="btn" id="bMetas" type="button">🎯 Metas</button></div></div>
+      <div class="tabs2" role="group" aria-label="Base dos números"><button type="button" data-base="caixa" aria-pressed="${S.base === "caixa"}">Caixa</button><button type="button" data-base="comp" aria-pressed="${S.base !== "caixa"}">Competência</button></div><button class="btn" id="bMetas" type="button">🎯 Metas</button></div></div>
 
   <div class="faixa">
     ${tile("", "Clientes ativos", nf(ativos), metaTxt("clientes_ativos") || `<span class="d">${nf(cur.pagantes)} pagaram no mês</span>`, sinal("clientes_ativos", ativos))}
-    ${tile("", "Receita do mês", brl(cur.receita), delta(+cur.receita, +ant.receita) + (cur.orc_receita ? `<span class="meta">orçado ${brl(cur.orc_receita)} · ${pc(cur.receita / cur.orc_receita * 100)}</span>` : ""), sinal("receita_mes", +cur.receita))}
+    ${tile("", caixa ? "Receita do mês" : "Receita do mês", brl(cur.receita), delta(+cur.receita, +ant.receita) + (cur.orc_receita ? `<span class="meta">orçado ${brl(cur.orc_receita)} · ${pc(cur.receita / cur.orc_receita * 100)}</span>` : ""), sinal("receita_mes", +cur.receita))}
     ${tile("", "Receita recorrente", brl(cur.recorrente), `<span class="d">${pc(recPct(cur))} da receita</span>${metaTxt("recorrente_pct")}`, sinal("recorrente_pct", recPct(cur)))}
     ${tile("", "Resultado do mês", brl(res(cur)), `<span class="d">margem ${pc(marg(cur))}</span>${metaTxt("margem_pct")}`, sinal("margem_pct", marg(cur)))}
     ${tile("", "NPS · 12 meses", nps.nps12 == null ? "–" : nf(nps.nps12), `<span class="d">${nf(nps.n12)} resposta(s)</span>${metaTxt("nps")}`, sinal("nps", nps.nps12))}
@@ -186,6 +188,7 @@ function desenhar() {
   $("#mAnt").onclick = () => { S.mes = addMes(S.mes, -1); carregar(); };
   $("#mProx").onclick = () => { S.mes = addMes(S.mes, 1); carregar(); };
   $("#bMetas").onclick = dlgMetas;
+  document.querySelectorAll("[data-base]").forEach((b) => b.onclick = () => { S.base = b.dataset.base; try { localStorage.setItem("bsc.base", S.base); } catch {} desenhar(); });
   ligarTips(); ligarDet();
 }
 /* ---------- analíticos: cada indicador abre o detalhamento ---------- */

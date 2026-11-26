@@ -200,6 +200,8 @@ dialog.pd.largo{max-width:900px}
 .ftab th:first-child{background:var(--surface-2)}
 .ftab tr.tot td{font-weight:700;background:var(--surface-2)}
 .ftab tr.res td{font-weight:800;border-top:2px solid var(--fg);background:var(--surface-2)}
+.ftab td.dmk{cursor:pointer}.ftab td.dmk:hover{background:var(--ok-bg,#E1F2E5);text-decoration:underline}
+.dmov{position:fixed;inset:0;z-index:80;background:rgba(15,23,18,.5);display:grid;place-items:center;padding:16px}.dmbox{background:var(--surface,#fff);border-radius:16px;padding:18px;width:min(1040px,100%);max-height:90vh;display:grid;gap:10px;grid-template-rows:auto auto minmax(0,1fr)}.dmbox input[type=search]{border:1px solid var(--line);border-radius:10px;padding:8px 10px}.dmb{overflow:auto;max-height:62vh}.dmt{width:100%;border-collapse:collapse;font-size:.88rem}.dmt th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:7px 9px;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em}.dmt td{padding:6px 9px;border-top:1px solid var(--line)}.dmt .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.dmt tfoot td{font-weight:700;background:var(--surface-2)}
 .ftab tr.sub td{font-weight:600} .ftab tr[data-fab]{cursor:pointer} .ftab tr[data-fab]:hover td{background:var(--surface-2)}
 .ftab tr.cat td{color:var(--muted);font-weight:400} .ftab tr.cat td:first-child{padding-left:26px}
 .ftab tr.sep td{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface);padding-top:14px}
@@ -1658,11 +1660,51 @@ function tabelaMeses(L, M, id, saldos){
     const a = somaT(M, tipos); const k=id+rot; const cats = tipo==="sub" ? catsDeTipos(tipos, M) : [];
     if (tipo==="sub" && !cats.length && !a.some(v=>r2(v))) continue;
     const ab = F.abertas.has(k);
-    lin.push(`<tr class="${tipo}" ${cats.length?`data-fab="${esc(k)}" title="Clique para ver por categoria"`:""}><td>${cats.length?`<span class="tw">${ab?"▾":"▸"}</span> `:""}${esc(rot)}</td>${a.map((v,i)=>`<td class="num ${sinal(v)}">${nf(v)}</td>`).join("")}</tr>`);
-    if (ab) cats.forEach(n=>{ const c=M["c:"+n]; lin.push(`<tr class="cat"><td>${esc(n)}</td>${c.map(v=>`<td class="num ${sinal(v)}">${nf(v)}</td>`).join("")}</tr>`); });
+    const dk = (chave, i, v) => r2(v) ? ` data-dm="${id}|${esc(chave)}|${i}|${esc(rot)}" title="Ver os lançamentos"` : "";
+    lin.push(`<tr class="${tipo}" ${cats.length?`data-fab="${esc(k)}" title="Clique para ver por categoria"`:""}><td>${cats.length?`<span class="tw">${ab?"▾":"▸"}</span> `:""}${esc(rot)}</td>${a.map((v,i)=>`<td class="num ${sinal(v)}${r2(v)?" dmk":""}"${dk("t:"+tipos.join(","), i, v)}>${nf(v)}</td>`).join("")}</tr>`);
+    if (ab) cats.forEach(n=>{ const c=M["c:"+n]; lin.push(`<tr class="cat"><td>${esc(n)}</td>${c.map((v,i)=>`<td class="num ${sinal(v)}${r2(v)?" dmk":""}"${r2(v)?` data-dm="${id}|c:${esc(n)}|${i}|${esc(n)}" title="Ver os lançamentos"`:""}>${nf(v)}</td>`).join("")}</tr>`); });
   }
   return `<div class="tablewrap"><table class="ftab"><thead><tr><th>R$</th>${MESES.map(m=>`<th class="num">${m}</th>`).join("")}<th class="num">Total</th></tr></thead><tbody>${lin.join("")}</tbody></table></div>`;
 }
+
+/* ---------- analítico: qualquer número da DRE/DFC abre os lançamentos que o compõem ---------- */
+function lancDe(id, chave, mi){
+  const A=String(F.ano), [k, ...rest]=chave.split(":"), val=rest.join(":"), tipos=val.split(",");
+  const okP = p => k==="c" ? (p.categoria||"(a classificar)")===val : tipos.includes(tipoDRE(p));
+  const naMes = d => d && d.slice(0,4)===A && (mi>=12 || +d.slice(5,7)-1===mi);
+  const L=[];
+  if (id==="c") { for (const t of F.tx) { if (!naMes(t.data) || !(F.conta==="todas" || t.conta===F.conta)) continue; const ps=F.ptx.get(t.id)||[];
+      if (!ps.length) { if (k==="c" ? val==="(a classificar)" : tipos.includes("sem")) L.push({data:t.data, comp:null, desc:t.descricao, proj:"", cat:"(a classificar)", valor:t.valor}); continue; }
+      ps.filter(okP).forEach(p=>L.push({data:t.data, comp:p.competencia, desc:(p.obs?p.obs+" · ":"")+t.descricao, proj:p.projeto||p.socio||p.pessoal||"", cat:p.categoria||"(a classificar)", valor:p.valor})); } }
+  else F.partes.forEach(p=>{ if (!naMes(p.competencia) || !okP(p)) return; const t=F.txm.get(p.transacao)||{};
+      L.push({data:t.data, comp:p.competencia, desc:(p.obs?p.obs+" · ":"")+(t.descricao||""), proj:p.projeto||p.socio||p.pessoal||"", cat:p.categoria||"(a classificar)", valor:p.valor}); });
+  return L.sort((a,b)=>(a.data||"").localeCompare(b.data||""));
+}
+function abrirDM(el){
+  const [id, chave, mis, rot] = el.dataset.dm.split("|"), mi=+mis, L=lancDe(id, chave, mi);
+  const per = mi>=12 ? `ano de ${F.ano}` : `${MESES[mi]}/${F.ano}`, base = id==="c" ? "pelo caixa (data do pagamento)" : "por competência";
+  const ov=document.createElement("div"); ov.className="dmov"; ov.setAttribute("role","dialog"); ov.setAttribute("aria-modal","true");
+  let modo="lanc", q="";
+  const agrupa = (campo, LL) => { const g={}; LL.forEach(x=>{ const kk=x[campo]||"(sem informação)"; const o=g[kk]=g[kk]||{n:0,v:0}; o.n++; o.v=r2(o.v+x.valor); }); return Object.entries(g).sort((a,b)=>Math.abs(b[1].v)-Math.abs(a[1].v)); };
+  const tot = L.reduce((a,x)=>a+x.valor,0);
+  const desenha = () => { const F2 = q ? L.filter(x=>[x.desc,x.proj,x.cat].join(" ").toLowerCase().includes(q)) : L, t2=F2.reduce((a,x)=>a+x.valor,0);
+    let h;
+    if (modo==="lanc") h = `<table class="dmt"><thead><tr><th>Data</th><th>Competência</th><th>Descrição</th><th>Cliente / pessoa</th><th>Categoria</th><th class="num">Valor</th></tr></thead><tbody>${F2.map(x=>`<tr><td>${fmtD(x.data)}</td><td>${x.comp?MESES[+x.comp.slice(5,7)-1]+"/"+x.comp.slice(2,4):"–"}</td><td>${esc(x.desc)}</td><td>${esc(x.proj)}</td><td>${esc(x.cat)}</td><td class="num ${sinal(x.valor)}">${brl2(x.valor)}</td></tr>`).join("")||`<tr><td colspan="6">Nada encontrado.</td></tr>`}</tbody><tfoot><tr><td colspan="5">Total (${F2.length})</td><td class="num">${brl2(t2)}</td></tr></tfoot></table>`;
+    else { const G = agrupa(modo==="cli"?"proj":"cat", F2); h = `<table class="dmt"><thead><tr><th>${modo==="cli"?"Cliente / pessoa":"Categoria"}</th><th class="num">Lançamentos</th><th class="num">Valor</th><th class="num">% do total</th></tr></thead><tbody>${G.map(([n,o])=>`<tr><td>${esc(n)}</td><td class="num">${o.n}</td><td class="num ${sinal(o.v)}">${brl2(o.v)}</td><td class="num">${t2?(Math.round(o.v/t2*1000)/10).toString().replace(".",",")+"%":"–"}</td></tr>`).join("")}</tbody><tfoot><tr><td>Total</td><td class="num">${F2.length}</td><td class="num">${brl2(t2)}</td><td></td></tr></tfoot></table>`; }
+    ov.querySelector(".dmb").innerHTML = h; };
+  ov.innerHTML = `<div class="dmbox"><div class="row" style="justify-content:space-between;align-items:start;flex-wrap:nowrap"><div><h3 style="margin:0">${esc(rot)} · ${per}</h3><p class="note2" style="margin:2px 0 0">${L.length} lançamento(s) · ${base} · total ${brl2(tot)}</p></div><button class="btn ghost" type="button" data-x aria-label="Fechar">✕</button></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><div class="chips"><button class="chip" type="button" data-mo="lanc" aria-pressed="true">Lançamentos</button><button class="chip" type="button" data-mo="cli" aria-pressed="false">Por cliente / pessoa</button><button class="chip" type="button" data-mo="cat" aria-pressed="false">Por categoria</button></div>
+      <input type="search" placeholder="Filtrar" data-q style="flex:1;min-width:150px"><button class="btn sm" type="button" data-csv>Baixar CSV</button></div>
+    <div class="dmb tablewrap"></div></div>`;
+  document.body.appendChild(ov); desenha();
+  const fecha=()=>ov.remove(); ov.querySelector("[data-x]").onclick=fecha; ov.onclick=e=>{ if(e.target===ov) fecha(); };
+  document.addEventListener("keydown", function k(e){ if(e.key==="Escape"){ fecha(); document.removeEventListener("keydown",k); } });
+  ov.querySelectorAll("[data-mo]").forEach(b=>b.onclick=()=>{ modo=b.dataset.mo; ov.querySelectorAll("[data-mo]").forEach(x=>x.setAttribute("aria-pressed", x===b)); desenha(); });
+  ov.querySelector("[data-q]").oninput=e=>{ q=e.target.value.trim().toLowerCase(); desenha(); };
+  ov.querySelector("[data-csv]").onclick=()=>{ const rows=[["Data","Competência","Descrição","Cliente/pessoa","Categoria","Valor"]].concat(L.map(x=>[x.data||"",x.comp||"",x.desc,x.proj,x.cat,String(x.valor).replace(".",",")]));
+    const csv="﻿"+rows.map(l=>l.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n"); const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); a.download=`${rot}-${per}.csv`.replace(/[^\p{L}\p{N}.]+/gu,"-"); a.click(); };
+}
+document.addEventListener("click", e=>{ const td=e.target.closest && e.target.closest("td[data-dm]"); if (!td) return; e.stopPropagation(); abrirDM(td); }, true);
 
 /* ---------- comissões ---------- */
 function regrasDe(proj){ const k=chave(proj); return F.regras.filter(r=>chave(r.projeto)===k); }

@@ -44,8 +44,9 @@ async function carregar() {
   const { data, error } = await sb.rpc("bsc_painel", { p_mes: S.mes + "-01" });
   if (error) { $("#app").innerHTML = `<div class="sec bloq"><h2>Não foi possível carregar</h2><p class="note">${esc(error.message)}</p></div>`; return; }
   S.d = data;
-  const cx = await sb.rpc("bsc_caixa", { p_mes: S.mes + "-01" }); S.cx = cx.error ? null : cx.data;
-  const rc = await sb.rpc("bsc_cobranca", { p_tipo: "receber", p_mes: S.mes + "-01" });
+  const [cx, rcp] = await Promise.all([sb.rpc("bsc_caixa", { p_mes: S.mes + "-01" }), sb.rpc("bsc_receita_comp", { p_mes: S.mes + "-01" })]);
+  S.cx = cx.error ? null : cx.data; S.rc = rcp.error ? null : rcp.data;
+  const rc = await sb.rpc("bsc_receber_carteira", { p_mes: S.mes + "-01" });
   S.receber = rc.error ? null : (rc.data.rows || []).reduce((a, r) => a + (+r[4] || 0), 0); S.receberN = rc.error ? 0 : (rc.data.rows || []).length;
   desenhar();
 }
@@ -59,14 +60,21 @@ const barras = (L, fmt, det) => { const mx = Math.max(1, ...L.map((x) => x[1]));
 function colunas(serie, val, orc, rot) {
   const mx = Math.max(1, ...serie.map((s) => Math.max(+val(s) || 0, +(orc ? orc(s) : 0) || 0)));
   return `<div class="cc">${serie.map((s, i) => { const v = +val(s) || 0, o = orc ? +orc(s) || 0 : 0;
-    return `<div class="${i === serie.length - 1 ? "cur" : ""}" data-tip="${esc(rot(s))}"><i style="height:${v / mx * 100}%"></i>${o ? `<u style="bottom:${o / mx * 100}%"></u>` : ""}</div>`; }).join("")}</div>
+    return `<div class="${i === serie.length - 1 ? "cur" : ""}${s.futuro ? " fut" : ""}" data-tip="${esc(rot(s))}"><i style="height:${v / mx * 100}%"></i>${o ? `<u style="bottom:${o / mx * 100}%"></u>` : ""}</div>`; }).join("")}</div>
     <div class="ccx">${serie.map((s) => `<span>${MC[+String(s.m).slice(5, 7) - 1]}</span>`).join("")}</div>`;
 }
 
 /* ---------- desenho ---------- */
 function desenhar() {
-  const d = S.d, caixa = S.base === "caixa" && S.cx;
-  const se = caixa ? S.cx.map((c, i) => ({ ...(d.serie || [])[i], ...c, novos: ((d.serie || [])[i] || {}).novos })) : (d.serie || []), cur = se[se.length - 1] || {}, ant = se[se.length - 2] || {};
+  const d = S.d, futuro = S.mes > new Date().toISOString().slice(0, 7), caixa = S.base === "caixa" && S.cx && !futuro;
+  /* competência: receita = carteira de contratos fixos + avulsos lançados; meses futuros = projeção (contratos + orçamento ou média de gastos) */
+  const comp = (d.serie || []).map((s, i) => { const r = (S.rc || [])[i]; if (!r) return s;
+    const o = { ...s, receita: +r.contratada + +r.avulsa, recorrente: +r.contratada, contratada: +r.contratada, avulsa: +r.avulsa, recebido_contratos: +r.recebido_contratos, contratos: r.contratos, futuro: r.futuro };
+    if (r.futuro) { const reais = (d.serie || []).slice(0, i).filter((x, j) => !(S.rc[j] || {}).futuro).slice(-3), med = (k) => reais.length ? reais.reduce((a, x) => a + (+x[k] || 0), 0) / reais.length : 0;
+      const g = +r.gastos_orc, base = med("custos") + med("despesas") + med("impostos"), f = g && base ? g / base : 1;
+      o.custos = med("custos") * f; o.despesas = med("despesas") * f; o.impostos = med("impostos") * f; o.pagantes = r.contratos; }
+    return o; });
+  const se = caixa ? S.cx.map((c, i) => ({ ...(d.serie || [])[i], ...c, novos: ((d.serie || [])[i] || {}).novos })) : comp, cur = se[se.length - 1] || {}, ant = se[se.length - 2] || {};
   const res = (s) => (+s.receita || 0) - (+s.custos || 0) - (+s.despesas || 0) - (+s.impostos || 0);
   const marg = (s) => +s.receita ? res(s) / +s.receita * 100 : null;
   const recPct = (s) => +s.receita ? +s.recorrente / +s.receita * 100 : null;
@@ -85,13 +93,13 @@ function desenhar() {
 
   $("#app").innerHTML = `
   <div class="bhead"><div><div class="eyeb">Gestão · sócios · Balanced Scorecard</div><h1>Como está a Vital</h1>
-      <p class="note">Financeiro lançado até ${ult}${mesAtual ? " · mês em andamento" : ""}. ${caixa ? "Valores <b>pelo caixa</b> (data em que o dinheiro entrou ou saiu), iguais à DFC do Financeiro." : "Valores <b>por competência</b> (mês a que o serviço se refere), iguais à DRE. Honorários de um mês costumam ser pagos no mês seguinte."}</p></div>
-    <div class="row"><div class="mesnav" role="group" aria-label="Mês"><button type="button" id="mAnt" aria-label="Mês anterior">‹</button><b>${mesRot(S.mes)}</b><button type="button" id="mProx" aria-label="Próximo mês" ${mesAtual ? "disabled" : ""}>›</button></div>
+      <p class="note">Financeiro lançado até ${ult}${mesAtual ? " · mês em andamento" : ""}. ${futuro ? "<b>Projeção</b>: receita da carteira de contratos fixos (Financeiro › Receitas fixas) e gastos pelo orçamento ou pela média dos últimos 3 meses." : caixa ? "Valores <b>pelo caixa</b> (data em que o dinheiro entrou ou saiu), iguais à DFC do Financeiro." : "Valores <b>por competência</b>: receita = contratos fixos do mês + serviços avulsos lançados, recebidos ou não."}</p></div>
+    <div class="row"><div class="mesnav" role="group" aria-label="Mês"><button type="button" id="mAnt" aria-label="Mês anterior">‹</button><b>${mesRot(S.mes)}</b><button type="button" id="mProx" aria-label="Próximo mês" ${S.mes >= addMes(new Date().toISOString().slice(0, 7), 12) ? "disabled" : ""}>›</button></div>
       <div class="tabs2" role="group" aria-label="Base dos números"><button type="button" data-base="caixa" aria-pressed="${S.base === "caixa"}">Caixa</button><button type="button" data-base="comp" aria-pressed="${S.base !== "caixa"}">Competência</button></div><button class="btn" id="bMetas" type="button">🎯 Metas</button></div></div>
 
   <div class="faixa">
     ${tile("", "Clientes ativos", nf(ativos), metaTxt("clientes_ativos") || `<span class="d">${nf(cur.pagantes)} pagaram no mês</span>`, sinal("clientes_ativos", ativos))}
-    ${tile("", caixa ? "Receita do mês" : "Receita do mês", brl(cur.receita), delta(+cur.receita, +ant.receita) + (cur.orc_receita ? `<span class="meta">orçado ${brl(cur.orc_receita)} · ${pc(cur.receita / cur.orc_receita * 100)}</span>` : ""), sinal("receita_mes", +cur.receita))}
+    ${tile("", futuro ? "Receita projetada" : "Receita do mês", brl(cur.receita), delta(+cur.receita, +ant.receita) + (!caixa && cur.contratada != null ? `<span class="meta">contratos ${brl(cur.contratada)} (${nf(cur.contratos)}) + avulsos ${brl(cur.avulsa)}${futuro ? "" : ` · recebido dos contratos ${brl(cur.recebido_contratos)}`}</span>` : "") + (cur.orc_receita ? `<span class="meta">orçado ${brl(cur.orc_receita)} · ${pc(cur.receita / cur.orc_receita * 100)}</span>` : ""), sinal("receita_mes", +cur.receita))}
     ${tile("", "Receita recorrente", brl(cur.recorrente), `<span class="d">${pc(recPct(cur))} da receita</span>${metaTxt("recorrente_pct")}`, sinal("recorrente_pct", recPct(cur)))}
     ${tile("", "Resultado do mês", brl(res(cur)), `<span class="d">margem ${pc(marg(cur))}</span>${metaTxt("margem_pct")}`, sinal("margem_pct", marg(cur)))}
     ${tile("", "NPS · 12 meses", nps.nps12 == null ? "–" : nf(nps.nps12), `<span class="d">${nf(nps.n12)} resposta(s)</span>${metaTxt("nps")}`, sinal("nps", nps.nps12))}
@@ -107,7 +115,7 @@ function desenhar() {
         ${mi("Ticket médio por cliente pagante", brl(ticket(cur)))}
         ${mi("Caixa (conta Cora)", brl(d.caixa))}
         ${mi("Honorários vencidos", brl(inad.valor), sinal("inadimplencia_max", +inad.valor), `<span class="meta">${nf(inad.qtd)} guia(s) no portal Dabar</span>`)}
-        ${mi("A receber (recorrentes)", brl(S.receber), S.receber ? "s-at" : "s-ok", `<span class="meta">${nf(S.receberN)} cliente(s) com mês em aberto</span>`)}
+        ${mi("A receber (contratos)", brl(S.receber), S.receber ? "s-at" : "s-ok", `<span class="meta">${nf(S.receberN)} cliente(s) com mês em aberto</span>`)}
         ${mi("Previsto × realizado por cliente", "Ver quem cobrar")}
         ${mi("Receita 12 meses", brl(d.receita_12m))}
         ${mi("Concentração nos 5 maiores", pc(conc), sinal("concentracao_max", conc), metaTxt("concentracao_max"))}
@@ -197,7 +205,7 @@ const DET = { "Clientes ativos": "ativos", "Receita do mês": "orcado", "Receita
   "Concentração nos 5 maiores": "concentracao", "Ativos": "ativos", "Pagaram no mês": "pagantes", "Novos no mês": "novos", "Inativos / encerrados": "inativos",
   "Leads novos no mês": "leads", "Ganhos no mês": "ganhos", "Conversão · 12 meses": "ganhos", "Ciclo médio de venda": "ganhos", "Em negociação (pipeline)": "abertos", "Sem próxima ação": "sem_acao",
   "Obrigações do mês no prazo": "obrig_mes", "Obrigações atrasadas": "obrig_atrasadas", "Projetos em andamento": "projetos", "Receita por pessoa · 12m": "servicos12",
-  "Investido em treinamento · 12m": "categoria|Cursos e Treinamentos", "A receber (recorrentes)": "receber", "Previsto × realizado por cliente": "cobrar",
+  "Investido em treinamento · 12m": "categoria|Cursos e Treinamentos", "A receber (contratos)": "receber", "Previsto × realizado por cliente": "cobrar",
   "Tarefas concluídas no mês (todos os quadros)": "@/vitalagroenegocios/kpi/", "Tarefas no prazo": "@/vitalagroenegocios/kpi/", "Dias médios para concluir": "@/vitalagroenegocios/kpi/" };
 function ligarDet() {
   document.querySelectorAll(".ft .k, .mi > span:first-child").forEach((l) => { const box = l.parentElement, t = DET[l.textContent.trim()]; if (!t || box.dataset.det) return;
@@ -213,6 +221,7 @@ const PILHA = [];   // navegação dentro do analítico (voltar)
 /* para onde vai o clique numa linha de cada analítico */
 function linkLinha(tipo, data, r) {
   if (tipo === "orcado" || tipo === "custos") return RECEITA_GRUPOS.has(r[0]) ? ["cobrar", r[1]] : ["categoria", r[1]];
+  if (tipo === "cobrar" || tipo === "receber") return r[0] ? ["cliente", String(r[0]).replace(/ \*$/, "")] : null;
   if (data.links === "cliente" || ["pagantes", "recorrente", "ticket", "novos", "concentracao", "top"].includes(tipo)) return r[0] && r[0] !== "(sem cliente)" ? ["cliente", r[0]] : null;
   if (["ativos", "inativos", "servico"].includes(tipo)) return ["cliente", r[0]];
   if (tipo === "servicos12" || tipo === "receita12") return ["cobrar", r[0]];
@@ -224,7 +233,7 @@ async function detalhe(tipo, filtro, mes, voltando) {
   if (!voltando && PILHA.length && PILHA[PILHA.length - 1].tipo === tipo && PILHA[PILHA.length - 1].filtro === filtro) PILHA.pop();
   if (!voltando) PILHA.push({ tipo, filtro, mes });
   f.innerHTML = `<p class="note">Carregando o detalhamento…</p>`;
-  const { data, error } = await sb.rpc(COBR.has(tipo) ? "bsc_cobranca" : "bsc_detalhe", { p_tipo: tipo, p_mes: mes + "-01", p_filtro: filtro });
+  const { data, error } = tipo === "receber" ? await sb.rpc("bsc_receber_carteira", { p_mes: mes + "-01" }) : tipo === "cobrar" ? await sb.rpc("bsc_carteira", { p_mes: mes + "-01", p_filtro: filtro }) : await sb.rpc(COBR.has(tipo) ? "bsc_cobranca" : "bsc_detalhe", { p_tipo: tipo, p_mes: mes + "-01", p_filtro: filtro });
   if (error) { f.innerHTML = `<p class="err">Não foi possível carregar: ${esc(error.message)}</p><div class="row" style="justify-content:flex-end"><button class="btn" value="cancel">Fechar</button></div>`; return; }
   const cols = data.cols || [], rows = data.rows || [];
   const grupo = tipo === "orcado" || tipo === "custos";

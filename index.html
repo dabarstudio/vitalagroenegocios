@@ -16,7 +16,17 @@
 /* links antigos do DISC (#t-empresa, #login) continuam funcionando */
 (function(){ var h=location.hash; if(/^#(t-|login|avaliar|rel)/.test(h)) location.replace("/vitalagroenegocios/disc/"+h); })();
 </script>
-<style id="vlarg">.wrap{max-width:1680px}dialog.pd.largo{max-width:1100px}</style></head>
+<style id="vlarg">.wrap{max-width:1680px}dialog.pd.largo{max-width:1100px}</style><style id="rev27css">
+.rev27-card{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--brand-light);border-radius:16px;padding:22px;box-shadow:0 6px 24px rgba(0,88,47,.06)}
+.rev27-txt h2{font-size:clamp(1.3rem,2.6vw,1.8rem);margin:8px 0 8px;font-weight:700;text-wrap:balance}
+.rev27-txt>p{margin:0 0 12px;color:var(--muted)}
+.rev27-it{list-style:none;margin:0 0 14px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:860px){.rev27-it{grid-template-columns:minmax(0,1fr)}}
+.rev27-it li{background:var(--tint);border-radius:12px;padding:12px 14px;display:grid;gap:4px}
+.rev27-it b{font-size:.95rem}.rev27-it span{font-size:.88rem;color:var(--muted)}
+.rev27-prazo{font-size:.88rem;margin:0 0 14px}
+.rev27 .cta{display:flex;gap:10px;flex-wrap:wrap}
+</style></head>
 <body>
 <a class="skip" href="#inicio">Pular para o conteúdo</a>
 <header class="top">
@@ -48,6 +58,23 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <section class="blk tight rev27" id="revisao-2027" aria-labelledby="rev27t">
+    <div class="wrap"><div class="rev27-card">
+      <div class="rev27-txt">
+        <span class="eyebrow">Revisão de regime 2027</span>
+        <h2 id="rev27t">O jeito que sua empresa paga imposto em 2027 se decide no começo do ano.</h2>
+        <p>Depois do primeiro pagamento, não dá para trocar até dezembro. E 2027 é um ano diferente:</p>
+        <ul class="rev27-it">
+          <li><b>PIS e COFINS acabam</b><span>Entra a CBS, com crédito sobre o que a empresa compra. Quem está no Simples pode avaliar o Simples Híbrido.</span></li>
+          <li><b>Retirada de lucro mudou</b><span>Desde 2026, lucro acima de R$ 50 mil por mês ao mesmo sócio tem 10% de imposto na fonte.</span></li>
+          <li><b>Presumido mais caro para quem fatura mais</b><span>Acima de R$ 5 milhões por ano, a base presumida subiu 10%.</span></li>
+        </ul>
+        <p class="rev27-prazo"><b>Prazos:</b> Simples Nacional até o fim de janeiro · Lucro Real com estimativa mensal até o fim de fevereiro · Lucro Presumido e Real trimestral até o fim de abril.</p>
+        <div class="cta"><a class="btn green" href="#simulacao" id="rev27Btn">Quero revisar meu regime</a><a class="btn ghost" href="/vitalagroenegocios/dividendos/">Calcular imposto da retirada de lucro</a></div>
+      </div>
+    </div></div>
   </section>
 
   <section class="blk tight" id="servicos">
@@ -147,6 +174,7 @@
         <a class="tool-mini" href="/vitalagroenegocios/giro/"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div><div><b>Giro da semana</b><span>Todo sábado, o resumo do que mexeu com o campo e com a sua empresa</span></div><span class="go">Ler →</span></a>
         <a class="tool-mini" href="/vitalagroenegocios/papo-de-porteira/"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3 3 0 0 1 0 6M18.5 20c0-2.6-1.4-4.8-3.5-5.6"/></svg></div><div><b>Papo de Porteira</b><span>Lives no Instagram, quartas ao meio-dia</span></div><span class="go">Assistir →</span></a>
         <a class="tool-mini" href="/vitalagroenegocios/radar/"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg></div><div><b>Notícias e cotações</b><span>Soja, milho, boi, café e dólar, atualizados todo dia</span></div><span class="go">Ver →</span></a>
+        <a class="tool-mini" href="/vitalagroenegocios/dividendos/"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M16 11v4"/></svg></div><div><b>Calculadora de dividendos 2026</b><span>Veja se a sua retirada de lucro passou a ter imposto</span></div><span class="go">Calcular →</span></a>
       </div>
     </div>
   </section>
@@ -171,7 +199,7 @@
   <div class="wrap">
     <nav class="fcols" aria-label="Rodapé">
       <div><b>Serviços</b><a href="/vitalagroenegocios/servicos/produtor-rural/">Produtor rural</a><a href="/vitalagroenegocios/servicos/empresas/">Empresas</a><a href="/vitalagroenegocios/servicos/bpo-financeiro/">BPO Financeiro</a><a href="/vitalagroenegocios/servicos/reforma-tributaria/">Reforma Tributária</a><a href="/vitalagroenegocios/servicos/recuperacao-judicial/">Recuperação judicial</a></div>
-      <div><b>Conteúdo gratuito</b><a href="/vitalagroenegocios/radar/">Radar</a><a href="/vitalagroenegocios/indicadores/">Dados econômicos</a><a href="/vitalagroenegocios/giro/">Giro da semana</a><a href="/vitalagroenegocios/papo-de-porteira/">Papo de Porteira</a><a href="/vitalagroenegocios/midias/">Mídias</a></div>
+      <div><b>Conteúdo gratuito</b><a href="/vitalagroenegocios/radar/">Radar</a><a href="/vitalagroenegocios/indicadores/">Dados econômicos</a><a href="/vitalagroenegocios/giro/">Giro da semana</a><a href="/vitalagroenegocios/papo-de-porteira/">Papo de Porteira</a><a href="/vitalagroenegocios/midias/">Mídias</a><a href="/vitalagroenegocios/dividendos/">Calculadora de dividendos</a></div>
       <div><b>A Vital</b><a href="/vitalagroenegocios/sobre/">Quem somos</a><a href="/vitalagroenegocios/#simulacao">Simulação gratuita</a><a href="/vitalagroenegocios/depoimento/">Deixe seu depoimento</a><a href="/vitalagroenegocios/cliente/">Área do cliente</a><a href="/vitalagroenegocios/privacidade/">Privacidade</a></div>
     </nav>
     <span>© <span class="ano">2026</span> Vital Agro &amp; Negócios · CNPJ 54.146.859/0001-32</span>
@@ -256,6 +284,18 @@ f.addEventListener("submit",function(ev){
     if(g){ document.getElementById("gTit").textContent=g.titulo; document.getElementById("gRes").textContent=g.resumo||""; document.getElementById("gData").textContent="Semana até "+dBR(g.semana) }
     document.getElementById("gItens").innerHTML=V.giroHtml(g) }).catch(function(){ Radar.erro(document.getElementById("gItens")) });
   if(document.getElementById("gBast")) V.bast(14,4).then(function(l){ document.getElementById("gBast").innerHTML=V.bastHtml(l) }).catch(function(){ document.getElementById("gBast").innerHTML=V.bastHtml([]) });
+})();
+</script>
+<script>
+(function(){
+  var sec=document.getElementById("revisao-2027"); if(!sec) return;
+  var hoje=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);
+  if(hoje>"2027-04-30"){ sec.hidden=true; return }
+  document.getElementById("rev27Btn").addEventListener("click",function(ev){
+    var ab=document.getElementById("abrirSim"), msg=document.getElementById("lMsg");
+    if(msg&&!msg.value) msg.value="Revisão de regime 2027";
+    if(ab&&!ab.hidden){ ev.preventDefault(); ab.click() }
+  });
 })();
 </script>
 </body>
